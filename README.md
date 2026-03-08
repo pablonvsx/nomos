@@ -9,7 +9,7 @@ O <strong>Nomos</strong> é um aplicativo móvel concebido para a coleta, valida
 <div align="justify">
 Este projeto integra a pesquisa de mestrado desenvolvida no Programa de Pós-Graduação em Geografia (PPGEO) da Universidade Federal de Pernambuco (UFPE).
 
-* **Autor:** Pablo Guilherme de Melo Neves[.
+* **Autor:** Pablo Guilherme de Melo Neves.
 * **Orientador:** Prof. Dr. Lucas Costa de Souza Cavalcanti.
 * **Grupo de Pesquisa:** PAISAGEO - Geografia de Paisagens Tropicais.
 </div>
@@ -28,8 +28,8 @@ O nome "Nomos" deriva do verbo grego <em>nemein</em>, cujo campo semântico orig
   <li><strong>Classificação Fisionômica (Matriz de Küchler):</strong> Interface interativa que codifica a estrutura da vegetação com base em formas de vida, altura e cobertura foliar por estrato.</li>
   <li><strong>Automação Analítica:</strong> Algoritmos locais que processam os dados inseridos in situ para classificar automaticamente o grupo vegetacional e compor uma síntese nomenclatural padronizada para a unidade de paisagem.</li>
   <li><strong>Paradigma Offline-First:</strong> Operação totalmente independente de rede móvel, com dados persistidos em banco de dados relacional embarcado, garantindo o funcionamento em ambientes naturais remotos.</li>
-  <li><strong>Localização e Rota (Mapa Integrado):</strong> Ferramenta cartográfica voltada exclusivamente para ajudar o pesquisador a se localizar em campo dentro da sua área de estudo e em sua rota de coleta, sem funções supérfluas de delimitação no mapa interativo.</li>
-  <li><strong>Exportação Interoperável:</strong> Geração simultânea de feições georreferenciadas (GeoJSON), tabelas de atributos achatadas prontas para análise estatística (CSV) e banco de imagens estruturado (ZIP), suprimindo a necessidade de transcrição pós-campo[.</li>
+  <li><strong>Localização e Rota (Mapa Integrado):</strong> Ferramenta cartográfica voltada exclusivamente para ajudar o pesquisador a se localizar em campo dentro da sua área de estudo e em sua rota de coleta.</li>
+  <li><strong>Exportação Interoperável:</strong> Geração simultânea de feições georreferenciadas (GeoJSON), tabelas de atributos achatadas prontas para análise estatística (CSV) e banco de imagens estruturado (ZIP), suprimindo a necessidade de transcrição pós-campo.</li>
 </ul>
 </div>
 
