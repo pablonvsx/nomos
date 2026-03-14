@@ -29,7 +29,7 @@ O nome "Nomos" deriva do verbo grego <em>nemein</em>, cujo campo semântico orig
   <li><strong>Automação Analítica:</strong> Algoritmos locais que processam os dados inseridos in situ para classificar automaticamente o grupo vegetacional e compor uma síntese nomenclatural padronizada para a unidade de paisagem.</li>
   <li><strong>Paradigma Offline-First:</strong> Operação totalmente independente de rede móvel, com dados persistidos em banco de dados relacional embarcado, garantindo o funcionamento em ambientes naturais remotos.</li>
   <li><strong>Localização e Rota (Mapa Integrado):</strong> Ferramenta cartográfica voltada exclusivamente para ajudar o pesquisador a se localizar em campo dentro da sua área de estudo e em sua rota de coleta.</li>
-  <li><strong>Exportação Interoperável:</strong> Geração simultânea de feições georreferenciadas (GeoJSON), tabelas de atributos achatadas prontas para análise estatística (CSV) e banco de imagens estruturado (ZIP), suprimindo a necessidade de transcrição pós-campo.</li>
+  <li><strong>Exportação Interoperável:</strong> Geração simultânea de pontos georreferenciadas (GeoJSON), tabelas de atributos achatadas prontas para análise estatística (CSV) e banco de imagens estruturado (ZIP), suprimindo a necessidade de transcrição pós-campo.</li>
 </ul>
 </div>
 
