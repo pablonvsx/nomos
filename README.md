@@ -57,6 +57,7 @@ Beyond data collection based on the primary methodological instrument, the app a
 - **Language:** TypeScript
 - **Local Database:** SQLite
 - **UI Layer:** React Native Paper
+- **Maps:** React Native Maps with Google Maps integration
 
 ---
 
@@ -88,7 +89,7 @@ A pre-built APK of the latest release is also available under [Releases](https:/
 - **User guide and field materials:** [Google Drive folder](https://drive.google.com/drive/folders/1Ikc18svAf_pBV3j8QSXvILa6XqKRPcRI?usp=sharing) — practical usage guide, printable field sheet, and the vegetation classification catalog. The installable APK is also available here.
 - **Architecture documentation:** see the `docs/` directory in this repository for the layered architecture, data model, and internationalization notes. All documents are written in English.
 - **In-app tutorials:** step-by-step walkthroughs are available directly inside the app, no external documentation needed for basic field use.
-- **Archival record (DOI):** citable, versioned deposit on Zenodo — link to be added once the first tagged release is archived.
+- **Archival record (DOI):** [10.5281/zenodo.22069701](https://doi.org/10.5281/zenodo.22069701) — citable, versioned deposit on Zenodo.
 
 ---
 

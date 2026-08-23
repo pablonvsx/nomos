@@ -16,6 +16,10 @@ version: "1.0.0"
 date-released: "2026-08-23"
 license: "GPL-3.0"
 repository-code: "https://github.com/pablonvsx/nomos"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.22069701"
+    description: "Archived snapshot of version 1.0.0"
 keywords:
   - geography
   - landscape-ecology
