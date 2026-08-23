@@ -1,0 +1,633 @@
+{
+  "groups": {
+    "C1": {
+      "id": "C1",
+      "name": {
+        "pt": "Floresta densa",
+        "en": "Closed forest",
+        "es": "Bosque denso",
+        "fr": "Forêt dense"
+      }
+    },
+    "C2": {
+      "id": "C2",
+      "name": {
+        "pt": "Floresta aberta",
+        "en": "Open forest",
+        "es": "Bosque abierto",
+        "fr": "Forêt claire"
+      }
+    },
+    "C3": {
+      "id": "C3",
+      "name": {
+        "pt": "Arbustal",
+        "en": "Scrub",
+        "es": "Matorral",
+        "fr": "Fruticée"
+      }
+    },
+    "C4": {
+      "id": "C4",
+      "name": {
+        "pt": "Arbustal anão",
+        "en": "Dwarf-scrub",
+        "es": "Matorral enano",
+        "fr": "Fruticée naine"
+      }
+    },
+    "C5": {
+      "id": "C5",
+      "name": {
+        "pt": "Formação herbácea",
+        "en": "Herbaceous vegetation",
+        "es": "Formación herbácea",
+        "fr": "Végétation herbacée"
+      }
+    }
+  },
+  "types": {
+    "C1_T01": {
+      "pt": "Floresta sempre-verde densa latifoliada",
+      "en": "Evergreen broad-leaved closed forest",
+      "es": "Bosque denso siempreverde latifoliado",
+      "fr": "Forêt dense sempervirente de feuillus"
+    },
+    "C1_T02": {
+      "pt": "Floresta sempre-verde densa micrófila",
+      "en": "Evergreen microphyllous closed forest",
+      "es": "Bosque denso siempreverde micrófilo",
+      "fr": "Forêt dense sempervirente microphylle"
+    },
+    "C1_T03": {
+      "pt": "Floresta sempre-verde densa aciculifoliada",
+      "en": "Evergreen needle-leaved closed forest",
+      "es": "Bosque denso siempreverde aciculifoliado",
+      "fr": "Forêt dense sempervirente de résineux"
+    },
+    "C1_T04": {
+      "pt": "Floresta sempre-verde densa de bambu",
+      "en": "Evergreen bamboo closed forest",
+      "es": "Bosque denso siempreverde de bambú",
+      "fr": "Forêt dense sempervirente de bambous"
+    },
+    "C1_T05": {
+      "pt": "Bosque de mangue",
+      "en": "Mangrove forest",
+      "es": "Bosque de manglar",
+      "fr": "Forêt de mangrove"
+    },
+    "C1_T06": {
+      "pt": "Floresta rosulada densa",
+      "en": "Closed rosulate forest",
+      "es": "Bosque denso rosulado",
+      "fr": "Forêt dense rosulée"
+    },
+    "C1_T07": {
+      "pt": "Floresta semidecídua densa",
+      "en": "Semi-deciduous closed forest",
+      "es": "Bosque denso semideciduo",
+      "fr": "Forêt dense semi-décidue"
+    },
+    "C1_T08": {
+      "pt": "Floresta mista densa",
+      "en": "Mixed closed forest",
+      "es": "Bosque denso mixto",
+      "fr": "Forêt dense mélangée"
+    },
+    "C1_T09": {
+      "pt": "Floresta decídua densa latifoliada",
+      "en": "Deciduous broad-leaved closed forest",
+      "es": "Bosque denso deciduo latifoliado",
+      "fr": "Forêt dense décidue de feuillus"
+    },
+    "C1_T10": {
+      "pt": "Floresta decídua densa micrófila",
+      "en": "Deciduous microphyllous closed forest",
+      "es": "Bosque denso deciduo micrófilo",
+      "fr": "Forêt dense décidue microphylle"
+    },
+    "C1_T11": {
+      "pt": "Floresta decídua densa aciculifoliada",
+      "en": "Deciduous needle-leaved closed forest",
+      "es": "Bosque denso deciduo aciculifoliado",
+      "fr": "Forêt dense décidue de résineux"
+    },
+    "C1_T12": {
+      "pt": "Floresta esclerófila densa",
+      "en": "Sclerophyllous closed forest",
+      "es": "Bosque denso esclerófilo",
+      "fr": "Forêt dense sclérophylle"
+    },
+    "C1_T13": {
+      "pt": "Floresta espinhosa densa",
+      "en": "Thorn closed forest",
+      "es": "Bosque denso espinoso",
+      "fr": "Forêt dense épineuse"
+    },
+    "C1_T14": {
+      "pt": "Floresta suculenta densa",
+      "en": "Succulent closed forest",
+      "es": "Bosque denso suculento",
+      "fr": "Forêt dense succulente"
+    },
+    "C2_T01": {
+      "pt": "Floresta sempre-verde aberta latifoliada",
+      "en": "Evergreen broad-leaved open forest",
+      "es": "Bosque abierto siempreverde latifoliado",
+      "fr": "Forêt claire sempervirente de feuillus"
+    },
+    "C2_T02": {
+      "pt": "Floresta sempre-verde aberta micrófila",
+      "en": "Evergreen microphyllous open forest",
+      "es": "Bosque abierto siempreverde micrófilo",
+      "fr": "Forêt claire sempervirente microphylle"
+    },
+    "C2_T03": {
+      "pt": "Floresta sempre-verde aberta aciculifoliada",
+      "en": "Evergreen needle-leaved open forest",
+      "es": "Bosque abierto siempreverde aciculifoliado",
+      "fr": "Forêt claire sempervirente de résineux"
+    },
+    "C2_T04": {
+      "pt": "Floresta sempre-verde aberta de bambu",
+      "en": "Evergreen bamboo open forest",
+      "es": "Bosque abierto siempreverde de bambú",
+      "fr": "Forêt claire sempervirente de bambous"
+    },
+    "C2_T05": {
+      "pt": "Floresta rosulada aberta",
+      "en": "Open rosulate forest",
+      "es": "Bosque abierto rosulado",
+      "fr": "Forêt claire rosulée"
+    },
+    "C2_T06": {
+      "pt": "Floresta semidecídua aberta",
+      "en": "Semi-deciduous open forest",
+      "es": "Bosque abierto semideciduo",
+      "fr": "Forêt claire semi-décidue"
+    },
+    "C2_T07": {
+      "pt": "Floresta mista aberta",
+      "en": "Mixed open forest",
+      "es": "Bosque abierto mixto",
+      "fr": "Forêt claire mélangée"
+    },
+    "C2_T08": {
+      "pt": "Floresta decídua aberta latifoliada",
+      "en": "Deciduous broad-leaved open forest",
+      "es": "Bosque abierto deciduo latifoliado",
+      "fr": "Forêt claire décidue de feuillus"
+    },
+    "C2_T09": {
+      "pt": "Floresta decídua aberta micrófila",
+      "en": "Deciduous microphyllous open forest",
+      "es": "Bosque abierto deciduo micrófilo",
+      "fr": "Forêt claire décidue microphylle"
+    },
+    "C2_T10": {
+      "pt": "Floresta decídua aberta aciculifoliada",
+      "en": "Deciduous needle-leaved open forest",
+      "es": "Bosque abierto deciduo aciculifoliado",
+      "fr": "Forêt claire décidue de résineux"
+    },
+    "C2_T11": {
+      "pt": "Floresta esclerófila aberta",
+      "en": "Sclerophyllous open forest",
+      "es": "Bosque abierto esclerófilo",
+      "fr": "Forêt claire sclérophylle"
+    },
+    "C2_T12": {
+      "pt": "Floresta espinhosa aberta",
+      "en": "Thorn open forest",
+      "es": "Bosque abierto espinoso",
+      "fr": "Forêt claire épineuse"
+    },
+    "C2_T13": {
+      "pt": "Floresta suculenta aberta",
+      "en": "Succulent open forest",
+      "es": "Bosque abierto suculento",
+      "fr": "Forêt claire succulente"
+    },
+    "C3_T01": {
+      "pt": "Arbustal sempreverde denso latifoliado",
+      "en": "Evergreen broad-leaved thicket",
+      "es": "Matorral denso siempreverde latifoliado",
+      "fr": "Fourrés sempervirents de feuillus"
+    },
+    "C3_T02": {
+      "pt": "Arbustal sempreverde esclerófilo denso latifoliado",
+      "en": "Evergreen sclerophyllous broad-leaved thicket",
+      "es": "Matorral denso siempreverde esclerófilo latifoliado",
+      "fr": "Fourrés sempervirents sclérophylles de feuillus"
+    },
+    "C3_T03": {
+      "pt": "Arbustal sempreverde denso micrófilo",
+      "en": "Evergreen microphyllous thicket",
+      "es": "Matorral denso siempreverde micrófilo",
+      "fr": "Fourrés sempervirents microphylles"
+    },
+    "C3_T04": {
+      "pt": "Subarbustal sempreverde denso",
+      "en": "Evergreen suffruticose thicket",
+      "es": "Matorral denso sufruticoso siempreverde",
+      "fr": "Fourrés sempervirents suffrutescents"
+    },
+    "C3_T05": {
+      "pt": "Arbustal sempreverde denso aciculifoliado",
+      "en": "Evergreen needle-leaved thicket",
+      "es": "Matorral denso siempreverde aciculifoliado",
+      "fr": "Fourrés sempervirents de résineux"
+    },
+    "C3_T06": {
+      "pt": "Arbustal sempreverde denso rosulado",
+      "en": "Evergreen rosulate thicket",
+      "es": "Matorral denso siempreverde rosulado",
+      "fr": "Fourrés sempervirents rosulés"
+    },
+    "C3_T07": {
+      "pt": "Arbustal denso de bambu",
+      "en": "Bamboo thicket",
+      "es": "Matorral denso de bambú",
+      "fr": "Fourrés de bambous"
+    },
+    "C3_T08": {
+      "pt": "Arbustal denso semidecíduo",
+      "en": "Semi-deciduous thicket",
+      "es": "Matorral denso semideciduo",
+      "fr": "Fourrés semi-décidus"
+    },
+    "C3_T09": {
+      "pt": "Arbustal denso decíduo latifoliado",
+      "en": "Deciduous broad-leaved thicket",
+      "es": "Matorral denso deciduo latifoliado",
+      "fr": "Fourrés décidus de feuillus"
+    },
+    "C3_T10": {
+      "pt": "Arbustal denso decíduo micrófilo",
+      "en": "Deciduous microphyllous thicket",
+      "es": "Matorral denso deciduo micrófilo",
+      "fr": "Fourrés décidus microphylles"
+    },
+    "C3_T11": {
+      "pt": "Arbustal denso decíduo aciculifoliado",
+      "en": "Deciduous needle-leaved thicket",
+      "es": "Matorral denso deciduo aciculifoliado",
+      "fr": "Fourrés décidus de résineux"
+    },
+    "C3_T12": {
+      "pt": "Arbustal denso suculento",
+      "en": "Succulent thicket",
+      "es": "Matorral denso suculento",
+      "fr": "Fourrés de succulents"
+    },
+    "C3_T13": {
+      "pt": "Arbustal sempreverde aberto latifoliado",
+      "en": "Evergreen broad-leaved shrubland",
+      "es": "Matorral abierto siempreverde latifoliado",
+      "fr": "Buissons sempervirents de feuillus"
+    },
+    "C3_T14": {
+      "pt": "Arbustal sempreverde esclerófilo aberto latifoliado",
+      "en": "Evergreen sclerophyllous broad-leaved shrubland",
+      "es": "Matorral abierto siempreverde esclerófilo latifoliado",
+      "fr": "Buissons sempervirents sclérophylles de feuillus"
+    },
+    "C3_T15": {
+      "pt": "Arbustal sempreverde aberto micrófilo",
+      "en": "Evergreen microphyllous shrubland",
+      "es": "Matorral abierto siempreverde micrófilo",
+      "fr": "Buissons sempervirents microphylles"
+    },
+    "C3_T16": {
+      "pt": "Subarbustal sempreverde aberto",
+      "en": "Evergreen suffruticose shrubland",
+      "es": "Matorral abierto sufruticoso siempreverde",
+      "fr": "Buissons sempervirents suffrutescents"
+    },
+    "C3_T17": {
+      "pt": "Arbustal sempreverde aberto aciculifoliado",
+      "en": "Evergreen needle-leaved shrubland",
+      "es": "Matorral abierto siempreverde aciculifoliado",
+      "fr": "Buissons sempervirents de résineux"
+    },
+    "C3_T18": {
+      "pt": "Arbustal sempreverde aberto rosulado",
+      "en": "Evergreen rosulate shrubland",
+      "es": "Matorral abierto siempreverde rosulado",
+      "fr": "Buissons sempervirents rosulés"
+    },
+    "C3_T19": {
+      "pt": "Arbustal aberto de bambu",
+      "en": "Bamboo shrubland",
+      "es": "Matorral abierto de bambú",
+      "fr": "Buissons de bambous"
+    },
+    "C3_T20": {
+      "pt": "Arbustal aberto semidecíduo",
+      "en": "Semi-deciduous shrubland",
+      "es": "Matorral abierto semideciduo",
+      "fr": "Buissons semi-décidus"
+    },
+    "C3_T21": {
+      "pt": "Arbustal aberto decíduo latifoliado",
+      "en": "Deciduous broad-leaved shrubland",
+      "es": "Matorral abierto deciduo latifoliado",
+      "fr": "Buissons décidus de feuillus"
+    },
+    "C3_T22": {
+      "pt": "Arbustal aberto decíduo micrófilo",
+      "en": "Deciduous microphyllous shrubland",
+      "es": "Matorral abierto deciduo micrófilo",
+      "fr": "Buissons décidus microphylles"
+    },
+    "C3_T23": {
+      "pt": "Arbustal aberto decíduo aciculifoliado",
+      "en": "Deciduous needle-leaved shrubland",
+      "es": "Matorral abierto deciduo aciculifoliado",
+      "fr": "Buissons décidus de résineux"
+    },
+    "C3_T24": {
+      "pt": "Arbustal aberto suculento",
+      "en": "Succulent shrubland",
+      "es": "Matorral abierto suculento",
+      "fr": "Buissons de succulents"
+    },
+    "C4_T01": {
+      "pt": "Arbustal anão sempreverde denso",
+      "en": "Evergreen dwarf-scrub thicket",
+      "es": "Matorral enano denso siempreverde",
+      "fr": "Fourrés nains sempervirents"
+    },
+    "C4_T02": {
+      "pt": "Arbustal anão sempreverde aberto",
+      "en": "Evergreen dwarf-scrub shrubland",
+      "es": "Matorral enano abierto siempreverde",
+      "fr": "Buissons nains sempervirents"
+    },
+    "C4_T03": {
+      "pt": "Arbustal anão sempreverde com herbáceas",
+      "en": "Evergreen dwarf-shrub and herb mixed",
+      "es": "Matorral enano siempreverde con herbáceas",
+      "fr": "Buissons nains sempervirents avec herbacées"
+    },
+    "C4_T04": {
+      "pt": "Arbustal anão decíduo denso",
+      "en": "Deciduous dwarf-scrub thicket",
+      "es": "Matorral enano denso deciduo",
+      "fr": "Fourrés nains décidus"
+    },
+    "C4_T05": {
+      "pt": "Arbustal anão decíduo aberto",
+      "en": "Deciduous dwarf-scrub shrubland",
+      "es": "Matorral enano abierto deciduo",
+      "fr": "Buissons nains décidus"
+    },
+    "C4_T06": {
+      "pt": "Arbustal anão decíduo com herbáceas",
+      "en": "Deciduous dwarf-shrub and herb mixed",
+      "es": "Matorral enano deciduo con herbáceas",
+      "fr": "Buissons nains décidus avec herbacées"
+    },
+    "C4_T07": {
+      "pt": "Arbustal anão aberto suculento",
+      "en": "Succulent dwarf-shrubland",
+      "es": "Matorral enano abierto suculento",
+      "fr": "Buissons nains de succulents"
+    },
+    "C5_T01": {
+      "pt": "Campo graminoide alto",
+      "en": "Tall grassland",
+      "es": "Pastizal alto",
+      "fr": "Prairie haute"
+    },
+    "C5_T02": {
+      "pt": "Campo graminoide médio",
+      "en": "Medium grassland",
+      "es": "Pastizal medio",
+      "fr": "Prairie moyenne"
+    },
+    "C5_T03": {
+      "pt": "Campo graminoide baixo",
+      "en": "Short grassland",
+      "es": "Pastizal bajo",
+      "fr": "Prairie basse"
+    },
+    "C5_T04": {
+      "pt": "Campo graminoide alto com estrato lenhoso sempreverde",
+      "en": "Tall grassland with evergreen woody synusia",
+      "es": "Pastizal alto con sinusia leñosa siempreverde",
+      "fr": "Prairie haute avec synusie ligneuse sempervirente"
+    },
+    "C5_T05": {
+      "pt": "Campo graminoide alto com elementos lenhosos sempreverdes",
+      "en": "Tall grassland with evergreen woody elements",
+      "es": "Pastizal alto con elementos leñosos siempreverdes",
+      "fr": "Prairie haute avec éléments ligneux sempervirents"
+    },
+    "C5_T06": {
+      "pt": "Campo graminoide médio com estrato lenhoso sempreverde",
+      "en": "Medium grassland with evergreen woody synusia",
+      "es": "Pastizal medio con sinusia leñosa siempreverde",
+      "fr": "Prairie moyenne avec synusie ligneuse sempervirente"
+    },
+    "C5_T07": {
+      "pt": "Campo graminoide médio com elementos lenhosos sempreverdes",
+      "en": "Medium grassland with evergreen woody elements",
+      "es": "Pastizal medio con elementos leñosos siempreverdes",
+      "fr": "Prairie moyenne avec éléments ligneux sempervirents"
+    },
+    "C5_T08": {
+      "pt": "Campo graminoide baixo com estrato lenhoso sempreverde",
+      "en": "Short grassland with evergreen woody synusia",
+      "es": "Pastizal bajo con sinusia leñosa siempreverde",
+      "fr": "Prairie basse avec synusie ligneuse sempervirente"
+    },
+    "C5_T09": {
+      "pt": "Campo graminoide baixo com elementos lenhosos perenes",
+      "en": "Short grassland with evergreen woody elements",
+      "es": "Pastizal bajo con elementos leñosos perennes",
+      "fr": "Prairie basse avec éléments ligneux sempervirents"
+    },
+    "C5_T10": {
+      "pt": "Campo graminoide alto com estrato lenhoso semidecíduo",
+      "en": "Tall grassland with semi-deciduous woody synusia",
+      "es": "Pastizal alto con sinusia leñosa semidecidua",
+      "fr": "Prairie haute avec synusie ligneuse semi-décidue"
+    },
+    "C5_T11": {
+      "pt": "Campo graminoide alto com elementos lenhosos semidecíduos",
+      "en": "Tall grassland with semi-deciduous woody elements",
+      "es": "Pastizal alto con elementos leñosos semideciduos",
+      "fr": "Prairie haute avec éléments ligneux semi-décidus"
+    },
+    "C5_T12": {
+      "pt": "Campo graminoide médio com estrato lenhoso semidecíduo",
+      "en": "Medium grassland with semi-deciduous woody synusia",
+      "es": "Pastizal medio con sinusia leñosa semidecidua",
+      "fr": "Prairie moyenne avec synusie ligneuse semi-décidue"
+    },
+    "C5_T13": {
+      "pt": "Campo graminoide médio com elementos lenhosos semidecíduos",
+      "en": "Medium grassland with semi-deciduous woody elements",
+      "es": "Pastizal medio con elementos leñosos semideciduos",
+      "fr": "Prairie moyenne avec éléments ligneux semi-décidus"
+    },
+    "C5_T14": {
+      "pt": "Campo graminoide baixo com estrato lenhoso semidecíduo",
+      "en": "Short grassland with semi-deciduous woody synusia",
+      "es": "Pastizal bajo con sinusia leñosa semidecidua",
+      "fr": "Prairie basse avec synusie ligneuse semi-décidue"
+    },
+    "C5_T15": {
+      "pt": "Campo graminoide baixo com elementos lenhosos semidecíduos",
+      "en": "Short grassland with semi-deciduous woody elements",
+      "es": "Pastizal bajo con elementos leñosos semideciduos",
+      "fr": "Prairie basse avec éléments ligneux semi-décidus"
+    },
+    "C5_T16": {
+      "pt": "Campo graminoide alto com estrato lenhoso decíduo",
+      "en": "Tall grassland with deciduous woody synusia",
+      "es": "Pastizal alto con sinusia leñosa decidua",
+      "fr": "Prairie haute avec synusie ligneuse décidue"
+    },
+    "C5_T17": {
+      "pt": "Campo graminoide alto com elementos lenhosos decíduos",
+      "en": "Tall grassland with deciduous woody elements",
+      "es": "Pastizal alto con elementos leñosos deciduos",
+      "fr": "Prairie haute avec éléments ligneux décidus"
+    },
+    "C5_T18": {
+      "pt": "Campo graminoide médio com estrato lenhoso decíduo",
+      "en": "Medium grassland with deciduous woody synusia",
+      "es": "Pastizal medio con sinusia leñosa decidua",
+      "fr": "Prairie moyenne avec synusie ligneuse décidue"
+    },
+    "C5_T19": {
+      "pt": "Campo graminoide médio com elementos lenhosos decíduos",
+      "en": "Medium grassland with deciduous woody elements",
+      "es": "Pastizal medio con elementos leñosos deciduos",
+      "fr": "Prairie moyenne avec éléments ligneux décidus"
+    },
+    "C5_T20": {
+      "pt": "Campo graminoide baixo com estrato lenhoso decíduo",
+      "en": "Short grassland with deciduous woody synusia",
+      "es": "Pastizal bajo con sinusia leñosa decidua",
+      "fr": "Prairie basse avec synusie ligneuse décidue"
+    },
+    "C5_T21": {
+      "pt": "Campo graminoide baixo com elementos lenhosos decíduos",
+      "en": "Short grassland with deciduous woody elements",
+      "es": "Pastizal bajo con elementos leñosos deciduos",
+      "fr": "Prairie basse avec éléments ligneux décidus"
+    },
+    "C5_T22": {
+      "pt": "Campo graminoide alto com palmeiral",
+      "en": "Tall grassland with palm trees",
+      "es": "Pastizal alto con palmeras",
+      "fr": "Prairie haute à palmiers"
+    },
+    "C5_T23": {
+      "pt": "Campo graminoide médio com palmeiral",
+      "en": "Medium grassland with palm trees",
+      "es": "Pastizal medio con palmeras",
+      "fr": "Prairie moyenne à palmiers"
+    },
+    "C5_T24": {
+      "pt": "Campo graminoide baixo com palmeiral",
+      "en": "Short grassland with palm trees",
+      "es": "Pastizal bajo con palmeras",
+      "fr": "Prairie basse à palmiers"
+    },
+    "C5_T25": {
+      "pt": "Comunidades de ervas altas",
+      "en": "Tall forb communities",
+      "es": "Comunidades de hierbas altas",
+      "fr": "Communautés de forbs hautes"
+    },
+    "C5_T26": {
+      "pt": "Comunidades de ervas baixas",
+      "en": "Low forb communities",
+      "es": "Comunidades de hierbas bajas",
+      "fr": "Communautés de forbs basses"
+    },
+    "C5_T27": {
+      "pt": "Comunidades de ervas altas com estrato lenhoso sempreverde",
+      "en": "Tall forb communities with evergreen woody synusia",
+      "es": "Comunidades de hierbas altas con sinusia leñosa siempreverde",
+      "fr": "Communautés de forbs hautes avec synusie ligneuse sempervirente"
+    },
+    "C5_T28": {
+      "pt": "Comunidades de ervas altas com elementos lenhosos sempreverdes",
+      "en": "Tall forb communities with evergreen woody elements",
+      "es": "Comunidades de hierbas altas con elementos leñosos siempreverdes",
+      "fr": "Communautés de forbs hautes avec éléments ligneux sempervirents"
+    },
+    "C5_T29": {
+      "pt": "Comunidades de ervas baixas com estrato lenhoso sempreverde",
+      "en": "Low forb communities with evergreen woody synusia",
+      "es": "Comunidades de hierbas bajas con sinusia leñosa siempreverde",
+      "fr": "Communautés de forbs basses avec synusie ligneuse sempervirente"
+    },
+    "C5_T30": {
+      "pt": "Comunidades de ervas baixas com elementos lenhosos sempreverdes",
+      "en": "Low forb communities with evergreen woody elements",
+      "es": "Comunidades de hierbas bajas con elementos leñosos siempreverdes",
+      "fr": "Communautés de forbs basses avec éléments ligneux sempervirents"
+    },
+    "C5_T31": {
+      "pt": "Comunidades de ervas altas com estrato lenhoso semidecíduo",
+      "en": "Tall forb communities with semi-deciduous woody synusia",
+      "es": "Comunidades de hierbas altas con sinusia leñosa semidecidua",
+      "fr": "Communautés de forbs hautes avec synusie ligneuse semi-décidue"
+    },
+    "C5_T32": {
+      "pt": "Comunidades de ervas altas com elementos lenhosos semidecíduos",
+      "en": "Tall forb communities with semi-deciduous woody elements",
+      "es": "Comunidades de hierbas altas con elementos leñosos semideciduos",
+      "fr": "Communautés de forbs hautes avec éléments ligneux semi-décidus"
+    },
+    "C5_T33": {
+      "pt": "Comunidades de ervas baixas com estrato lenhoso semidecíduo",
+      "en": "Low forb communities with semi-deciduous woody synusia",
+      "es": "Comunidades de hierbas bajas con sinusia leñosa semidecidua",
+      "fr": "Communautés de forbs basses avec synusie ligneuse semi-décidue"
+    },
+    "C5_T34": {
+      "pt": "Comunidades de ervas baixas com elementos lenhosos semidecíduos",
+      "en": "Low forb communities with semi-deciduous woody elements",
+      "es": "Comunidades de hierbas bajas con elementos leñosos semideciduos",
+      "fr": "Communautés de forbs basses avec éléments ligneux semi-décidus"
+    },
+    "C5_T35": {
+      "pt": "Comunidades de ervas altas com estrato lenhoso decíduo",
+      "en": "Tall forb communities with deciduous woody synusia",
+      "es": "Comunidades de hierbas altas con sinusia leñosa decidua",
+      "fr": "Communautés de forbs hautes avec synusie ligneuse décidue"
+    },
+    "C5_T36": {
+      "pt": "Comunidades de ervas altas com elementos lenhosos decíduos",
+      "en": "Tall forb communities with deciduous woody elements",
+      "es": "Comunidades de hierbas altas con elementos leñosos deciduos",
+      "fr": "Communautés de forbs hautes avec éléments ligneux décidus"
+    },
+    "C5_T37": {
+      "pt": "Comunidades de ervas baixas com estrato lenhoso decíduo",
+      "en": "Low forb communities with deciduous woody synusia",
+      "es": "Comunidades de hierbas bajas con sinusia leñosa decidua",
+      "fr": "Communautés de forbs basses avec synusie ligneuse décidue"
+    },
+    "C5_T38": {
+      "pt": "Comunidades de ervas baixas com elementos lenhosos decíduos",
+      "en": "Low forb communities with deciduous woody elements",
+      "es": "Comunidades de hierbas bajas con elementos leñosos deciduos",
+      "fr": "Communautés de forbs basses avec éléments ligneux décidus"
+    },
+    "C5_T39": {
+      "pt": "Comunidades de líquens e briófitas",
+      "en": "Lichen and bryophyte communities",
+      "es": "Comunidades de líquenes y briófitas",
+      "fr": "Communautés de lichens et bryophytes"
+    }
+  }
+}

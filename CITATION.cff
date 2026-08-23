@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "Nomos"
+abstract: >-
+  Mobile application for environmental inventories, built as an extensible
+  platform capable of hosting multiple field survey protocols. Its initial
+  version operationalizes a geosystemic protocol for landscape cartography,
+  developed as part of master's research linked to the Graduate Program in
+  Geography (PPGEO) at the Federal University of Pernambuco (UFPE).
+authors:
+  - family-names: "Neves"
+    given-names: "Pablo Guilherme de Melo"
+    affiliation: "Universidade Federal de Pernambuco (UFPE)"
+version: "1.0.0"
+date-released: "2026-08-23"
+license: "GPL-3.0"
+repository-code: "https://github.com/pablonvsx/nomos"
+keywords:
+  - geography
+  - landscape-ecology
+  - geospatial-data-collection
+  - field-data-collection
+  - environmental-monitoring
+  - extensible-platform
+  - mobile-application
+  - react-native

@@ -1,0 +1,2465 @@
+{
+  "id": "geral-v1",
+  "title": {
+    "pt": "Protocolo Paisageo",
+    "en": "Protocol Paisageo",
+    "es": "Protocolo Paisageo",
+    "fr": "Protocole Paisageo"
+  },
+  "version": "1.0",
+  "authors": [
+    "Neves, P. G. M.",
+    "Cavalcanti, L. C. S."
+  ],
+  "description": {
+    "pt": "Protocolo para coleta de dados geossistêmicos (Versão 1.0).",
+    "en": "Standard for geosystemic data collection (Version 1.0).",
+    "es": "Protocolo para la recopilación de datos geosistémicos (Versión 1.0).",
+    "fr": "Protocole pour la collecte de données géosystémiques (Version 1.0)."
+  },
+  "sections": [
+    {
+      "id": "homog",
+      "title": {
+        "pt": "Verificação de Homogeneidade",
+        "en": "Homogeneity Check",
+        "es": "Verificación de Homogeneidad",
+        "fr": "Vérification d'Homogénéité"
+      },
+      "fields": [
+        {
+          "key": "homogeneity_check",
+          "type": "confirm_checkbox",
+          "required": true,
+          "label": {
+            "pt": "Confirmo que a área observada é homogênea nesta escala de coleta",
+            "en": "I confirm that the observed area is homogeneous at this collection scale",
+            "es": "Confirmo que el área observada es homogénea en esta escala de recolección",
+            "fr": "Je confirme que la zone observée est homogène à cette échelle de collecte"
+          },
+          "desc": {
+            "pt": "A homogeneidade é o pressuposto fundamental da unidade de paisagem: cada ponto de coleta deve representar um segmento internamente uniforme em termos de vegetação, solo e relevo, na escala de observação adotada. Se a área observada combinar elementos heterogêneos (por exemplo, transição abrupta de vegetação ou relevo), os dados coletados não representam corretamente uma única unidade de paisagem, comprometendo comparações e classificações posteriores. Antes de prosseguir, verifique se o ponto e seu entorno imediato mantêm essa homogeneidade.",
+            "en": "Homogeneity is the fundamental assumption of the landscape unit: each collection point must represent an internally uniform segment in terms of vegetation, soil, and relief, at the observation scale adopted. If the observed area combines heterogeneous elements (for example, an abrupt transition in vegetation or relief), the collected data does not correctly represent a single landscape unit, compromising later comparisons and classifications. Before proceeding, verify that the point and its immediate surroundings maintain this homogeneity.",
+            "es": "La homogeneidad es el supuesto fundamental de la unidad de paisaje: cada punto de recolección debe representar un segmento internamente uniforme en términos de vegetación, suelo y relieve, en la escala de observación adoptada. Si el área observada combina elementos heterogéneos (por ejemplo, una transición abrupta de vegetación o relieve), los datos recolectados no representan correctamente una única unidad de paisaje, comprometiendo comparaciones y clasificaciones posteriores. Antes de continuar, verifique que el punto y su entorno inmediato mantengan esa homogeneidad.",
+            "fr": "L'homogénéité est le postulat fondamental de l'unité de paysage : chaque point de collecte doit représenter un segment intérieurement uniforme en termes de végétation, de sol et de relief, à l'échelle d'observation adoptée. Si la zone observée combine des éléments hétérogènes (par exemple, une transition abrupte de végétation ou de relief), les données collectées ne représentent pas correctement une seule unité de paysage, ce qui compromet les comparaisons et classifications ultérieures. Avant de continuer, vérifiez que le point et ses environs immédiats maintiennent cette homogénéité."
+          }
+        }
+      ]
+    },
+    {
+      "id": "loc",
+      "title": {
+        "pt": "Tamanho da Parcela",
+        "en": "Plot Size",
+        "es": "Superficie de la Parcela",
+        "fr": "Taille de la Parcelle"
+      },
+      "fields": [
+        {
+          "key": "point_size",
+          "label": {
+            "pt": "Área (m²) do ponto de observação",
+            "en": "Area (m²) of the observation point",
+            "es": "Superficie (m²) del punto de observación",
+            "fr": "Superficie (m²) du point d'observation"
+          },
+          "type": "number",
+          "placeholder": {
+            "pt": "Ex: 100",
+            "en": "Ex: 100",
+            "es": "Ej: 100",
+            "fr": "Ex. : 100"
+          },
+          "required": true,
+          "desc": {
+            "pt": "Área total da parcela observada em campo, em metros quadrados. A parcela é a unidade espacial mínima de coleta e deve ser homogênea em termos de vegetação e ambiente. Para levantamentos detalhados, recomenda-se parcelas entre 100 m² e 2.500 m², dependendo da escala do estudo.",
+            "en": "Total area of the observed plot in the field, in square meters. The plot is the minimum spatial unit of collection and must be homogeneous in terms of vegetation and environment. For detailed surveys, plots between 100 m² and 2,500 m² are recommended, depending on the study scale.",
+            "es": "Área total de la parcela observada en campo, en metros cuadrados. La parcela es la unidad espacial mínima de recolección y debe ser homogénea en términos de vegetación y ambiente. Para levantamientos detallados, se recomiendan parcelas entre 100 m² y 2.500 m², según la escala del estudio.",
+            "fr": "Superficie totale de la parcelle observée sur le terrain, en mètres carrés. La parcelle est l'unité spatiale minimale de collecte et doit être homogène en termes de végétation et d'environnement. Pour des relevés détaillés, des parcelles entre 100 m² et 2 500 m² sont recommandées, selon l'échelle d'étude."
+          }
+        }
+      ]
+    },
+    {
+      "id": "conserv",
+      "title": {
+        "pt": "Estado de Conservação da Vegetação",
+        "en": "Vegetation Conservation Status",
+        "es": "Estado de Conservación de la Vegetación",
+        "fr": "État de Conservation de la Végétation"
+      },
+      "desc": {
+        "pt": "Classificação macroscópica do estado de conservação da cobertura vegetal da parcela. A vegetação é um dos principais indicadores visuais da paisagem e de seu estado de conservação. Selecione a categoria que melhor descreve a situação observada em campo.",
+        "en": "Macroscopic classification of the vegetation cover conservation status in the plot. Vegetation is one of the main visual indicators of the landscape and its conservation state. Select the category that best describes the situation observed in the field.",
+        "es": "Clasificación macroscópica del estado de conservación de la cobertura vegetal de la parcela. La vegetación es uno de los principales indicadores visuales del paisaje y de su estado de conservación. Seleccione la categoría que mejor describe la situación observada en campo.",
+        "fr": "Classification macroscopique de l'état de conservation du couvert végétal de la parcelle. La végétation est l'un des principaux indicateurs visuels du paysage et de son état de conservation. Sélectionnez la catégorie qui décrit le mieux la situation observée sur le terrain."
+      },
+      "fields": [
+        {
+          "key": "veg_conservation_status",
+          "label": {
+            "pt": "Estado de Conservação da Vegetação",
+            "en": "Vegetation Conservation Status",
+            "es": "Estado de Conservación de la Vegetación",
+            "fr": "État de Conservation de la Végétation"
+          },
+          "type": "select",
+          "layout": "single_column",
+          "hideLabel": true,
+          "required": false,
+          "desc": {
+            "pt": "Classificação macroscópica do estado de conservação da cobertura vegetal da parcela. A vegetação é um dos principais indicadores visuais da paisagem e de seu estado de conservação. Selecione a categoria que melhor descreve a situação observada em campo.",
+            "en": "Macroscopic classification of the vegetation cover conservation status in the plot. Vegetation is one of the main visual indicators of the landscape and its conservation state. Select the category that best describes the situation observed in the field.",
+            "es": "Clasificación macroscópica del estado de conservación de la cobertura vegetal de la parcela. La vegetación es uno de los principales indicadores visuales del paisaje y de su estado de conservación. Seleccione la categoría que mejor describe la situación observada en campo.",
+            "fr": "Classification macroscopique de l'état de conservation du couvert végétal de la parcelle. La végétation est l'un des principaux indicateurs visuels du paysage et de son état de conservation. Sélectionnez la catégorie qui décrit le mieux la situation observée sur le terrain."
+          },
+          "options": [
+            {
+              "value": "conservada",
+              "label": {
+                "pt": "Conservada",
+                "en": "Conserved",
+                "es": "Conservada",
+                "fr": "Conservée"
+              },
+              "desc": {
+                "pt": "Vegetação nativa com estrutura e composição características do tipo fisionômico local, sem sinais evidentes de perturbação antrópica recente.",
+                "en": "Native vegetation with structure and composition characteristic of the local physiognomic type, with no evident signs of recent human disturbance.",
+                "es": "Vegetación nativa con estructura y composición características del tipo fisionómico local, sin señales evidentes de perturbación antrópica reciente.",
+                "fr": "Végétation native avec une structure et une composition caractéristiques du type physionomique local, sans signes évidents de perturbation anthropique récente."
+              }
+            },
+            {
+              "value": "em_regeneracao_nativas",
+              "label": {
+                "pt": "Em Regeneração — Nativas",
+                "en": "In Regeneration — Natives",
+                "es": "En Regeneración — Nativas",
+                "fr": "En Régénération — Natives"
+              },
+              "desc": {
+                "pt": "Vegetação em processo de regeneração natural composta predominantemente por espécies nativas. Evidencia-se pela presença de capoeira, capoeirinha ou vegetação secundária em estágio inicial ou médio, sem domínio de espécies invasoras.",
+                "en": "Vegetation in natural regeneration process composed predominantly of native species. Evidenced by the presence of secondary vegetation in early or intermediate stage, without dominance of invasive species.",
+                "es": "Vegetación en proceso de regeneración natural compuesta predominantemente por especies nativas. Se evidencia por la presencia de vegetación secundaria en etapa inicial o media, sin dominio de especies invasoras.",
+                "fr": "Végétation en processus de régénération naturelle composée principalement d'espèces natives. Mise en évidence par la présence de végétation secondaire en stade initial ou intermédiaire, sans dominance d'espèces invasives."
+              }
+            },
+            {
+              "value": "em_regeneracao_consorciada",
+              "label": {
+                "pt": "Em Regeneração — Consorciada com Invasoras",
+                "en": "In Regeneration — Native-Invasive Mix",
+                "es": "En Regeneración — Consorciada con Invasoras",
+                "fr": "En Régénération — Mixte Natives-Invasives"
+              },
+              "desc": {
+                "pt": "Vegetação em regeneração com presença significativa de espécies exóticas invasoras (ex.: braquiária, capim-gordura, leucena, pinus). As espécies nativas estão presentes, mas a regeneração é comprometida pela competição com invasoras.",
+                "en": "Regenerating vegetation with significant presence of exotic invasive species (e.g.: Urochloa, molasses grass, leucaena, pinus). Native species are present, but regeneration is compromised by competition with invasives.",
+                "es": "Vegetación en regeneración con presencia significativa de especies exóticas invasoras (ej.: braquiaria, pasto gordura, leucena, pinus). Las especies nativas están presentes, pero la regeneración es comprometida por la competencia con invasoras.",
+                "fr": "Végétation en régénération avec présence significative d'espèces exotiques invasives (ex. : Urochloa, herbe à mélasse, leucène, pin). Les espèces natives sont présentes, mais la régénération est compromise par la concurrence avec les invasives."
+              }
+            },
+            {
+              "value": "substituida",
+              "label": {
+                "pt": "Substituída",
+                "en": "Substituted",
+                "es": "Sustituida",
+                "fr": "Substituée"
+              },
+              "desc": {
+                "pt": "Vegetação nativa original completamente substituída por outro uso da terra. Se selecionada, indique o tipo de uso da terra no campo seguinte.",
+                "en": "Original native vegetation completely replaced by another land use. If selected, indicate the land use type in the following field.",
+                "es": "Vegetación nativa original completamente sustituida por otro uso de la tierra. Si se selecciona, indique el tipo de uso de la tierra en el siguiente campo.",
+                "fr": "Végétation native originale complètement remplacée par un autre usage du sol. Si sélectionné, indiquez le type d'utilisation du sol dans le champ suivant."
+              }
+            }
+          ]
+        },
+        {
+          "key": "veg_land_use",
+          "label": {
+            "pt": "Uso da Terra (Vegetação Substituída)",
+            "en": "Land Use (Substituted Vegetation)",
+            "es": "Uso de la Tierra (Vegetación Sustituida)",
+            "fr": "Utilisation du Sol (Végétation Substituée)"
+          },
+          "type": "select",
+          "required": false,
+          "conditional": {
+            "field": "veg_conservation_status",
+            "value": "substituida"
+          },
+          "desc": {
+            "pt": "Tipo de uso da terra que substituiu a vegetação nativa original na parcela. Preencher apenas quando o estado de conservação selecionado for 'Substituída'.",
+            "en": "Type of land use that replaced the original native vegetation in the plot. Fill in only when the selected conservation status is 'Substituted'.",
+            "es": "Tipo de uso de la tierra que sustituyó la vegetación nativa original en la parcela. Rellenar solo cuando el estado de conservación seleccionado sea 'Sustituida'.",
+            "fr": "Type d'utilisation du sol qui a remplacé la végétation native originale dans la parcelle. À renseigner uniquement lorsque l'état de conservation sélectionné est « Substituée »."
+          },
+          "options": [
+            {
+              "value": "cultivo_temporario",
+              "label": {
+                "pt": "Cultivo Temporário",
+                "en": "Temporary Crops",
+                "es": "Cultivo Temporal",
+                "fr": "Cultures Temporaires"
+              },
+              "desc": {
+                "pt": "Áreas com culturas de ciclo curto colhidas e replantadas periodicamente (ex.: milho, soja, arroz, feijão, hortaliças).",
+                "en": "Areas with short-cycle crops harvested and replanted periodically (e.g.: corn, soybean, rice, beans, vegetables).",
+                "es": "Áreas con cultivos de ciclo corto cosechados y replantados periódicamente (ej.: maíz, soja, arroz, frijol, hortalizas).",
+                "fr": "Zones de cultures à cycle court, récoltées et replantées périodiquement (ex. : maïs, soja, riz, haricots, légumes)."
+              }
+            },
+            {
+              "value": "cultivo_permanente",
+              "label": {
+                "pt": "Cultivo Permanente",
+                "en": "Permanent Crops",
+                "es": "Cultivo Permanente",
+                "fr": "Cultures Permanentes"
+              },
+              "desc": {
+                "pt": "Culturas de longa duração sem necessidade de replantio após cada colheita (ex.: café, cacau, citros, banana, seringueira).",
+                "en": "Long-duration crops that do not require replanting after each harvest (e.g.: coffee, cocoa, citrus, banana, rubber tree).",
+                "es": "Cultivos de larga duración que no requieren replantación después de cada cosecha (ej.: café, cacao, cítricos, banana, caucho).",
+                "fr": "Cultures de longue durée ne nécessitant pas de replantation après chaque récolte (ex. : café, cacao, agrumes, banane, hévéa)."
+              }
+            },
+            {
+              "value": "pasto_plantado",
+              "label": {
+                "pt": "Pasto Plantado",
+                "en": "Planted Pasture",
+                "es": "Pasto Plantado",
+                "fr": "Pâturage Planté"
+              },
+              "desc": {
+                "pt": "Gramíneas forrageiras implantadas intencionalmente para suporte de rebanhos (ex.: braquiária, capim-mombaça, tifton).",
+                "en": "Forage grasses intentionally planted to support livestock (e.g.: Urochloa, mombaça grass, tifton).",
+                "es": "Gramíneas forrajeras implantadas intencionalmente para sustentar rebaños (ej.: braquiaria, pasto mombaça, tifton).",
+                "fr": "Graminées fourragères plantées intentionnellement pour soutenir le bétail (ex. : Urochloa, herbe mombaça, tifton)."
+              }
+            },
+            {
+              "value": "agrofloresta",
+              "label": {
+                "pt": "Agrofloresta",
+                "en": "Agroforestry",
+                "es": "Agrosilvicultura",
+                "fr": "Agroforesterie"
+              },
+              "desc": {
+                "pt": "Sistema que combina espécies lenhosas perenes com cultivos agrícolas e/ou animais na mesma área.",
+                "en": "System combining perennial woody species with agricultural crops and/or animals in the same area.",
+                "es": "Sistema que combina especies leñosas perennes con cultivos agrícolas y/o animales en la misma área.",
+                "fr": "Système combinant des espèces ligneuses pérennes avec des cultures agricoles et/ou des animaux dans la même zone."
+              }
+            },
+            {
+              "value": "silvicultura",
+              "label": {
+                "pt": "Silvicultura",
+                "en": "Silviculture",
+                "es": "Silvicultura",
+                "fr": "Sylviculture"
+              },
+              "desc": {
+                "pt": "Plantação florestal para fins madeireiros ou celulose em arranjo monoespecífico (ex.: eucalipto, pinus, teca).",
+                "en": "Forest plantation for timber or pulp in monospecific arrangement (e.g.: eucalyptus, pine, teak).",
+                "es": "Plantación forestal con fines madereros o celulosa en arreglo monoespecífico (ej.: eucalipto, pino, teca).",
+                "fr": "Plantation forestière à des fins de bois d'œuvre ou de pâte à papier en arrangement monospécifique (ex. : eucalyptus, pin, teck)."
+              }
+            },
+            {
+              "value": "construcoes",
+              "label": {
+                "pt": "Construções / Infraestrutura",
+                "en": "Buildings / Infrastructure",
+                "es": "Construcciones / Infraestructura",
+                "fr": "Constructions / Infrastructures"
+              },
+              "desc": {
+                "pt": "Edificações, vias, pavimentação ou infraestruturas que suprimiram totalmente a cobertura vegetal.",
+                "en": "Buildings, roads, paving or infrastructure that totally suppressed vegetation cover.",
+                "es": "Edificaciones, vías, pavimentación o infraestructuras que suprimieron totalmente la cobertura vegetal.",
+                "fr": "Bâtiments, routes, pavage ou infrastructures ayant totalement supprimé le couvert végétal."
+              }
+            },
+            {
+              "value": "solo_exposto",
+              "label": {
+                "pt": "Solo Exposto",
+                "en": "Bare Soil",
+                "es": "Suelo Expuesto",
+                "fr": "Sol Nu"
+              },
+              "desc": {
+                "pt": "Área sem cobertura vegetal com solo diretamente exposto por ação antrópica (terraplanagem, mineração, preparo de solo).",
+                "en": "Area without vegetation cover with soil directly exposed by human action (earthmoving, mining, soil preparation).",
+                "es": "Área sin cobertura vegetal con suelo directamente expuesto por acción antrópica (movimiento de tierras, minería, preparación del suelo).",
+                "fr": "Zone sans couvert végétal avec le sol directement exposé par action anthropique (terrassement, extraction minière, préparation du sol)."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "veg",
+      "title": {
+        "pt": "Estrutura da Vegetação (Kuchler, 1988)",
+        "en": "Vegetation Structure (Kuchler, 1988)",
+        "es": "Estructura de la Vegetación (Kuchler, 1988)",
+        "fr": "Structure de la Végétation (Küchler, 1988)"
+      },
+      "fields": [
+        {
+          "key": "veg_structure",
+          "label": {
+            "pt": "Matriz Fisionômica (Küchler)",
+            "en": "Physiognomic Matrix (Küchler)",
+            "es": "Matriz Fisonómica (Küchler)",
+            "fr": "Matrice Physionomique (Küchler)"
+          },
+          "type": "kuchler_matrix",
+          "required": true,
+          "config": {
+            "helper_text": {
+              "pt": "Cruze a Linha (Altura) com a Coluna (Forma de Vida).",
+              "en": "Cross the Row (Height) with the Column (Life Form).",
+              "es": "Cruce la Fila (Altura) con la Columna (Forma de Vida).",
+              "fr": "Croisez la Ligne (Hauteur) avec la Colonne (Forme de Vie)."
+            },
+            "height_classes": [
+              {
+                "id": "8",
+                "label": "> 35m",
+                "desc": {
+                  "pt": "Árvores emergentes",
+                  "en": "Emergent trees",
+                  "es": "Árboles emergentes",
+                  "fr": "Arbres émergents"
+                }
+              },
+              {
+                "id": "7",
+                "label": "20 - 35m",
+                "desc": {
+                  "pt": "Dossel alto",
+                  "en": "High canopy",
+                  "es": "Dosel alto",
+                  "fr": "Canopée haute"
+                }
+              },
+              {
+                "id": "6",
+                "label": "10 - 20m",
+                "desc": {
+                  "pt": "Dossel médio",
+                  "en": "Medium canopy",
+                  "es": "Dosel medio",
+                  "fr": "Canopée moyenne"
+                }
+              },
+              {
+                "id": "5",
+                "label": "5 - 10m",
+                "desc": {
+                  "pt": "Arvoretas / Dossel baixo",
+                  "en": "Saplings / Low canopy",
+                  "es": "Arbolillos / Dosel bajo",
+                  "fr": "Gaulis / Canopée basse"
+                }
+              },
+              {
+                "id": "4",
+                "label": "2 - 5m",
+                "desc": {
+                  "pt": "Arbustos altos",
+                  "en": "Tall shrubs",
+                  "es": "Arbustos altos",
+                  "fr": "Arbustes hauts"
+                }
+              },
+              {
+                "id": "3",
+                "label": "0.5 - 2m",
+                "desc": {
+                  "pt": "Arbustos baixos",
+                  "en": "Low shrubs",
+                  "es": "Arbustos bajos",
+                  "fr": "Arbustes bas"
+                }
+              },
+              {
+                "id": "2",
+                "label": "0.1 - 0.5m",
+                "desc": {
+                  "pt": "Subarbustos / Herbáceas altas",
+                  "en": "Subshrubs / Tall herbs",
+                  "es": "Subarbustos / Hierbas altas",
+                  "fr": "Sous-arbrisseaux / Herbes hautes"
+                }
+              },
+              {
+                "id": "1",
+                "label": "< 0.1m",
+                "desc": {
+                  "pt": "Rasteiras / Herbáceas baixas",
+                  "en": "Creeping / Low herbs",
+                  "es": "Rastreras / Hierbas bajas",
+                  "fr": "Herbes rampantes / Herbes basses"
+                }
+              }
+            ],
+            "cover_classes": [
+              {
+                "id": "c",
+                "label": "c (>75%)",
+                "name": {
+                  "pt": "Contínua",
+                  "en": "Continuous",
+                  "es": "Continua",
+                  "fr": "Continue"
+                },
+                "desc": {
+                  "pt": "Copas se tocam",
+                  "en": "Crowns touch",
+                  "es": "Copas se tocan",
+                  "fr": "Couronnes se touchant"
+                }
+              },
+              {
+                "id": "i",
+                "label": "i (50-75%)",
+                "name": {
+                  "pt": "Interrompida",
+                  "en": "Interrupted",
+                  "es": "Interrumpida",
+                  "fr": "Interrompue"
+                },
+                "desc": {
+                  "pt": "Copas próximas",
+                  "en": "Crowns close",
+                  "es": "Copas cercanas",
+                  "fr": "Couronnes proches"
+                }
+              },
+              {
+                "id": "p",
+                "label": "p (25-50%)",
+                "name": {
+                  "pt": "Parque",
+                  "en": "Park",
+                  "es": "Parque",
+                  "fr": "Parc"
+                },
+                "desc": {
+                  "pt": "Indivíduos em grupos",
+                  "en": "Individuals in groups",
+                  "es": "Individuos en grupos",
+                  "fr": "Individus en groupes"
+                }
+              },
+              {
+                "id": "r",
+                "label": "r (5-25%)",
+                "name": {
+                  "pt": "Rara",
+                  "en": "Rare",
+                  "es": "Rara",
+                  "fr": "Rare"
+                },
+                "desc": {
+                  "pt": "Indivíduos isolados",
+                  "en": "Isolated individuals",
+                  "es": "Individuos aislados",
+                  "fr": "Individus isolés"
+                }
+              },
+              {
+                "id": "b",
+                "label": "b (1-5%)",
+                "name": {
+                  "pt": "Esparsa",
+                  "en": "Sparse",
+                  "es": "Esparcida",
+                  "fr": "Éparse"
+                },
+                "desc": {
+                  "pt": "Ocorrência ocasional",
+                  "en": "Occasional occurrence",
+                  "es": "Ocurrencia ocasional",
+                  "fr": "Occurrence occasionnelle"
+                }
+              }
+            ],
+            "leaf_adaptations": [
+              {
+                "id": "h",
+                "label": "h",
+                "name": {
+                  "pt": "Rígida",
+                  "en": "Rigid",
+                  "es": "Rígida",
+                  "fr": "Rigide"
+                },
+                "desc": {
+                  "pt": "Esclerófilas/coriáceas (duras)",
+                  "en": "Sclerophyllous/coriaceous (hard)",
+                  "es": "Esclerófilas/coriáceas (duras)",
+                  "fr": "Sclérophylles/coriaces (dures)"
+                }
+              },
+              {
+                "id": "w",
+                "label": "w",
+                "name": {
+                  "pt": "Leve",
+                  "en": "Light",
+                  "es": "Ligera",
+                  "fr": "Légère"
+                },
+                "desc": {
+                  "pt": "Malacófilas (flexíveis)",
+                  "en": "Malacophyllous (flexible)",
+                  "es": "Malacófilas (flexibles)",
+                  "fr": "Malacophylles (flexibles)"
+                }
+              },
+              {
+                "id": "k",
+                "label": "k",
+                "name": {
+                  "pt": "Suculenta",
+                  "en": "Succulent",
+                  "es": "Suculenta",
+                  "fr": "Succulente"
+                },
+                "desc": {
+                  "pt": "Folhas suculentas",
+                  "en": "Succulent leaves",
+                  "es": "Hojas suculentas",
+                  "fr": "Feuilles succulentes"
+                }
+              },
+              {
+                "id": "l",
+                "label": "l",
+                "name": {
+                  "pt": "Grande",
+                  "en": "Large",
+                  "es": "Grande",
+                  "fr": "Grande"
+                },
+                "desc": {
+                  "pt": "Megáfilas (>400 cm²)",
+                  "en": "Megaphylls (>400 cm²)",
+                  "es": "Megáfilas (>400 cm²)",
+                  "fr": "Mégaphylles (>400 cm²)"
+                }
+              },
+              {
+                "id": "s",
+                "label": "s",
+                "name": {
+                  "pt": "Pequena",
+                  "en": "Small",
+                  "es": "Pequeña",
+                  "fr": "Petite"
+                },
+                "desc": {
+                  "pt": "Leptófilas/nanófilas (<4 cm²)",
+                  "en": "Leptophylls/nanophylls (<4 cm²)",
+                  "es": "Leptófilas/nanófilas (<4 cm²)",
+                  "fr": "Leptophylles/nanophylles (<4 cm²)"
+                }
+              }
+            ],
+            "life_forms": {
+              "woody": [
+                {
+                  "id": "B",
+                  "label": "B",
+                  "name": {
+                    "pt": "Lenhosa Sempreverde",
+                    "en": "Evergreen Woody",
+                    "es": "Leñosa Perennifolia",
+                    "fr": "Ligneuse Sempervirente"
+                  },
+                  "desc": {
+                    "pt": "Folhas largas perenes",
+                    "en": "Broad perennial leaves",
+                    "es": "Hojas anchas perennes",
+                    "fr": "Feuilles larges pérennes"
+                  }
+                },
+                {
+                  "id": "D",
+                  "label": "D",
+                  "name": {
+                    "pt": "Lenhosa Decídua",
+                    "en": "Deciduous Woody",
+                    "es": "Leñosa Decidua",
+                    "fr": "Ligneuse Décidue"
+                  },
+                  "desc": {
+                    "pt": "Perde folhas na seca",
+                    "en": "Loses leaves in dry season",
+                    "es": "Pierde hojas en sequía",
+                    "fr": "Perd ses feuilles en saison sèche"
+                  }
+                },
+                {
+                  "id": "E",
+                  "label": "E",
+                  "name": {
+                    "pt": "Lenhosa Aciculifoliada",
+                    "en": "Needle-leaved Woody",
+                    "es": "Leñosa Aciculifoliada",
+                    "fr": "Ligneuse Aciculifoliée"
+                  },
+                  "desc": {
+                    "pt": "Folhas em agulha (Pinus)",
+                    "en": "Needle leaves (Pine)",
+                    "es": "Hojas en aguja (Pino)",
+                    "fr": "Feuilles en aiguilles (Pin)"
+                  }
+                },
+                {
+                  "id": "N",
+                  "label": "N",
+                  "name": {
+                    "pt": "Acículas Decíduas",
+                    "en": "Deciduous Needles",
+                    "es": "Acículas Deciduas",
+                    "fr": "Aiguilles Décidues"
+                  },
+                  "desc": {
+                    "pt": "Folhas em agulha, caem na seca (ex: Lariços)",
+                    "en": "Needle leaves that fall in dry season (e.g. Larches)",
+                    "es": "Hojas en aguja, caen en sequía (ej: Alerces)",
+                    "fr": "Feuilles en aiguilles qui tombent en saison sèche (ex. : Mélèzes)"
+                  }
+                },
+                {
+                  "id": "O",
+                  "label": "O",
+                  "name": {
+                    "pt": "Áfilas",
+                    "en": "Aphyllous",
+                    "es": "Áfilas",
+                    "fr": "Aphylles"
+                  },
+                  "desc": {
+                    "pt": "Sem folhas ou folhas reduzidas; clorofila no caule (ex: Casuarinas)",
+                    "en": "Without leaves or reduced leaves; chlorophyll in stem (e.g. Casuarinas)",
+                    "es": "Sin hojas o hojas reducidas; clorofila en el tallo (ej: Casuarinas)",
+                    "fr": "Sans feuilles ou feuilles réduites ; chlorophylle dans la tige (ex. : Casuarinas)"
+                  }
+                },
+                {
+                  "id": "S",
+                  "label": "S",
+                  "name": {
+                    "pt": "Semidecíduas",
+                    "en": "Semi-deciduous",
+                    "es": "Semideciduas",
+                    "fr": "Semi-décidues"
+                  },
+                  "desc": {
+                    "pt": "Misto de B e D (onde a menor classe cobre ao menos 25%)",
+                    "en": "Mix of B and D (where the smaller class covers at least 25%)",
+                    "es": "Mezcla de B y D (donde la clase menor cubre al menos 25%)",
+                    "fr": "Mélange de B et D (où la classe minoritaire couvre au moins 25 %)"
+                  }
+                },
+                {
+                  "id": "M",
+                  "label": "M",
+                  "name": {
+                    "pt": "Mistas",
+                    "en": "Mixed",
+                    "es": "Mixtas",
+                    "fr": "Mixtes"
+                  },
+                  "desc": {
+                    "pt": "Misto de E e D ou Latifoliadas + Aciculifoliadas",
+                    "en": "Mix of E and D or Broadleaved + Needleleaved",
+                    "es": "Mezcla de E y D o Latifoliadas + Aciculifoliadas",
+                    "fr": "Mélange de E et D ou Feuillus + Résineux"
+                  }
+                }
+              ],
+              "herbaceous": [
+                {
+                  "id": "G",
+                  "label": "G",
+                  "name": {
+                    "pt": "Graminoides",
+                    "en": "Graminoids",
+                    "es": "Graminoides",
+                    "fr": "Graminoïdes"
+                  },
+                  "desc": {
+                    "pt": "Gramíneas e ciperáceas",
+                    "en": "Grasses and sedges",
+                    "es": "Gramíneas y ciperáceas",
+                    "fr": "Graminées et cypéracées"
+                  }
+                },
+                {
+                  "id": "H",
+                  "label": "H",
+                  "name": {
+                    "pt": "Latifoliadas",
+                    "en": "Broad-leaved",
+                    "es": "Latifoliadas",
+                    "fr": "Feuillus"
+                  },
+                  "desc": {
+                    "pt": "Ervas de folhas largas",
+                    "en": "Broad-leaved herbs",
+                    "es": "Hierbas de hojas anchas",
+                    "fr": "Herbes à larges feuilles"
+                  }
+                },
+                {
+                  "id": "L",
+                  "label": "L",
+                  "name": {
+                    "pt": "Liquens/Musgos",
+                    "en": "Lichens/Mosses",
+                    "es": "Líquenes/Musgos",
+                    "fr": "Lichens/Mousses"
+                  },
+                  "desc": {
+                    "pt": "Tapetes no solo",
+                    "en": "Ground carpets",
+                    "es": "Alfombras en el suelo",
+                    "fr": "Tapis au sol"
+                  }
+                }
+              ],
+              "special": [
+                {
+                  "id": "C",
+                  "label": "C",
+                  "name": {
+                    "pt": "Lianas",
+                    "en": "Lianas",
+                    "es": "Lianas",
+                    "fr": "Lianes"
+                  },
+                  "desc": {
+                    "pt": "Trepadeiras de caule lenhoso (cipós)",
+                    "en": "Woody-stemmed climbers (vines)",
+                    "es": "Trepadoras de tallo leñoso (bejucos)",
+                    "fr": "Grimpantes à tige ligneuse (lianes)"
+                  }
+                },
+                {
+                  "id": "K",
+                  "label": "K",
+                  "name": {
+                    "pt": "Caule Suculento",
+                    "en": "Succulent Stem",
+                    "es": "Tallo Suculento",
+                    "fr": "Tige Succulente"
+                  },
+                  "desc": {
+                    "pt": "Cactos colunares, mandacaru, facheiro",
+                    "en": "Columnar cacti, mandacaru, facheiro",
+                    "es": "Cactus columnares, mandacaru, facheiro",
+                    "fr": "Cactus columnaires, mandacaru, facheiro"
+                  }
+                },
+                {
+                  "id": "T",
+                  "label": "T",
+                  "name": {
+                    "pt": "Plantas Tufadas",
+                    "en": "Tufted Plants",
+                    "es": "Plantas Amacolladas",
+                    "fr": "Plantes en Touffe"
+                  },
+                  "desc": {
+                    "pt": "Folhas em tufos no ápice, sem galhos (ex: Palmeiras)",
+                    "en": "Leaves in tufts at apex, no branches (e.g. Palms)",
+                    "es": "Hojas en penachos en el ápice, sin ramas (ej: Palmeras)",
+                    "fr": "Feuilles en touffes au sommet, sans branches (ex. : Palmiers)"
+                  }
+                },
+                {
+                  "id": "V",
+                  "label": "V",
+                  "name": {
+                    "pt": "Bambus",
+                    "en": "Bamboos",
+                    "es": "Bambúes",
+                    "fr": "Bambous"
+                  },
+                  "desc": {
+                    "pt": "Graminoides de caule lenhoso",
+                    "en": "Woody-stemmed graminoids",
+                    "es": "Graminoides de tallo leñoso",
+                    "fr": "Graminoïdes à tige ligneuse"
+                  }
+                },
+                {
+                  "id": "X",
+                  "label": "X",
+                  "name": {
+                    "pt": "Epífitas",
+                    "en": "Epiphytes",
+                    "es": "Epífitas",
+                    "fr": "Épiphytes"
+                  },
+                  "desc": {
+                    "pt": "Crescem sobre outras plantas (ex: Bromélias)",
+                    "en": "Grow on other plants (e.g. Bromeliads)",
+                    "es": "Crecen sobre otras plantas (ej: Bromelias)",
+                    "fr": "Poussent sur d'autres plantes (ex. : Broméliacées)"
+                  }
+                }
+              ]
+            }
+          },
+          "desc": {
+            "pt": "Sistema de classificação fisionômica da vegetação proposto por Küchler (1988). Combina a forma de vida dominante (letras maiúsculas), a classe de altura (números 1–8) e a classe de cobertura (letras minúsculas) para gerar um código sintético que descreve a estrutura vertical e horizontal da vegetação. O algoritmo do Nomos processa esse código para classificar automaticamente o tipo fisionômico da paisagem.",
+            "en": "Physiognomic classification system for vegetation proposed by Küchler (1988). It combines the dominant life form (capital letters), height class (numbers 1–8) and cover class (lowercase letters) to generate a synthetic code describing the vertical and horizontal structure of vegetation. The Nomos algorithm processes this code to automatically classify the physiognomic type of the landscape.",
+            "es": "Sistema de clasificación fisionómica de la vegetación propuesto por Küchler (1988). Combina la forma de vida dominante (letras mayúsculas), la clase de altura (números 1–8) y la clase de cobertura (letras minúsculas) para generar un código sintético que describe la estructura vertical y horizontal de la vegetación. El algoritmo de Nomos procesa este código para clasificar automáticamente el tipo fisionómico del paisaje.",
+            "fr": "Système de classification physionomique de la végétation proposé par Küchler (1988). Il combine la forme de vie dominante (lettres majuscules), la classe de hauteur (chiffres 1–8) et la classe de couverture (lettres minuscules) pour générer un code synthétique décrivant la structure verticale et horizontale de la végétation. L'algorithme de Nomos traite ce code pour classifier automatiquement le type physionomique du paysage."
+          }
+        }
+      ]
+    },
+    {
+      "id": "flora",
+      "title": {
+        "pt": "Levantamento Florístico",
+        "en": "Floristic Survey",
+        "es": "Levantamiento Florístico",
+        "fr": "Relevé Floristique"
+      },
+      "fields": [
+        {
+          "key": "veg_species",
+          "label": {
+            "pt": "Registro Florístico",
+            "en": "Floristic Record",
+            "es": "Registro Florístico",
+            "fr": "Relevé Floristique"
+          },
+          "type": "species_list",
+          "placeholder": {
+            "pt": "Digite a espécie e pressione adicionar",
+            "en": "Type the species and press add",
+            "es": "Escriba la especie y presione agregar",
+            "fr": "Tapez l'espèce et appuyez sur ajouter"
+          },
+          "helper_text": {
+            "pt": "Insira os nomes científicos ou populares das espécies identificadas.",
+            "en": "Enter scientific or common names of identified species.",
+            "es": "Ingrese los nombres científicos o comunes de las especies identificadas.",
+            "fr": "Saisissez les noms scientifiques ou communs des espèces identifiées."
+          },
+          "desc": {
+            "pt": "Registro qualitativo das espécies vegetais identificadas na parcela. Funciona como dado complementar ao código fisionômico da Matriz de Küchler, conferindo conteúdo florístico ao registro estrutural. Podem ser inseridos nomes científicos completos (gênero e espécie) ou nomes populares quando a identificação taxonômica não for possível em campo.",
+            "en": "Qualitative record of plant species identified in the plot. Functions as complementary data to the Küchler Matrix physiognomic code, adding floristic content to the structural record. Full scientific names (genus and species) or common names may be entered when taxonomic identification is not possible in the field.",
+            "es": "Registro cualitativo de las especies vegetales identificadas en la parcela. Funciona como dato complementario al código fisionómico de la Matriz de Küchler, aportando contenido florístico al registro estructural. Se pueden ingresar nombres científicos completos (género y especie) o nombres comunes cuando la identificación taxonómica no sea posible en campo.",
+            "fr": "Relevé qualitatif des espèces végétales identifiées dans la parcelle. Complète le code physionomique de la Matrice de Küchler en y ajoutant un contenu floristique. Les noms scientifiques complets (genre et espèce) ou les noms communs peuvent être saisis lorsque l'identification taxonomique n'est pas possible sur le terrain."
+          }
+        }
+      ]
+    },
+    {
+      "id": "surf",
+      "title": {
+        "pt": "Cobertura da Superfície",
+        "en": "Surface Coverage",
+        "es": "Cobertura de la Superficie",
+        "fr": "Couverture de la Surface"
+      },
+      "fields": [
+        {
+          "key": "surface_cover_group",
+          "type": "percentage_group",
+          "label": {
+            "pt": "Estimativa de Cobertura",
+            "en": "Coverage Estimate",
+            "es": "Estimación de Cobertura",
+            "fr": "Estimation de Couverture"
+          },
+          "helper_text": {
+            "pt": "Indique a porcentagem de cobertura para cada elemento.",
+            "en": "Indicate the percentage of coverage for each element.",
+            "es": "Indique el porcentaje de cobertura para cada elemento.",
+            "fr": "Indiquez le pourcentage de couverture pour chaque élément."
+          },
+          "classes": [
+            {
+              "pt": "Ausente",
+              "en": "Absent",
+              "es": "Ausente",
+              "fr": "Absent"
+            },
+            "1-5%",
+            "5-25%",
+            "25-50%",
+            "50-75%",
+            ">75%"
+          ],
+          "items": [
+            {
+              "key": "litter_layer",
+              "desc": {
+                "pt": "restos de folhas, galhos, cascas, frutos e flores caídos no solo",
+                "en": "fallen leaves, branches, bark, fruits and flowers on the ground",
+                "es": "restos de hojas, ramas, corteza, frutos y flores caídos en el suelo",
+                "fr": "feuilles mortes, branches, écorces, fruits et fleurs tombés au sol"
+              },
+              "label": {
+                "pt": "Serrapilheira",
+                "en": "Litter",
+                "es": "Hojarasca",
+                "fr": "Litière"
+              }
+            },
+            {
+              "key": "stoniness",
+              "desc": {
+                "pt": "fragmentos de minerais e rochas de 2 a 25cm de diâmetro",
+                "en": "fragments of minerals and rocks from 2 to 25cm in diameter",
+                "es": "fragmentos de minerales y rocas de 2 a 25cm de diámetro",
+                "fr": "fragments de minéraux et de roches de 2 à 25 cm de diamètre"
+              },
+              "label": {
+                "pt": "Pedregosidade",
+                "en": "Stoniness",
+                "es": "Pedregosidad",
+                "fr": "Pierrosité"
+              }
+            },
+            {
+              "key": "rockiness",
+              "desc": {
+                "pt": "afloramentos e fragmentos de rochas e minerais com mais de 25cm de diâmetro",
+                "en": "outcrops and fragments of rocks and minerals larger than 25cm in diameter",
+                "es": "afloramientos y fragmentos de rocas y minerales mayores a 25cm de diámetro",
+                "fr": "affleurements et fragments de roches et minéraux de plus de 25 cm de diamètre"
+              },
+              "label": {
+                "pt": "Rochosidade",
+                "en": "Rockiness",
+                "es": "Rocosidad",
+                "fr": "Rochosité"
+              }
+            },
+            {
+              "key": "bare_soil",
+              "desc": {
+                "pt": "solo ou regolito sem cobertura",
+                "en": "soil or regolith without cover",
+                "es": "suelo o regolito sin cobertura",
+                "fr": "sol ou régolithe sans couverture"
+              },
+              "label": {
+                "pt": "Chão exposto",
+                "en": "Bare soil",
+                "es": "Suelo desnudo",
+                "fr": "Sol nu"
+              }
+            }
+          ],
+          "desc": {
+            "pt": "Estimativa visual da proporção da superfície do solo ocupada por cada elemento não-vegetal na parcela. Os valores devem refletir a cobertura projetada sobre o solo, observada de cima para baixo. A soma dos elementos pode ultrapassar 100% quando há sobreposição, por exemplo, serrapilheira sobre solo exposto.",
+            "en": "Visual estimate of the proportion of the soil surface occupied by each non-vegetation element in the plot. Values must reflect projected cover observed from top to bottom. The sum of elements may exceed 100% when there is overlap, for example, litter over bare soil.",
+            "es": "Estimación visual de la proporción de la superficie del suelo ocupada por cada elemento no vegetal en la parcela. Los valores deben reflejar la cobertura proyectada observada de arriba hacia abajo. La suma de los elementos puede superar el 100% cuando hay sobreposición, por ejemplo, hojarasca sobre suelo desnudo.",
+            "fr": "Estimation visuelle de la proportion de la surface du sol occupée par chaque élément non végétal dans la parcelle. Les valeurs doivent refléter la couverture projetée observée de haut en bas. La somme des éléments peut dépasser 100 % en cas de chevauchement, par exemple, litière sur sol nu."
+          }
+        }
+      ]
+    },
+    {
+      "id": "geo",
+      "title": {
+        "pt": "Geomorfologia e Relevo",
+        "en": "Geomorphology and Relief",
+        "es": "Geomorfología y Relieve",
+        "fr": "Géomorphologie et Relief"
+      },
+      "fields": [
+        {
+          "key": "exposure",
+          "label": {
+            "pt": "Exposição",
+            "en": "Exposure",
+            "es": "Exposición",
+            "fr": "Exposition"
+          },
+          "type": "select",
+          "options": [
+            {
+              "pt": "Barlavento",
+              "en": "Windward",
+              "es": "Barlovento",
+              "desc": {
+                "pt": "Lado exposto ao vento; geralmente mais úmido e com vegetação mais densa",
+                "en": "Wind-exposed side; generally wetter with denser vegetation",
+                "es": "Lado expuesto al viento; generalmente más húmedo y con vegetación más densa",
+                "fr": "Côté exposé au vent ; généralement plus humide avec une végétation plus dense"
+              },
+              "fr": "Côté au vent"
+            },
+            {
+              "pt": "Sotavento",
+              "en": "Leeward",
+              "es": "Sotavento",
+              "desc": {
+                "pt": "Lado protegido do vento; geralmente mais seco e com vegetação mais rala",
+                "en": "Wind-sheltered side; generally drier with sparser vegetation",
+                "es": "Lado protegido del viento; generalmente más seco y con vegetación más rala",
+                "fr": "Côté abrité du vent ; généralement plus sec avec une végétation plus clairsemée"
+              },
+              "fr": "Sous le vent"
+            },
+            {
+              "pt": "Não se Aplica",
+              "en": "Not Applicable",
+              "es": "No Aplica",
+              "desc": {
+                "pt": "Para terrenos planos ou onde a exposição ao vento não é fator relevante na diferenciação ambiental",
+                "en": "For flat terrain or where wind exposure is not a relevant factor in environmental differentiation",
+                "es": "Para terrenos planos o donde la exposición al viento no es un factor relevante en la diferenciación ambiental",
+                "fr": "Pour les terrains plats ou lorsque l'exposition au vent n'est pas un facteur pertinent de différenciation environnementale"
+              },
+              "fr": "Sans objet"
+            }
+          ],
+          "desc": {
+            "pt": "Posição da parcela em relação à direção predominante dos ventos ou à orientação solar. Barlavento refere-se ao lado exposto ao vento (geralmente mais úmido), e sotavento ao lado protegido. O critério de escolha deve levar em conta o agente de maior influência na dinâmica local.",
+            "en": "Position of the plot in relation to the predominant wind direction or solar orientation. Windward refers to the side exposed to wind (usually wetter), and leeward to the sheltered side. The selection criterion should consider the agent with the greatest influence on local dynamics.",
+            "es": "Posición de la parcela en relación con la dirección predominante de los vientos o la orientación solar. Barlovento se refiere al lado expuesto al viento (generalmente más húmedo), y sotavento al lado protegido. El criterio de selección debe considerar el agente de mayor influencia en la dinámica local.",
+            "fr": "Position de la parcelle par rapport à la direction dominante des vents ou à l'orientation solaire. Côté au vent désigne le versant exposé au vent (généralement plus humide), et sous le vent le versant abrité. Le critère de sélection doit prendre en compte l'agent ayant la plus grande influence sur la dynamique locale."
+          }
+        },
+        {
+          "key": "slope",
+          "label": {
+            "pt": "Declive",
+            "en": "Slope",
+            "es": "Pendiente",
+            "fr": "Pente"
+          },
+          "type": "select",
+          "options": [
+            {
+              "pt": "Plano (<1°)",
+              "en": "Flat (<1°)",
+              "es": "Plano (<1°)",
+              "desc": {
+                "pt": "Terreno sem inclinação perceptível; favorece acúmulo de água e solos profundos",
+                "en": "Terrain without perceptible inclination; favors water accumulation and deep soils",
+                "es": "Terreno sin inclinación perceptible; favorece la acumulación de agua y suelos profundos",
+                "fr": "Terrain sans inclinaison perceptible ; favorise l'accumulation d'eau et les sols profonds"
+              },
+              "fr": "Plat (<1°)"
+            },
+            {
+              "pt": "Muito suave (1-5°)",
+              "en": "Very gentle (1-5°)",
+              "es": "Muy suave (1-5°)",
+              "desc": {
+                "pt": "Inclinação leve; escoamento superficial lento; baixo risco erosivo",
+                "en": "Slight inclination; slow surface runoff; low erosion risk",
+                "es": "Inclinación leve; escorrentía superficial lenta; bajo riesgo erosivo",
+                "fr": "Légère inclinaison ; ruissellement de surface lent ; faible risque d'érosion"
+              },
+              "fr": "Très doux (1-5°)"
+            },
+            {
+              "pt": "Suave (5-10°)",
+              "en": "Gentle (5-10°)",
+              "es": "Suave (5-10°)",
+              "desc": {
+                "pt": "Inclinação moderada; escoamento superficial moderado; risco erosivo médio em solos expostos",
+                "en": "Moderate inclination; moderate surface runoff; medium erosion risk on exposed soils",
+                "es": "Inclinación moderada; escorrentía superficial moderada; riesgo erosivo medio en suelos expuestos",
+                "fr": "Inclinaison modérée ; ruissellement de surface modéré ; risque d'érosion moyen sur les sols exposés"
+              },
+              "fr": "Doux (5-10°)"
+            },
+            {
+              "pt": "Moderado (10-30°)",
+              "en": "Moderate (10-30°)",
+              "es": "Moderado (10-30°)",
+              "desc": {
+                "pt": "Encosta com inclinação pronunciada; solos rasos; alta suscetibilidade à erosão laminar e em sulcos",
+                "en": "Slope with pronounced inclination; shallow soils; high susceptibility to sheet and rill erosion",
+                "es": "Ladera con inclinación pronunciada; suelos poco profundos; alta susceptibilidad a la erosión laminar y en surcos",
+                "fr": "Versant à inclinaison prononcée ; sols peu profonds ; forte susceptibilité à l'érosion en nappe et en rigoles"
+              },
+              "fr": "Modéré (10-30°)"
+            },
+            {
+              "pt": "Íngreme (>30°)",
+              "en": "Steep (>30°)",
+              "es": "Empinado (>30°)",
+              "desc": {
+                "pt": "Encosta muito inclinada ou escarpa; solos muito rasos ou ausentes; dominância de processos gravitacionais",
+                "en": "Very steep slope or escarpment; very shallow or absent soils; dominance of gravitational processes",
+                "es": "Ladera muy inclinada o escarpa; suelos muy poco profundos o ausentes; predominio de procesos gravitacionales",
+                "fr": "Versant très incliné ou escarpement ; sols très peu profonds ou absents ; dominance des processus gravitaires"
+              },
+              "fr": "Raide (>30°)"
+            }
+          ],
+          "desc": {
+            "pt": "Ângulo de inclinação do terreno em relação ao plano horizontal, expresso em graus. O declive controla processos hidrológicos, a velocidade do escoamento superficial, a suscetibilidade à erosão e a profundidade dos solos. A estimativa pode ser realizada visualmente ou com o auxílio de clinômetro.",
+            "en": "Angle of terrain inclination in relation to the horizontal plane, expressed in degrees. The slope controls hydrological processes, surface runoff speed, erosion susceptibility and soil depth. The estimate can be made visually or with the aid of a clinometer.",
+            "es": "Ángulo de inclinación del terreno respecto al plano horizontal, expresado en grados. La pendiente controla los procesos hidrológicos, la velocidad de la escorrentía superficial, la susceptibilidad a la erosión y la profundidad de los suelos. La estimación puede realizarse visualmente o con la ayuda de un clinómetro.",
+            "fr": "Angle d'inclinaison du terrain par rapport au plan horizontal, exprimé en degrés. La pente contrôle les processus hydrologiques, la vitesse du ruissellement en surface, la susceptibilité à l'érosion et la profondeur des sols. L'estimation peut être réalisée visuellement ou à l'aide d'un clinomètre."
+          }
+        },
+        {
+          "key": "topographic_position",
+          "label": {
+            "pt": "Posição Topográfica",
+            "en": "Topographic Position",
+            "es": "Posición Topográfica",
+            "fr": "Position Topographique"
+          },
+          "type": "select",
+          "options": [
+            {
+              "pt": "Topo",
+              "en": "Top",
+              "es": "Cima",
+              "desc": {
+                "pt": "Parte mais elevada da vertente; solos rasos; maior exposição ao vento e à insolação",
+                "en": "Highest part of the hillslope; shallow soils; greater exposure to wind and solar radiation",
+                "es": "Parte más elevada de la vertiente; suelos poco profundos; mayor exposición al viento y la insolación",
+                "fr": "Partie la plus élevée du versant ; sols peu profonds ; plus grande exposition au vent et au rayonnement solaire"
+              },
+              "fr": "Sommet"
+            },
+            {
+              "pt": "Intermediária",
+              "en": "Mid-slope",
+              "es": "Intermedia",
+              "desc": {
+                "pt": "Porção mediana da encosta; transição entre processos de topo e de base; solos moderados",
+                "en": "Middle portion of the slope; transition between hilltop and footslope processes; moderate soils",
+                "es": "Porción media de la ladera; transición entre procesos de cima y de base; suelos moderados",
+                "fr": "Partie médiane du versant ; transition entre processus de sommet et de bas de versant ; sols modérés"
+              },
+              "fr": "Mi-versant"
+            },
+            {
+              "pt": "Inferior",
+              "en": "Lower",
+              "es": "Inferior",
+              "desc": {
+                "pt": "Base da encosta ou planície; concentração de sedimentos e umidade; solos profundos e úmidos",
+                "en": "Slope base or plain; concentration of sediments and moisture; deep and wet soils",
+                "es": "Base de la ladera o planicie; concentración de sedimentos y humedad; suelos profundos y húmedos",
+                "fr": "Base du versant ou plaine ; concentration de sédiments et d'humidité ; sols profonds et humides"
+              },
+              "fr": "Bas de versant"
+            }
+          ],
+          "desc": {
+            "pt": "Localização da parcela ao longo do perfil topográfico da vertente. A posição topográfica determina o balanço hídrico local, a espessura do solo e a natureza dos processos morfodinâmicos. Topos tendem a apresentar solos rasos e drenagem livre; posições inferiores concentram fluxo hídrico e matéria orgânica.",
+            "en": "Location of the plot along the topographic profile of the hillslope. Topographic position determines local water balance, soil thickness and the nature of morphodynamic processes. Hilltops tend to have shallow soils and free drainage; lower positions concentrate water flow and organic matter.",
+            "es": "Ubicación de la parcela a lo largo del perfil topográfico de la vertiente. La posición topográfica determina el balance hídrico local, el espesor del suelo y la naturaleza de los procesos morfodinámicos. Las cimas tienden a tener suelos poco profundos y drenaje libre; las posiciones inferiores concentran flujo hídrico y materia orgánica.",
+            "fr": "Localisation de la parcelle le long du profil topographique du versant. La position topographique détermine le bilan hydrique local, l'épaisseur du sol et la nature des processus morphodynamiques. Les sommets présentent généralement des sols peu profonds et un drainage libre ; les positions basses concentrent le flux hydrique et la matière organique."
+          }
+        },
+        {
+          "key": "slope_shape",
+          "label": {
+            "pt": "Forma do Relevo",
+            "en": "Landform",
+            "es": "Forma del Relieve",
+            "fr": "Forme du Relief"
+          },
+          "type": "select",
+          "options": [
+            {
+              "pt": "Côncava",
+              "en": "Concave",
+              "es": "Cóncava",
+              "desc": {
+                "pt": "Perfil em forma de concha; desacelera o fluxo de água; acumula sedimentos e umidade; favorece solos mais profundos",
+                "en": "Shell-shaped profile; slows water flow; accumulates sediments and moisture; favors deeper soils",
+                "es": "Perfil en forma de cuenco; desacelera el flujo de agua; acumula sedimentos y humedad; favorece suelos más profundos",
+                "fr": "Profil en forme de cuvette ; ralentit le flux d'eau ; accumule sédiments et humidité ; favorise les sols plus profonds"
+              },
+              "fr": "Concave"
+            },
+            {
+              "pt": "Retilínea",
+              "en": "Rectilinear",
+              "es": "Rectilínea",
+              "desc": {
+                "pt": "Perfil reto; fluxo uniforme de água e sedimentos ao longo da encosta",
+                "en": "Straight profile; uniform flow of water and sediments along the slope",
+                "es": "Perfil recto; flujo uniforme de agua y sedimentos a lo largo de la ladera",
+                "fr": "Profil rectiligne ; flux uniforme d'eau et de sédiments le long du versant"
+              },
+              "fr": "Rectiligne"
+            },
+            {
+              "pt": "Convexa",
+              "en": "Convex",
+              "es": "Convexa",
+              "desc": {
+                "pt": "Perfil em forma de cúpula; acelera o fluxo de água; favorece erosão e solos rasos",
+                "en": "Dome-shaped profile; accelerates water flow; favors erosion and shallow soils",
+                "es": "Perfil en forma de domo; acelera el flujo de agua; favorece la erosión y los suelos poco profundos",
+                "fr": "Profil en dôme ; accélère le flux d'eau ; favorise l'érosion et les sols peu profonds"
+              },
+              "fr": "Convexe"
+            }
+          ],
+          "desc": {
+            "pt": "Curvatura do perfil da encosta no sentido do declive. A forma da vertente condiciona a convergência ou divergência do fluxo de água e sedimentos, influenciando diretamente a espessura e as propriedades do solo, bem como o padrão de distribuição espacial da vegetação.",
+            "en": "Curvature of the slope profile in the direction of inclination. The slope shape conditions the convergence or divergence of water and sediment flow, directly influencing soil thickness and properties, as well as the spatial distribution pattern of vegetation.",
+            "es": "Curvatura del perfil de la ladera en la dirección de la pendiente. La forma de la vertiente condiciona la convergencia o divergencia del flujo de agua y sedimentos, influyendo directamente en el espesor y las propiedades del suelo, así como en el patrón de distribución espacial de la vegetación.",
+            "fr": "Courbure du profil de versant dans le sens de la pente. La forme du versant conditionne la convergence ou la divergence des flux d'eau et de sédiments, influençant directement l'épaisseur et les propriétés du sol, ainsi que le patron de distribution spatiale de la végétation."
+          }
+        },
+        {
+          "key": "geomorphology_type",
+          "label": {
+            "pt": "Ambiente Geomorfológico",
+            "en": "Geomorphological Environment",
+            "es": "Ambiente Geomorfológico",
+            "fr": "Environnement Géomorphologique"
+          },
+          "type": "checkbox",
+          "helper_text": {
+            "pt": "Selecione um ou mais ambientes.",
+            "en": "Select one or more environments.",
+            "es": "Seleccione uno o más entornos.",
+            "fr": "Sélectionnez un ou plusieurs environnements."
+          },
+          "options": [
+            {
+              "pt": "De encosta",
+              "en": "Hillslope",
+              "es": "De ladera",
+              "desc": {
+                "pt": "Superfícies inclinadas moldadas por processos de intemperismo, erosão e movimentos de massa",
+                "en": "Inclined surfaces shaped by weathering, erosion and mass movement processes",
+                "es": "Superficies inclinadas moldeadas por procesos de meteorización, erosión y movimientos en masa",
+                "fr": "Surfaces inclinées façonnées par l'altération, l'érosion et les mouvements de masse"
+              },
+              "fr": "En versant"
+            },
+            {
+              "pt": "Fluvial",
+              "en": "Fluvial",
+              "es": "Fluvial",
+              "desc": {
+                "pt": "Formas criadas pela ação de rios e córregos: planícies de inundação, terraços, calhas aluviais",
+                "en": "Forms created by river and stream action: floodplains, terraces, alluvial channels",
+                "es": "Formas creadas por la acción de ríos y arroyos: llanuras de inundación, terrazas, cauces aluviales",
+                "fr": "Formes créées par l'action des cours d'eau : plaines inondables, terrasses, chenaux alluviaux"
+              },
+              "fr": "Fluvial"
+            },
+            {
+              "pt": "Lacustre",
+              "en": "Lacustrine",
+              "es": "Lacustre",
+              "desc": {
+                "pt": "Ambientes associados a lagos e lagoas; depósitos de fundo e margens lacustres",
+                "en": "Environments associated with lakes and ponds; bottom deposits and lacustrine margins",
+                "es": "Ambientes asociados a lagos y lagunas; depósitos de fondo y márgenes lacustres",
+                "fr": "Environnements associés aux lacs et étangs ; dépôts de fond et rives lacustres"
+              },
+              "fr": "Lacustre"
+            },
+            {
+              "pt": "Eólico",
+              "en": "Aeolian",
+              "es": "Eólico",
+              "desc": {
+                "pt": "Formas criadas pelo transporte e deposição pelo vento: dunas, mantos de areia, depressões de deflação",
+                "en": "Forms created by wind transport and deposition: dunes, sand sheets, deflation depressions",
+                "es": "Formas creadas por el transporte y depósito eólico: dunas, mantos de arena, depresiones de deflación",
+                "fr": "Formes créées par le transport et le dépôt éoliens : dunes, nappes sableuses, dépressions de déflation"
+              },
+              "fr": "Éolien"
+            },
+            {
+              "pt": "Cársico",
+              "en": "Karst",
+              "es": "Kárstico",
+              "desc": {
+                "pt": "Formas resultantes da dissolução de rochas solúveis (calcário, dolomito): dolinas, sumidouros, lapiezs",
+                "en": "Forms resulting from dissolution of soluble rocks (limestone, dolomite): sinkholes, swallow holes, karren",
+                "es": "Formas resultantes de la disolución de rocas solubles (caliza, dolomita): dolinas, sumideros, lapiaces",
+                "fr": "Formes résultant de la dissolution de roches solubles (calcaire, dolomie) : dolines, pertes, lapiés"
+              },
+              "fr": "Karstique"
+            },
+            {
+              "pt": "Estuarino",
+              "en": "Estuarine",
+              "es": "Estuarino",
+              "desc": {
+                "pt": "Zona de encontro entre rio e mar; influência de marés; depósitos mistos fluvio-marinhos",
+                "en": "Zone where river meets sea; tidal influence; mixed fluvial-marine deposits",
+                "es": "Zona de encuentro entre río y mar; influencia de mareas; depósitos mixtos fluvio-marinos",
+                "fr": "Zone de rencontre entre la rivière et la mer ; influence des marées ; dépôts mixtes fluvio-marins"
+              },
+              "fr": "Estuarien"
+            },
+            {
+              "pt": "Praial",
+              "en": "Beach",
+              "es": "Playero",
+              "desc": {
+                "pt": "Faixa de areia ou sedimentos na margem de corpos d'água; submetida a dinâmica de ondas e marés",
+                "en": "Strip of sand or sediments at the margin of water bodies; subject to wave and tidal dynamics",
+                "es": "Franja de arena o sedimentos en el margen de cuerpos de agua; sujeta a dinámica de olas y mareas",
+                "fr": "Bande de sable ou de sédiments en bordure des plans d'eau ; soumise à la dynamique des vagues et des marées"
+              },
+              "fr": "Plage"
+            },
+            {
+              "pt": "Deltaico",
+              "en": "Deltaic",
+              "es": "Deltaico",
+              "desc": {
+                "pt": "Depósitos sedimentares na foz de rios; ambiente de transição entre sistema fluvial e marinho ou lacustre",
+                "en": "Sedimentary deposits at river mouths; transitional environment between fluvial and marine or lacustrine systems",
+                "es": "Depósitos sedimentarios en la desembocadura de ríos; ambiente de transición entre sistema fluvial y marino o lacustre",
+                "fr": "Dépôts sédimentaires à l'embouchure des rivières ; environnement de transition entre les systèmes fluvial et marin ou lacustre"
+              },
+              "fr": "Deltaïque"
+            },
+            {
+              "pt": "Costeiro Erosivo",
+              "en": "Erosive Coastal",
+              "es": "Costero Erosivo",
+              "desc": {
+                "pt": "Costa dominada por erosão de ondas sobre rochas ou sedimentos; falésias, plataformas de abrasão",
+                "en": "Coast dominated by wave erosion on rocks or sediments; sea cliffs, abrasion platforms",
+                "es": "Costa dominada por erosión de olas sobre rocas o sedimentos; acantilados, plataformas de abrasión",
+                "fr": "Côte dominée par l'érosion des vagues sur les roches ou les sédiments ; falaises marines, plates-formes d'abrasion"
+              },
+              "fr": "Côtier Érosif"
+            }
+          ],
+          "desc": {
+            "pt": "Identificação do sistema geomorfológico dominante na área da parcela. O ambiente geomorfológico expressa os processos morfogenéticos atuantes e a origem das formas de relevo observadas, constituindo um dos atributos centrais para a nomeação da unidade de paisagem pelo algoritmo do Nomos.",
+            "en": "Identification of the dominant geomorphological system in the plot area. The geomorphological environment expresses the active morphogenetic processes and the origin of the observed landforms, constituting one of the central attributes for landscape unit naming by the Nomos algorithm.",
+            "es": "Identificación del sistema geomorfológico dominante en el área de la parcela. El ambiente geomorfológico expresa los procesos morfogenéticos activos y el origen de las formas del relieve observadas, constituyendo uno de los atributos centrales para la denominación de la unidad de paisaje por el algoritmo de Nomos.",
+            "fr": "Identification du système géomorphologique dominant dans la zone de la parcelle. L'environnement géomorphologique exprime les processus morphogénétiques actifs et l'origine des formes de relief observées, constituant l'un des attributs centraux pour la dénomination des unités de paysage par l'algorithme de Nomos."
+          }
+        }
+      ]
+    },
+    {
+      "id": "soil",
+      "title": {
+        "pt": "Solos",
+        "en": "Soils",
+        "es": "Suelos",
+        "fr": "Sols"
+      },
+      "fields": [
+        {
+          "key": "soil_profile",
+          "label": {
+            "pt": "Descrição do Solo",
+            "en": "Soil Description",
+            "es": "Descripción del Suelo",
+            "fr": "Description du Sol"
+          },
+          "type": "soil_profile_input",
+          "helper_text": {
+            "pt": "Selecione entre descrição simplificada ou detalhada (camadas). Para cores variegadas, especifique fundo e mosqueado.",
+            "en": "Select between simplified or detailed description (layers). For variegated colors, specify background and mottling.",
+            "es": "Seleccione entre descripción simplificada o detallada (capas). Para colores variegados, especifique fondo y moteado.",
+            "fr": "Sélectionnez entre description simplifiée ou détaillée (couches). Pour les couleurs bariolées, spécifiez le fond et les taches."
+          },
+          "config": {
+            "texture_options": [
+              {
+                "value": "sand",
+                "pt": "Areia",
+                "en": "Sand",
+                "es": "Arena",
+                "fr": "Sable",
+                "desc": {
+                  "pt": "Solo arenoso puro. Partículas de areia visíveis a olho nu. Ao umedecer e amassar, não forma fita nem bola coesa; esfacela facilmente. Sem plasticidade e sem pegajosidade.",
+                  "en": "Pure sandy soil. Sand particles visible to the naked eye. When wet and kneaded, does not form a ribbon or cohesive ball; crumbles easily. No plasticity or stickiness.",
+                  "es": "Suelo arenoso puro. Partículas de arena visibles a simple vista. Al humedecer y amasar, no forma cinta ni bola cohesiva; se desmorona fácilmente. Sin plasticidad ni pegajosidad.",
+                  "fr": "Sol sableux pur. Particules de sable visibles à l'œil nu. Humidifié et pétri, ne forme pas de ruban ni de boule cohésive ; s'émiette facilement. Sans plasticité ni adhérence."
+                }
+              },
+              {
+                "value": "loamy_sand",
+                "pt": "Areia franca",
+                "en": "Loamy sand",
+                "es": "Arena franca",
+                "fr": "Sable limoneux",
+                "desc": {
+                  "pt": "Predominantemente arenoso, com pequena fração de argila. Forma uma bola frágil ao ser pressionado úmido, mas não forma fita. Sem pegajosidade perceptível.",
+                  "en": "Predominantly sandy with a small clay fraction. Forms a fragile ball when pressed moist but does not form a ribbon. No noticeable stickiness.",
+                  "es": "Predominantemente arenoso con pequeña fracción de arcilla. Forma una bola frágil al presionar húmedo, pero no forma cinta. Sin pegajosidad perceptible.",
+                  "fr": "Principalement sableux avec une petite fraction d'argile. Forme une boule fragile quand pressé humide, mais ne forme pas de ruban. Pas d'adhérence perceptible."
+                }
+              },
+              {
+                "value": "sandy_loam",
+                "pt": "Franco-arenoso",
+                "en": "Sandy loam",
+                "es": "Franco arenoso",
+                "fr": "Limon sableux",
+                "desc": {
+                  "pt": "Textura mista com predominância de areia. Forma fita curta e friável ao ser amassado úmido. Levemente plástico e levemente pegajoso. A sensação granulosa da areia é facilmente perceptível.",
+                  "en": "Mixed texture with predominance of sand. Forms a short, friable ribbon when kneaded moist. Slightly plastic and slightly sticky. The grainy feel of sand is easily noticeable.",
+                  "es": "Textura mixta con predominio de arena. Forma cinta corta y friable al amasarse húmedo. Levemente plástico y levemente pegajoso. La sensación granulosa de la arena es fácilmente perceptible.",
+                  "fr": "Texture mixte à dominance sableuse. Forme un ruban court et friable pétri humide. Légèrement plastique et légèrement adhérent. La sensation granuleuse du sable est facilement perceptible."
+                }
+              },
+              {
+                "value": "loam",
+                "pt": "Franco",
+                "en": "Loam",
+                "es": "Franco",
+                "fr": "Limon",
+                "desc": {
+                  "pt": "Textura equilibrada entre areia, silte e argila. Forma fita de comprimento médio ao ser amassado úmido. Moderadamente plástico e moderadamente pegajoso. Sem dominância tátil de nenhum componente.",
+                  "en": "Balanced texture among sand, silt, and clay. Forms a medium-length ribbon when kneaded moist. Moderately plastic and moderately sticky. No tactile dominance of any single component.",
+                  "es": "Textura equilibrada entre arena, limo y arcilla. Forma cinta de longitud media al amasarse húmedo. Moderadamente plástico y moderadamente pegajoso. Sin dominancia táctil de ningún componente.",
+                  "fr": "Texture équilibrée entre sable, limon et argile. Forme un ruban de longueur moyenne pétri humide. Modérément plastique et modérément adhérent. Pas de dominance tactile d'un seul composant."
+                }
+              },
+              {
+                "value": "silt_loam",
+                "pt": "Franco-siltoso",
+                "en": "Silt loam",
+                "es": "Franco limoso",
+                "fr": "Limon silteux",
+                "desc": {
+                  "pt": "Sensação sedosa e suave dominante ao tato. Moderadamente plástico e moderadamente pegajoso. Forma fita de comprimento médio. O silte confere uma maciez característica que diferencia esta classe das texturais argilosas.",
+                  "en": "Dominant silky and smooth feel to the touch. Moderately plastic and moderately sticky. Forms a medium-length ribbon. The silt gives a characteristic softness that distinguishes this class from clayey textures.",
+                  "es": "Sensación sedosa y suave dominante al tacto. Moderadamente plástico y moderadamente pegajoso. Forma cinta de longitud media. El limo confiere una suavidad característica que diferencia esta clase de las texturas arcillosas.",
+                  "fr": "Sensation soyeuse et douce dominante au toucher. Modérément plastique et modérément adhérent. Forme un ruban de longueur moyenne. Le limon confère une douceur caractéristique qui distingue cette classe des textures argileuses."
+                }
+              },
+              {
+                "value": "silt",
+                "pt": "Silte",
+                "en": "Silt",
+                "es": "Limo",
+                "fr": "Limon pur",
+                "desc": {
+                  "pt": "Quase exclusivamente silte. Extremamente sedoso ao tato, como farinha fina. Muito pouco plástico, sem pegajosidade expressiva. Raro em solos tropicais brasileiros; mais frequente em depósitos aluviais recentes.",
+                  "en": "Almost exclusively silt. Extremely silky to the touch, like fine flour. Very slightly plastic, with no significant stickiness. Rare in Brazilian tropical soils; more common in recent alluvial deposits.",
+                  "es": "Casi exclusivamente limo. Extremadamente sedoso al tacto, como harina fina. Muy poco plástico, sin pegajosidad significativa. Raro en suelos tropicales brasileños; más frecuente en depósitos aluviales recientes.",
+                  "fr": "Presque exclusivement du limon. Extrêmement soyeux au toucher, comme de la farine fine. Très légèrement plastique, sans adhérence significative. Rare dans les sols tropicaux brésiliens ; plus fréquent dans les dépôts alluviaux récents."
+                }
+              },
+              {
+                "value": "clay_loam",
+                "pt": "Franco-argiloso",
+                "en": "Clay loam",
+                "es": "Franco arcilloso",
+                "fr": "Limon argileux",
+                "desc": {
+                  "pt": "Claramente plástico e pegajoso ao tato. Forma fita longa e contínua ao ser amassado úmido. Sem dominância de areia ou silte. Ao secar, forma torrões de média dureza.",
+                  "en": "Clearly plastic and sticky to the touch. Forms a long, continuous ribbon when kneaded moist. No dominance of sand or silt. When dry, forms medium-hard clods.",
+                  "es": "Claramente plástico y pegajoso al tacto. Forma cinta larga y continua al amasarse húmedo. Sin predominio de arena ni limo. Al secarse, forma terrones de dureza media.",
+                  "fr": "Clairement plastique et adhérent au toucher. Forme un ruban long et continu pétri humide. Pas de dominance de sable ou de limon. En séchant, forme des mottes de dureté moyenne."
+                }
+              },
+              {
+                "value": "sandy_clay_loam",
+                "pt": "Franco-argilo-arenoso",
+                "en": "Sandy clay loam",
+                "es": "Franco arcillo arenoso",
+                "fr": "Limon argilo-sableux",
+                "desc": {
+                  "pt": "Plástico e pegajoso com presença de areia claramente perceptível. Forma fita longa, mas com superfície áspera pela areia. A combinação de pegajosidade e granulosidade é característica desta classe.",
+                  "en": "Plastic and sticky with clearly perceptible presence of sand. Forms a long ribbon but with a rough surface due to sand. The combination of stickiness and graininess is characteristic of this class.",
+                  "es": "Plástico y pegajoso con presencia de arena claramente perceptible. Forma cinta larga, pero con superficie rugosa por la arena. La combinación de pegajosidad y granulometría es característica de esta clase.",
+                  "fr": "Plastique et adhérent avec présence de sable clairement perceptible. Forme un ruban long mais avec une surface rugueuse due au sable. La combinaison d'adhérence et de granulométrie est caractéristique de cette classe."
+                }
+              },
+              {
+                "value": "silty_clay_loam",
+                "pt": "Franco-argilo-siltoso",
+                "en": "Silty clay loam",
+                "es": "Franco arcillo limoso",
+                "fr": "Limon argilo-silteux",
+                "desc": {
+                  "pt": "Muito plástico e muito pegajoso com sensação sedosa intensa. Forma fita longa e brilhosa. A plasticidade é alta, mas a superfície da fita é mais lisa que nas classes argilosas puras, pela presença do silte.",
+                  "en": "Very plastic and very sticky with intense silky feel. Forms a long and shiny ribbon. Plasticity is high, but the ribbon surface is smoother than in pure clayey classes due to the presence of silt.",
+                  "es": "Muy plástico y muy pegajoso con intensa sensación sedosa. Forma cinta larga y brillante. La plasticidad es alta, pero la superficie de la cinta es más lisa que en las clases arcillosas puras, por la presencia del limo.",
+                  "fr": "Très plastique et très adhérent avec une sensation soyeuse intense. Forme un ruban long et brillant. La plasticité est élevée, mais la surface du ruban est plus lisse que dans les classes argileuses pures, en raison de la présence du limon."
+                }
+              },
+              {
+                "value": "sandy_clay",
+                "pt": "Argilo-arenoso",
+                "en": "Sandy clay",
+                "es": "Arcillo arenoso",
+                "fr": "Argile sableuse",
+                "desc": {
+                  "pt": "Muito plástico e muito pegajoso, com areia visivelmente incorporada à massa. A areia não reduz a plasticidade de forma significativa. Ao secar, forma torrões duros e angulosos com partículas de areia visíveis.",
+                  "en": "Very plastic and very sticky, with sand visibly incorporated into the mass. The sand does not significantly reduce plasticity. When dry, forms hard angular clods with visible sand particles.",
+                  "es": "Muy plástico y muy pegajoso, con arena visiblemente incorporada a la masa. La arena no reduce significativamente la plasticidad. Al secarse, forma terrones duros y angulosos con partículas de arena visibles.",
+                  "fr": "Très plastique et très adhérent, avec du sable visiblement incorporé dans la masse. Le sable ne réduit pas significativement la plasticité. En séchant, forme des mottes dures et anguleuses avec des particules de sable visibles."
+                }
+              },
+              {
+                "value": "silty_clay",
+                "pt": "Argilo-siltoso",
+                "en": "Silty clay",
+                "es": "Arcillo limoso",
+                "fr": "Argile silteuse",
+                "desc": {
+                  "pt": "Muito plástico, muito pegajoso e muito sedoso simultaneamente. Forma fita muito longa e brilhosa. A sensação de seda e de cola ao mesmo tempo é característica desta classe. Ao secar, torna-se muito duro.",
+                  "en": "Very plastic, very sticky, and very silky simultaneously. Forms a very long and shiny ribbon. The simultaneous feeling of silk and glue is characteristic of this class. When dry, becomes very hard.",
+                  "es": "Muy plástico, muy pegajoso y muy sedoso simultáneamente. Forma cinta muy larga y brillante. La sensación simultánea de seda y pegamento es característica de esta clase. Al secarse, se vuelve muy duro.",
+                  "fr": "Très plastique, très adhérent et très soyeux simultanément. Forme un ruban très long et brillant. La sensation simultanée de soie et de colle est caractéristique de cette classe. En séchant, devient très dur."
+                }
+              },
+              {
+                "value": "clay",
+                "pt": "Argila",
+                "en": "Clay",
+                "es": "Arcilla",
+                "fr": "Argile",
+                "desc": {
+                  "pt": "Extremamente plástico e pegajoso. Forma fita muito longa, brilhosa e resistente à ruptura. Ao umedecer, absorve água lentamente e incha. Ao secar, contrai fortemente, formando fissuras e torrões extremamente duros. Teor de argila superior a 40%, podendo ultrapassar 60%.",
+                  "en": "Extremely plastic and sticky. Forms a very long, shiny ribbon that resists breaking. When wetted, absorbs water slowly and swells. When dry, contracts strongly, forming cracks and extremely hard clods. Clay content above 40%, potentially exceeding 60%.",
+                  "es": "Extremadamente plástico y pegajoso. Forma cinta muy larga, brillante y resistente a la ruptura. Al humedecerse, absorbe agua lentamente e hincha. Al secarse, se contrae fuertemente, formando grietas y terrones extremadamente duros. Contenido de arcilla superior al 40%, pudiendo superar el 60%.",
+                  "fr": "Extrêmement plastique et adhérent. Forme un ruban très long, brillant et résistant à la rupture. Humidifié, absorbe l'eau lentement et gonfle. Séché, se contracte fortement, formant des fissures et des mottes extrêmement dures. Teneur en argile supérieure à 40 %, pouvant dépasser 60 %."
+                }
+              }
+            ],
+            "structure_options": [
+              {
+                "value": "single_grain",
+                "pt": "Grãos simples",
+                "en": "Single grain",
+                "es": "Grano simple",
+                "fr": "Grain simple",
+                "desc": {
+                  "pt": "Cada partícula comporta-se de forma independente, sem ligação com as demais. Estrutura típica de solos arenosos ou de horizontes muito lixiviados. Ao tentar formar um torrão, o material se esfacela imediatamente.",
+                  "en": "Each particle behaves independently, with no bonding to others. Typical structure of sandy soils or highly leached horizons. When attempting to form a clod, the material crumbles immediately.",
+                  "es": "Cada partícula se comporta de forma independiente, sin ligación con las demás. Estructura típica de suelos arenosos o de horizontes muy lixiviados. Al intentar formar un terrón, el material se deshace inmediatamente.",
+                  "fr": "Chaque particule se comporte de façon indépendante, sans liaison avec les autres. Structure typique des sols sableux ou des horizons très lessivés. En tentant de former une motte, le matériau s'émiette immédiatement."
+                }
+              },
+              {
+                "value": "massive",
+                "pt": "Maciça",
+                "en": "Massive",
+                "es": "Masiva",
+                "fr": "Massive",
+                "desc": {
+                  "pt": "Massa coesa sem agregados visíveis. O material não apresenta planos de fratura preferenciais; ao ser rompido, gera fragmentos de formato irregular. Pode indicar compactação, horizonte coeso, plíntico ou material de origem com cimentação.",
+                  "en": "Coherent mass without visible aggregates. The material shows no preferential fracture planes; when broken, generates irregularly shaped fragments. May indicate compaction, cemented, plinthic, or cohesive horizon.",
+                  "es": "Masa cohesiva sin agregados visibles. El material no presenta planos de fractura preferenciales; al romperse, genera fragmentos de formato irregular. Puede indicar compactación, horizonte cohesivo, plíntico o material de origen con cementación.",
+                  "fr": "Masse cohésive sans agrégats visibles. Le matériau ne présente pas de plans de fracture préférentiels ; en se cassant, génère des fragments de forme irrégulière. Peut indiquer une compaction, un horizon cohésif, plinthique ou un matériau d'origine cimenté."
+                }
+              },
+              {
+                "value": "granular",
+                "pt": "Granular",
+                "en": "Granular",
+                "es": "Granular",
+                "fr": "Granulaire",
+                "desc": {
+                  "pt": "Agregados pequenos, esféricos ou subesféricos, soltos entre si como grânulos de terra. Indica alta atividade biológica e boa incorporação de matéria orgânica. Comum em horizontes A bem desenvolvidos. Favorece alta porosidade e boa drenagem.",
+                  "en": "Small, spherical or subspherical aggregates, loosely arranged like soil granules. Indicates high biological activity and good organic matter incorporation. Common in well-developed A horizons. Favors high porosity and good drainage.",
+                  "es": "Agregados pequeños, esféricos o subesféricos, sueltos entre sí como gránulos de tierra. Indica alta actividad biológica e buena incorporación de materia orgánica. Común en horizontes A bien desarrollados. Favorece alta porosidad y buen drenaje.",
+                  "fr": "Agrégats petits, sphériques ou subsphériques, lâchement arrangés comme des granules de terre. Indique une haute activité biologique et une bonne incorporation de matière organique. Commun dans les horizons A bien développés. Favorise une haute porosité et un bon drainage."
+                }
+              },
+              {
+                "value": "angular_blocky",
+                "pt": "Blocos angulares",
+                "en": "Angular blocky",
+                "es": "Bloques angulares",
+                "fr": "Blocs anguleux",
+                "desc": {
+                  "pt": "Agregados cúbicos com seis faces planas e arestas agudas. As faces dos blocos encaixam-se entre si. Indica horizonte B com acúmulo de argila por iluviação (horizonte Bt). Permeabilidade moderada; drenagem menos livre que nos agregados granulares.",
+                  "en": "Cubic aggregates with six flat faces and sharp edges. Block faces fit together. Indicates a B horizon with clay accumulation by illuviation (Bt horizon). Moderate permeability; less free drainage than granular aggregates.",
+                  "es": "Agregados cúbicos con seis caras planas y aristas agudas. Las caras de los bloques encajan entre sí. Indica horizonte B con acumulación de arcilla por iluviación (horizonte Bt). Permeabilidad moderada; drenaje menos libre que en los agregados granulares.",
+                  "fr": "Agrégats cubiques avec six faces planes et arêtes vives. Les faces des blocs s'emboîtent. Indique un horizon B avec accumulation d'argile par illuviation (horizon Bt). Perméabilité modérée ; drainage moins libre que les agrégats granulaires."
+                }
+              },
+              {
+                "value": "subangular_blocky",
+                "pt": "Blocos subangulares",
+                "en": "Subangular blocky",
+                "es": "Bloques subangulares",
+                "fr": "Blocs subanguleux",
+                "desc": {
+                  "pt": "Semelhante aos blocos angulares, mas com algumas faces curvas e cantos mistos (parte agudos, parte arredondados). Mais comum em Latossolos e Argissolos do que os blocos angulares. Indica pedogênese moderada a avançada.",
+                  "en": "Similar to angular blocks but with some curved faces and mixed corners (partly sharp, partly rounded). More common in Latosols and Ultisols than angular blocks. Indicates moderate to advanced pedogenesis.",
+                  "es": "Similar a los bloques angulares, pero con algunas caras curvas y esquinas mixtas (parte agudas, parte redondeadas). Más común en Latosoles y Ultisoles que los bloques angulares. Indica pedogénesis moderada a avanzada.",
+                  "fr": "Similaire aux blocs anguleux, mais avec certaines faces courbes et des coins mixtes (partiellement aigus, partiellement arrondis). Plus commun dans les Latosols et Ultisols que les blocs anguleux. Indique une pédogenèse modérée à avancée."
+                }
+              },
+              {
+                "value": "prismatic",
+                "pt": "Prismática",
+                "en": "Prismatic",
+                "es": "Prismática",
+                "fr": "Prismatique",
+                "desc": {
+                  "pt": "Agregados alongados verticalmente com topos planos, formando colunas paralelas entre si. Característico de solos com argilominerais expansivos (montmorilonita) que se expandem e contraem sazonalmente. As faces verticais podem apresentar revestimentos argilosos.",
+                  "en": "Vertically elongated aggregates with flat tops, forming parallel columns. Characteristic of soils with expansive clay minerals (montmorillonite) that seasonally expand and contract. Vertical faces may show clay coatings.",
+                  "es": "Agregados elongados verticalmente con topos planos, formando columnas paralelas entre sí. Característico de suelos con arcillominerales expansivos (montmorillonita) que se expanden y contraen estacionalmente. Las caras verticales pueden presentar revestimientos arcillosos.",
+                  "fr": "Agrégats allongés verticalement avec des sommets plats, formant des colonnes parallèles. Caractéristique des sols avec des minéraux argileux expansifs (montmorillonite) qui se dilatent et se contractent saisonnièrement. Les faces verticales peuvent présenter des revêtements argileux."
+                }
+              },
+              {
+                "value": "columnar",
+                "pt": "Colunar",
+                "en": "Columnar",
+                "es": "Columnar",
+                "fr": "Columnaire",
+                "desc": {
+                  "pt": "Semelhante à prismática, mas com topos arredondados e frequentemente com cobertura branca (sais) ou escura no ápice das colunas. Diagnóstico de solos sódicos com alto teor de sódio trocável. Característico de Vertissolos, Planossolos e Solonetz.",
+                  "en": "Similar to prismatic but with rounded tops and often with white (salts) or dark coating at the column apex. Diagnostic of sodic soils with high exchangeable sodium content. Characteristic of Vertisols, Planosols, and Solonetz.",
+                  "es": "Similar a la prismática, pero con topos redondeados y, frecuentemente, con cobertura blanca (sales) o oscura en el ápice de las columnas. Diagnóstico de suelos sódicos con alto contenido de sodio intercambiable. Característico de Vertisoles, Planosoles y Solonetz.",
+                  "fr": "Similaire au prismatique, mais avec des sommets arrondis et souvent avec un revêtement blanc (sels) ou sombre à l'apex des colonnes. Diagnostic des sols sodiques à haute teneur en sodium échangeable. Caractéristique des Vertisols, Planosols et Solonetz."
+                }
+              }
+            ],
+            "crack_options": [
+              {
+                "value": "absent",
+                "pt": "Ausente",
+                "en": "Absent",
+                "es": "Ausente",
+                "fr": "Absent",
+                "desc": {
+                  "pt": "Sem fissuras ou rachaduras visíveis na camada. Indica argilominerais de baixa atividade (como a caulinita, predominante em solos tropicais intemperizados), solo com bom conteúdo de água ou textura não argilosa.",
+                  "en": "No visible cracks or fissures in the layer. Indicates low-activity clay minerals (such as kaolinite, predominant in weathered tropical soils), adequate soil moisture, or non-clayey texture.",
+                  "es": "Sin fisuras ni grietas visibles en la capa. Indica arcillominerales de baja actividad (como la caolinita, predominante en suelos tropicales meteorizados), buen contenido de agua o textura no arcillosa.",
+                  "fr": "Sans fissures ni craquelures visibles dans la couche. Indique des argiles à faible activité (comme la kaolinite, prédominante dans les sols tropicaux altérés), une bonne teneur en eau ou une texture non argileuse."
+                }
+              },
+              {
+                "value": "narrow",
+                "pt": "Estreita (< 1 cm)",
+                "en": "Narrow (< 1 cm)",
+                "es": "Estrecha (< 1 cm)",
+                "fr": "Étroite (< 1 cm)",
+                "desc": {
+                  "pt": "Fissuras visíveis com largura inferior a 1 cm. Indica argilominerais com atividade moderada ou solo argiloso em processo inicial de ressecamento. Comum em Argissolos e Cambissolos de textura argilosa durante o período seco.",
+                  "en": "Visible cracks narrower than 1 cm. Indicates clay minerals with moderate activity or clayey soil in early desiccation. Common in Argisols and Cambisols with clayey texture during the dry season.",
+                  "es": "Fisuras visibles de menos de 1 cm de ancho. Indica arcillominerales con actividad moderada o suelo arcilloso en proceso inicial de desecación. Común en Argisoles y Cambisoles de textura arcillosa durante la estación seca.",
+                  "fr": "Fissures visibles de moins de 1 cm de largeur. Indique des argiles à activité modérée ou un sol argileux en début de dessiccation. Commun dans les Argisols et Cambisols à texture argileuse pendant la saison sèche."
+                }
+              },
+              {
+                "value": "wide",
+                "pt": "Larga (> 1 cm)",
+                "en": "Wide (> 1 cm)",
+                "es": "Ancha (> 1 cm)",
+                "fr": "Large (> 1 cm)",
+                "desc": {
+                  "pt": "Fissuras com largura superior a 1 cm, abertas mesmo com alguma umidade no perfil. Indica argilominerais 2:1 de alta atividade (montmorilonita) com ciclos intensos de expansão e contração sazonal. Diagnóstico de Vertissolos e Planossolos; indica drenagem impedida ou alternante.",
+                  "en": "Cracks wider than 1 cm, open even with some moisture in the profile. Indicates high-activity 2:1 clay minerals (montmorillonite) with intense seasonal expansion-contraction cycles. Diagnostic of Vertisols and Planosols; indicates impeded or alternating drainage.",
+                  "es": "Fisuras de más de 1 cm de ancho, abiertas incluso con algo de humedad en el perfil. Indica arcillominerales 2:1 de alta actividad (montmorillonita) con intensos ciclos de expansión y contracción estacional. Diagnóstico de Vertisoles y Planosoles; indica drenaje impedido o alternante.",
+                  "fr": "Fissures de plus de 1 cm de largeur, ouvertes même avec une certaine humidité dans le profil. Indique des argiles 2:1 à haute activité (montmorillonite) avec des cycles intenses d'expansion-contraction saisonniers. Diagnostique des Vertisols et Planosols ; indique un drainage empêché ou alternant."
+                }
+              }
+            ],
+            "color_pattern_options": [
+              {
+                "value": "homogeneous",
+                "pt": "Homogênea",
+                "en": "Homogeneous",
+                "es": "Homogénea",
+                "fr": "Homogène",
+                "desc": {
+                  "pt": "Toda a camada apresenta uma única cor uniforme, sem manchas, listras ou variações cromáticas discerníveis. Indica condições estáveis de drenagem e pedogênese homogênea ao longo da camada.",
+                  "en": "The entire layer presents a single uniform color, without spots, streaks, or discernible chromatic variations. Indicates stable drainage conditions and homogeneous pedogenesis throughout the layer.",
+                  "es": "Toda la capa presenta un único color uniforme, sin manchas, rayas ni variaciones cromáticas discernibles. Indica condiciones estables de drenaje y pedogénesis homogénea a lo largo de la capa.",
+                  "fr": "Toute la couche présente une seule couleur uniforme, sans taches, raies ou variations chromatiques discernables. Indique des conditions de drainage stables et une pédogenèse homogène dans toute la couche."
+                }
+              },
+              {
+                "value": "variegated",
+                "pt": "Variegada",
+                "en": "Variegated",
+                "es": "Variegada",
+                "fr": "Variégée",
+                "desc": {
+                  "pt": "A camada apresenta duas ou mais cores visíveis, ou manchas de cor diferente sobre uma cor de fundo dominante. Indica alternância de processos de oxidação (manchas avermelhadas) e redução (manchas acinzentadas), associada a flutuações do lençol freático. Registrar a cor dominante e a cor secundária.",
+                  "en": "The layer presents two or more visible colors, or spots of a different color on a dominant background. Indicates alternating oxidation (reddish spots) and reduction (grayish spots) processes, associated with water table fluctuations. Record both the dominant and secondary colors.",
+                  "es": "La capa presenta dos o más colores visibles, o manchas de color diferente sobre un color de fondo dominante. Indica alternancia de procesos de oxidación (manchas rojizas) y reducción (manchas grisáceas), asociada a fluctuaciones del nivel freático. Registrar el color dominante y el secundario.",
+                  "fr": "La couche présente deux couleurs ou plus visibles, ou des taches de couleur différente sur une couleur de fond dominante. Indique une alternance de processus d'oxydation (taches rougeâtres) et de réduction (taches grisâtres), associée à des fluctuations de la nappe. Enregistrer les couleurs dominante et secondaire."
+                }
+              }
+            ],
+            "color_term_options": [
+              {
+                "value": "red",
+                "pt": "Vermelho",
+                "en": "Red",
+                "es": "Rojo",
+                "fr": "Rouge",
+                "desc": {
+                  "pt": "Coloração vermelha intensa, típica de solos com alto teor de hematita (Fe₂O₃). Indica intemperismo avançado e drenagem livre e prolongada. Frequente em Latossolos Vermelhos e Nitossolos Vermelhos de regiões tropicais úmidas.",
+                  "en": "Intense red color, typical of soils with high hematite content (Fe₂O₃). Indicates advanced weathering and prolonged free drainage. Frequent in Red Latosols and Red Nitosols of humid tropical regions.",
+                  "es": "Coloración roja intensa, típica de suelos con alto contenido de hematita (Fe₂O₃). Indica meteorización avanzada y drenaje libre y prolongado. Frecuente en Latosoles Rojos y Nitosoles Rojos de regiones tropicales húmedas.",
+                  "fr": "Couleur rouge intense, typique des sols à haute teneur en hématite (Fe₂O₃). Indique une altération avancée et un drainage libre et prolongé. Fréquent dans les Latosols Rouges et Nitosols Rouges des régions tropicales humides."
+                }
+              },
+              {
+                "value": "reddish_brown",
+                "pt": "Bruno-avermelhado",
+                "en": "Reddish brown",
+                "es": "Pardo rojizo",
+                "fr": "Brun rougeâtre",
+                "desc": {
+                  "pt": "Coloração pardo-avermelhada, com teor moderado de óxidos de ferro. Indica intemperismo intermediário. Frequente em Argissolos Vermelho-Amarelos e em horizontes B de Cambissolos.",
+                  "en": "Reddish brown color with moderate iron oxide content. Indicates intermediate weathering. Frequent in Red-Yellow Argisols and in B horizons of Cambisols.",
+                  "es": "Coloración pardo-rojiza, con contenido moderado de óxidos de hierro. Indica meteorización intermedia. Frecuente en Argisoles Rojo-Amarillos y en horizontes B de Cambisoles.",
+                  "fr": "Couleur brun rougeâtre, avec une teneur modérée en oxydes de fer. Indique une altération intermédiaire. Fréquent dans les Argisols Rouge-Jaune et dans les horizons B des Cambisols."
+                }
+              },
+              {
+                "value": "yellowish_red",
+                "pt": "Vermelho-amarelado",
+                "en": "Yellowish red",
+                "es": "Rojo amarillento",
+                "fr": "Rouge jaunâtre",
+                "desc": {
+                  "pt": "Coloração vermelho-amarelada, resultante da coexistência de hematita e goethita. Típica de solos bem drenados em regiões úmidas. Frequente em Latossolos e Argissolos Vermelho-Amarelos.",
+                  "en": "Yellowish red color resulting from the coexistence of hematite and goethite. Typical of well-drained soils in humid regions. Frequent in Latosols and Red-Yellow Argisols.",
+                  "es": "Coloración rojo-amarillenta, resultado de la coexistencia de hematita y goethita. Típica de suelos bien drenados en regiones húmedas. Frecuente en Latosoles y Argisoles Rojo-Amarillos.",
+                  "fr": "Couleur rouge jaunâtre résultant de la coexistence d'hématite et de goéthite. Typique des sols bien drainés dans les régions humides. Fréquent dans les Latosols et Argisols Rouge-Jaune."
+                }
+              },
+              {
+                "value": "strong_brown",
+                "pt": "Bruno-forte",
+                "en": "Strong brown",
+                "es": "Pardo fuerte",
+                "fr": "Brun fort",
+                "desc": {
+                  "pt": "Coloração parda intensa, com goethita como óxido de ferro dominante. Indica boa drenagem. Frequente nos horizontes B de Argissolos e Cambissolos de regiões com estação seca moderada.",
+                  "en": "Intense brown color with goethite as the dominant iron oxide. Indicates good drainage. Frequent in B horizons of Argisols and Cambisols in regions with moderate dry seasons.",
+                  "es": "Coloración parda intensa, con goethita como óxido de hierro dominante. Indica buen drenaje. Frecuente en los horizontes B de Argisoles y Cambisoles de regiones con estación seca moderada.",
+                  "fr": "Couleur brune intense avec la goéthite comme oxyde de fer dominant. Indique un bon drainage. Fréquent dans les horizons B des Argisols et Cambisols des régions à saison sèche modérée."
+                }
+              },
+              {
+                "value": "yellowish_brown",
+                "pt": "Bruno-amarelado",
+                "en": "Yellowish brown",
+                "es": "Pardo amarillento",
+                "fr": "Brun jaunâtre",
+                "desc": {
+                  "pt": "Coloração pardo-amarelada, com goethita dominante e intemperismo moderado. Frequente no topo de perfis lateríticos e em horizontes de transição. Comum em Argissolos e Cambissolos de regiões tropicais com drenagem moderada.",
+                  "en": "Yellowish brown color with dominant goethite and moderate weathering. Frequent at the top of lateritic profiles and in transitional horizons. Common in Argisols and Cambisols of tropical regions with moderate drainage.",
+                  "es": "Coloración pardo-amarillenta, con goethita dominante y meteorización moderada. Frecuente en la parte superior de perfiles lateríticos y en horizontes de transición. Común en Argisoles y Cambisoles de regiones tropicales con drenaje moderado.",
+                  "fr": "Couleur brun jaunâtre avec goéthite dominante et altération modérée. Fréquent au sommet des profils latéritiques et dans les horizons de transition. Commun dans les Argisols et Cambisols des régions tropicales à drainage modéré."
+                }
+              },
+              {
+                "value": "brownish_yellow",
+                "pt": "Amarelo-brunado",
+                "en": "Brownish yellow",
+                "es": "Amarillo parduzco",
+                "fr": "Jaune brunâtre",
+                "desc": {
+                  "pt": "Coloração amarelo-acastanhada, associada a solos muito intemperizados com baixa concentração de óxidos de ferro. Diagnóstica de Latossolos Amarelos. Indica alto grau de lixiviação de bases e cátions.",
+                  "en": "Brownish yellow color associated with highly weathered soils with low iron oxide concentration. Diagnostic of Yellow Latosols. Indicates a high degree of leaching of bases and cations.",
+                  "es": "Coloración amarillo-parduzca, asociada a suelos muy meteorizados con baja concentración de óxidos de hierro. Diagnóstica de Latosoles Amarillos. Indica alto grado de lixiviación de bases y cationes.",
+                  "fr": "Couleur jaune brunâtre associée aux sols très altérés avec une faible concentration en oxydes de fer. Diagnostique des Latosols Jaunes. Indique un fort degré de lessivage des bases et des cations."
+                }
+              },
+              {
+                "value": "yellow",
+                "pt": "Amarelo",
+                "en": "Yellow",
+                "es": "Amarillo",
+                "fr": "Jaune",
+                "desc": {
+                  "pt": "Coloração amarela, resultante de lixiviação extrema e mínima concentração de óxidos de ferro. Indica alta saturação por Al³⁺ e baixa fertilidade natural. Diagnóstica de Latossolos Amarelos em estágio avançado de intemperismo, comum na Amazônia e no litoral nordestino.",
+                  "en": "Yellow color resulting from extreme leaching and minimal iron oxide concentration. Indicates high Al³⁺ saturation and low natural fertility. Diagnostic of Yellow Latosols in advanced weathering stage, common in the Amazon and northeastern Brazilian coast.",
+                  "es": "Coloración amarilla, resultado de lixiviación extrema y mínima concentración de óxidos de hierro. Indica alta saturación por Al³⁺ y baja fertilidad natural. Diagnóstica de Latosoles Amarillos en estado avanzado de meteorización, común en la Amazonía y el litoral nororiental.",
+                  "fr": "Couleur jaune résultant d'un lessivage extrême et d'une concentration minimale en oxydes de fer. Indique une haute saturation en Al³⁺ et une faible fertilité naturelle. Diagnostique des Latosols Jaunes à stade d'altération avancé, commun en Amazonie et sur le littoral nord-est brésilien."
+                }
+              },
+              {
+                "value": "brown",
+                "pt": "Bruno",
+                "en": "Brown",
+                "es": "Pardo",
+                "fr": "Brun",
+                "desc": {
+                  "pt": "Coloração parda neutra, com teor moderado de matéria orgânica e intemperismo intermediário. Comum em horizontes A e B de Cambissolos, Argissolos e Neossolos. Não indica hidromorfismo nem acúmulo expressivo de óxidos de ferro.",
+                  "en": "Neutral brown color with moderate organic matter content and intermediate weathering. Common in A and B horizons of Cambisols, Argisols, and Neosols. Does not indicate hydromorphism or significant iron oxide accumulation.",
+                  "es": "Coloración parda neutra, con contenido moderado de materia orgánica y meteorización intermedia. Común en horizontes A y B de Cambisoles, Argisoles y Neosoles. No indica hidromorfismo ni acumulación significativa de óxidos de hierro.",
+                  "fr": "Couleur brune neutre avec une teneur modérée en matière organique et une altération intermédiaire. Commun dans les horizons A et B des Cambisols, Argisols et Néosols. N'indique pas d'hydromorphie ni d'accumulation significative d'oxydes de fer."
+                }
+              },
+              {
+                "value": "dark_brown",
+                "pt": "Bruno-escuro",
+                "en": "Dark brown",
+                "es": "Pardo oscuro",
+                "fr": "Brun foncé",
+                "desc": {
+                  "pt": "Coloração parda escura, resultante de teor elevado de matéria orgânica. Típica de horizontes A moderados, proeminentes ou húmicos. A cor escura indica boa atividade biológica e acúmulo de húmus.",
+                  "en": "Dark brown color resulting from high organic matter content. Typical of moderate, prominent, or humic A horizons. The dark color indicates good biological activity and humus accumulation.",
+                  "es": "Coloración parda oscura, resultado de alto contenido de materia orgánica. Típica de horizontes A moderados, prominentes o húmicos. El color oscuro indica buena actividad biológica y acumulación de humus.",
+                  "fr": "Couleur brun foncé résultant d'une haute teneur en matière organique. Typique des horizons A modérés, proéminents ou humiques. La couleur sombre indique une bonne activité biologique et une accumulation d'humus."
+                }
+              },
+              {
+                "value": "grayish_brown",
+                "pt": "Bruno-acinzentado",
+                "en": "Grayish brown",
+                "es": "Pardo grisáceo",
+                "fr": "Brun grisâtre",
+                "desc": {
+                  "pt": "Coloração pardo-acinzentada, indicando gleização incipiente ou alternância de condições de drenagem. A redução do croma em relação ao bruno indica início de processos redutores na camada, associados a saturação hídrica periódica.",
+                  "en": "Grayish brown color indicating incipient gleization or alternating drainage conditions. The reduction in chroma relative to brown indicates the beginning of reducing processes in the layer, associated with periodic waterlogging.",
+                  "es": "Coloración pardo-grisácea, que indica gleización incipiente o alternancia de condiciones de drenaje. La reducción del croma respecto al pardo indica inicio de procesos reductores en la capa, asociados a saturación hídrica periódica.",
+                  "fr": "Couleur brun grisâtre indiquant une gléisation incipiente ou une alternance de conditions de drainage. La réduction du chroma par rapport au brun indique le début de processus réducteurs dans la couche, associés à une saturation hydrique périodique."
+                }
+              },
+              {
+                "value": "gray",
+                "pt": "Cinzento",
+                "en": "Gray",
+                "es": "Gris",
+                "fr": "Gris",
+                "desc": {
+                  "pt": "Coloração cinzenta com baixo croma, indicando horizonte gleizado em condição anaeróbia por saturação hídrica. O ferro foi reduzido a Fe²⁺ e parcialmente removido, resultando na cor característica. Diagnóstica de Gleissolos e horizontes glei em outros solos.",
+                  "en": "Gray color with low chroma, indicating a gleyed horizon under anaerobic conditions from waterlogging. Iron was reduced to Fe²⁺ and partially removed, resulting in the characteristic color. Diagnostic of Gleysols and gley horizons in other soils.",
+                  "es": "Coloración gris con bajo croma, que indica horizonte gleizado en condición anaeróbica por saturación hídrica. El hierro fue reducido a Fe²⁺ y parcialmente removido, resultando en el color característico. Diagnóstica de Gleisoles y horizontes glei en otros suelos.",
+                  "fr": "Couleur grise à faible chroma, indiquant un horizon engorgé en condition anaérobie par saturation hydrique. Le fer a été réduit en Fe²⁺ et partiellement éliminé. Diagnostique des Gleysols et des horizons gley dans d'autres sols."
+                }
+              },
+              {
+                "value": "dark_gray",
+                "pt": "Cinzento-escuro",
+                "en": "Dark gray",
+                "es": "Gris oscuro",
+                "fr": "Gris foncé",
+                "desc": {
+                  "pt": "Coloração cinzenta escura, combinando gleização com acúmulo de matéria orgânica. Indica horizonte gleico com atividade biológica preservada em condições anaeróbias, ou horizonte A de áreas permanentemente alagadas.",
+                  "en": "Dark gray color combining gleization with organic matter accumulation. Indicates a gley horizon with biological activity preserved under anaerobic conditions, or an A horizon in permanently flooded areas.",
+                  "es": "Coloración gris oscura, que combina gleización con acumulación de materia orgánica. Indica horizonte gleico con actividad biológica preservada en condiciones anaeróbicas, o horizonte A de áreas permanentemente inundadas.",
+                  "fr": "Couleur gris foncé combinant gléisation et accumulation de matière organique. Indique un horizon gley avec activité biologique préservée en conditions anaérobies, ou un horizon A de zones en permanence inondées."
+                }
+              },
+              {
+                "value": "black",
+                "pt": "Preto",
+                "en": "Black",
+                "es": "Negro",
+                "fr": "Noir",
+                "desc": {
+                  "pt": "Coloração preta, resultante de acúmulo muito elevado de matéria orgânica (horizontes A chernozêmico ou húmico) ou de gleização intensa. Indica alta fertilidade natural quando associado à matéria orgânica, ou hidromorfismo permanente quando associado à gleização.",
+                  "en": "Black color resulting from very high organic matter accumulation (chernozemic or humic A horizons) or intense gleization. Indicates high natural fertility when associated with organic matter, or permanent hydromorphism when associated with gleization.",
+                  "es": "Coloración negra, resultado de acumulación muy elevada de materia orgánica (horizontes A chernozémico o húmico) o de gleización intensa. Indica alta fertilidad natural cuando asociada a materia orgánica, o hidromorfismo permanente cuando asociada a gleización.",
+                  "fr": "Couleur noire résultant d'une accumulation très élevée de matière organique (horizons A chernozémique ou humique) ou d'une gléisation intense. Indique une haute fertilité naturelle quand associée à la matière organique, ou un hydromorphisme permanent quand associée à la gléisation."
+                }
+              }
+            ],
+            "characteristics_options": [
+              {
+                "key": "has_gravel",
+                "value": "gravel",
+                "pt": "Cascalhos / Pedregosidade",
+                "en": "Gravel / Stoniness",
+                "es": "Cascajos / Pedregosidad",
+                "fr": "Graviers / Cailloux",
+                "desc": {
+                  "pt": "Presença de fragmentos de rocha com diâmetro superior a 2 mm (cascalhos) ou de pedras na superfície ou interior da camada (pedregosidade). Indica material de origem pedregoso, processo erosivo pretérito que removeu a fração fina, ou herança de material coluvionar.",
+                  "en": "Presence of rock fragments larger than 2 mm (gravel) or stones on the surface or within the layer. Indicates stony parent material, past erosive processes that removed fine particles, or colluvial material inheritance.",
+                  "es": "Presencia de fragmentos de roca con diámetro superior a 2 mm (cascajos) o piedras en la superficie o interior de la capa. Indica material de origen pedregoso, procesos erosivos pretéritos que removieron la fracción fina, o herencia de material coluvionar.",
+                  "fr": "Présence de fragments de roche de diamètre supérieur à 2 mm (graviers) ou de pierres en surface ou dans la couche. Indique un matériau parental pierreux, des processus érosifs passés ayant éliminé la fraction fine, ou un héritage de matériau colluvionnaire."
+                }
+              },
+              {
+                "key": "has_roots",
+                "value": "roots",
+                "pt": "Raízes",
+                "en": "Roots",
+                "es": "Raíces",
+                "fr": "Racines",
+                "desc": {
+                  "pt": "Presença de raízes vivas ou mortas na camada analisada. Indica a profundidade efetiva do solo e a atividade biológica do perfil. Raízes em camadas profundas sinalizam boas condições de aeração, ausência de camadas restritivas e solo com profundidade efetiva elevada.",
+                  "en": "Presence of live or dead roots in the analyzed layer. Indicates the effective soil depth and the biological activity of the profile. Roots in deep layers signal good aeration conditions, absence of restrictive layers, and high effective soil depth.",
+                  "es": "Presencia de raíces vivas o muertas en la capa analizada. Indica la profundidad efectiva del suelo y la actividad biológica del perfil. Raíces en capas profundas señalan buenas condiciones de aireación, ausencia de capas restrictivas y suelo de elevada profundidad efectiva.",
+                  "fr": "Présence de racines vivantes ou mortes dans la couche analysée. Indique la profondeur effective du sol et l'activité biologique du profil. Des racines dans les couches profondes signalent de bonnes conditions d'aération, l'absence de couches restrictives et une profondeur effective élevée."
+                }
+              },
+              {
+                "key": "has_nodules",
+                "value": "nodules",
+                "pt": "Nódulos / Concreções",
+                "en": "Nodules / Concretions",
+                "es": "Nódulos / Concreciones",
+                "fr": "Nodules / Concrétions",
+                "desc": {
+                  "pt": "Presença de corpos cimentados de óxido de ferro (goethita, hematita) ou manganês, geralmente de formato arredondado e cor avermelhada a preta. Sinaliza episódios de hidromorfismo passado ou presente, com alternância de condições de oxidação e redução associadas a flutuações do lençol freático.",
+                  "en": "Presence of cemented bodies of iron oxide (goethite, hematite) or manganese, usually rounded in shape and reddish to black in color. Signals past or present hydromorphism episodes, with alternating oxidizing and reducing conditions associated with water table fluctuations.",
+                  "es": "Presencia de cuerpos cementados de óxido de hierro (goethita, hematita) o manganeso, generalmente de forma redondeada y color rojizo a negro. Señala episodios de hidromorfismo pasado o presente, con alternancia de condiciones de oxidación y reducción asociadas a fluctuaciones del nivel freático.",
+                  "fr": "Présence de corps cimentés d'oxyde de fer (goéthite, hématite) ou de manganèse, généralement de forme arrondie et de couleur rougeâtre à noire. Signale des épisodes d'hydromorphie passés ou présents, avec alternance de conditions oxydantes et réductrices associées aux fluctuations de la nappe."
+                }
+              },
+              {
+                "key": "has_dispersive",
+                "value": "dispersive",
+                "pt": "Dispersivo",
+                "en": "Dispersive",
+                "es": "Dispersivo",
+                "fr": "Dispersif",
+                "desc": {
+                  "pt": "Solo com alta concentração de sódio trocável que se dispersa em contato com água pura, formando crosta superficial impermeável e suspensão turva. Indica solo sódico (Solonetz, Planossolo) com alta suscetibilidade à erosão interna por piping e ao encrostamento superficial.",
+                  "en": "Soil with high exchangeable sodium content that disperses on contact with pure water, forming an impermeable surface crust and a turbid suspension. Indicates sodic soil (Solonetz, Planosol) with high susceptibility to internal erosion by piping and surface crusting.",
+                  "es": "Suelo con alta concentración de sodio intercambiable que se dispersa en contacto con agua pura, formando costra superficial impermeable y suspensión turbia. Indica suelo sódico (Solonetz, Planossolo) con alta susceptibilidad a la erosión interna por piping y al encostramento superficial.",
+                  "fr": "Sol à haute teneur en sodium échangeable qui se disperse au contact de l'eau pure, formant une croûte de surface imperméable et une suspension trouble. Indique un sol sodique (Solonetz, Planosol) à haute susceptibilité à l'érosion interne par piping et à la formation de croûtes de surface."
+                }
+              },
+              {
+                "key": "has_hardened",
+                "value": "hardened",
+                "pt": "Endurecido / Coeso",
+                "en": "Hardened / Cohesive",
+                "es": "Endurecido / Cohesivo",
+                "fr": "Durci / Cohésif",
+                "desc": {
+                  "pt": "Horizonte com consistência muito dura a extremamente dura quando seco, resistente à penetração de raízes e à escavação manual. Pode indicar horizonte coeso (comum no Nordeste brasileiro), fragipã ou horizonte plíntico, restringindo a infiltração de água e o crescimento radicular.",
+                  "en": "Horizon with very hard to extremely hard consistency when dry, resistant to root penetration and manual excavation. May indicate a cohesive horizon (common in northeastern Brazil), fragipan, or plinthic horizon, restricting water infiltration and root growth.",
+                  "es": "Horizonte con consistencia muy dura a extremadamente dura cuando seco, resistente a la penetración de raíces y a la excavación manual. Puede indicar horizonte cohesivo (común en el Nordeste brasileño), fragipán u horizonte plíntico, restringiendo la infiltración de agua y el crecimiento radicular.",
+                  "fr": "Horizon à consistance très dure à extrêmement dure quand sec, résistant à la pénétration des racines et à l'excavation manuelle. Peut indiquer un horizon cohésif (commun dans le Nordeste brésilien), un fragipan ou un horizon plinthique, restreignant l'infiltration de l'eau et la croissance racinaire."
+                }
+              },
+              {
+                "key": "has_water_table",
+                "value": "water_table",
+                "pt": "Lençol Freático",
+                "en": "Water Table",
+                "es": "Nivel Freático",
+                "fr": "Nappe Phréatique",
+                "desc": {
+                  "pt": "Afloramento de água durante a descrição da camada, indicando que o lençol freático está dentro do perfil no momento do levantamento. Evidencia drenagem imperfeita a muito mal drenada, com implicações diretas para a vegetação que pode ser sustentada no sítio e para os processos geossistêmicos locais.",
+                  "en": "Water seeping into the layer during description, indicating the water table is within the profile at the time of the survey. Evidences imperfect to very poorly drained conditions, with direct implications for the vegetation that can be sustained at the site and for local geosystemic processes.",
+                  "es": "Afloramiento de agua durante la descripción de la capa, indicando que el nivel freático está dentro del perfil en el momento del levantamiento. Evidencia drenaje imperfecto a muy mal drenado, con implicaciones directas para la vegetación que puede sustentarse en el sitio y para los procesos geosistémicos locales.",
+                  "fr": "Affleurement d'eau pendant la description de la couche, indiquant que la nappe phréatique est dans le profil au moment du levé. Témoigne d'un drainage imparfait à très mauvais, avec des implications directes pour la végétation pouvant être soutenue sur le site et pour les processus géosystémiques locaux."
+                }
+              }
+            ]
+          },
+          "desc": {
+            "pt": "Caracterização morfológica do solo da parcela, realizada por observação tátil-visual em campo. O solo é um dos principais condicionantes da vegetação e um indicador da dinâmica geossistêmica local. A descrição pode ser simplificada (um único horizonte representativo) ou detalhada (camada por camada), conforme a profundidade da investigação pretendida.",
+            "en": "Morphological characterization of the plot soil, performed through tactile-visual observation in the field. Soil is one of the main conditioning factors for vegetation and an indicator of local geosystemic dynamics. The description can be simplified (a single representative horizon) or detailed (layer by layer), according to the depth of investigation intended.",
+            "es": "Caracterización morfológica del suelo de la parcela, realizada mediante observación táctil-visual en campo. El suelo es uno de los principales condicionantes de la vegetación e indicador de la dinámica geosistémica local. La descripción puede ser simplificada (un único horizonte representativo) o detallada (capa por capa), según la profundidad de investigación prevista.",
+            "fr": "Caractérisation morphologique du sol de la parcelle, réalisée par observation tactile-visuelle sur le terrain. Le sol est l'un des principaux facteurs conditionnant la végétation et un indicateur de la dynamique géosystémique locale. La description peut être simplifiée (un seul horizon représentatif) ou détaillée (couche par couche), selon la profondeur d'investigation souhaitée."
+          }
+        }
+      ]
+    },
+    {
+      "id": "impacts",
+      "title": {
+        "pt": "Impactos Ambientais",
+        "en": "Environmental Impacts",
+        "es": "Impactos Ambientales",
+        "fr": "Impacts Environnementaux"
+      },
+      "fields": [
+        {
+          "key": "environmental_impacts",
+          "label": {
+            "pt": "Impactos Ambientais",
+            "en": "Environmental Impacts",
+            "es": "Impactos Ambientales",
+            "fr": "Impacts Environnementaux"
+          },
+          "type": "impact_list",
+          "helper_text": {
+            "pt": "Selecione os impactos observados e adicione detalhes se necessário.",
+            "en": "Select observed impacts and add details if necessary.",
+            "es": "Seleccione los impactos observados y agregue detalles si es necesario.",
+            "fr": "Sélectionnez les impacts observés et ajoutez des détails si nécessaire."
+          },
+          "options": [
+            {
+              "key": "Poluição",
+              "label": {
+                "pt": "Poluição",
+                "en": "Pollution",
+                "es": "Contaminación",
+                "fr": "Pollution"
+              },
+              "desc": {
+                "pt": "Contaminação do solo, água ou ar por resíduos, químicos ou dejetos",
+                "en": "Contamination of soil, water or air by waste, chemicals or effluents",
+                "es": "Contaminación del suelo, agua o aire por residuos, químicos o efluentes",
+                "fr": "Contamination du sol, de l'eau ou de l'air par des déchets, des produits chimiques ou des effluents"
+              },
+              "magnitude_desc": [
+                {
+                  "pt": "Resíduos dispersos pontualmente; impacto localizado e reversível a curto prazo.",
+                  "en": "Scattered waste; localized and reversible impact in the short term.",
+                  "es": "Residuos dispersos puntualmente; impacto localizado y reversible a corto plazo.",
+                  "fr": "Déchets dispersés ponctuellement ; impact localisé et réversible à court terme."
+                },
+                {
+                  "pt": "Contaminação difusa visível; indícios de toxicidade na vegetação ou no solo.",
+                  "en": "Visible diffuse contamination; signs of toxicity in vegetation or soil.",
+                  "es": "Contaminación difusa visible; indicios de toxicidad en la vegetación o el suelo.",
+                  "fr": "Contamination diffuse visible ; signes de toxicité dans la végétation ou le sol."
+                },
+                {
+                  "pt": "Passivo ambiental grave; solo ou água visivelmente comprometidos — recuperação improvável sem intervenção.",
+                  "en": "Severe environmental liability; soil or water visibly compromised — recovery unlikely without intervention.",
+                  "es": "Pasivo ambiental grave; suelo o agua visiblemente comprometidos — recuperación improbable sin intervención.",
+                  "fr": "Passif environnemental grave ; sol ou eau visiblement compromis — récupération improbable sans intervention."
+                }
+              ]
+            },
+            {
+              "key": "Erosão",
+              "label": {
+                "pt": "Erosão",
+                "en": "Erosion",
+                "es": "Erosión",
+                "fr": "Érosion"
+              },
+              "desc": {
+                "pt": "Perda de solo por ação da água, vento ou gravidade; formação de sulcos e ravinas",
+                "en": "Soil loss by water, wind or gravity action; formation of gullies and ravines",
+                "es": "Pérdida de suelo por acción del agua, viento o gravedad; formación de surcos y cárcavas",
+                "fr": "Perte de sol par l'action de l'eau, du vent ou de la gravité ; formation de ravines et de ravinements"
+              },
+              "magnitude_desc": [
+                {
+                  "pt": "Sulcos superficiais incipientes (< 10 cm); remoção laminar pontual do horizonte superficial.",
+                  "en": "Incipient shallow rills (< 10 cm); localized sheet removal of the topsoil.",
+                  "es": "Surcos superficiales incipientes (< 10 cm); remoción laminar puntual del horizonte superficial.",
+                  "fr": "Rigoles superficielles incipientes (< 10 cm) ; enlèvement lamellaire localisé de la couche superficielle."
+                },
+                {
+                  "pt": "Ravinas ativas com sulcos 10–50 cm; perda expressiva do horizonte A; assoreamento de drenagens.",
+                  "en": "Active gullies 10–50 cm deep; significant loss of A horizon; drainage siltation.",
+                  "es": "Cárcavas activas de 10–50 cm; pérdida significativa del horizonte A; colmatación de drenajes.",
+                  "fr": "Ravines actives de 10 à 50 cm de profondeur ; perte significative de l'horizon A ; envasement des drains."
+                },
+                {
+                  "pt": "Voçorocamento — sulcos > 50 cm ou colapso de encosta; exposição de horizontes B/C ou rocha.",
+                  "en": "Gullying — channels > 50 cm or slope collapse; exposure of B/C horizons or bedrock.",
+                  "es": "Cárcavas profundas > 50 cm o colapso de ladera; exposición de horizontes B/C o roca madre.",
+                  "fr": "Ravinement — chenaux > 50 cm ou effondrement de versant ; exposition des horizons B/C ou de la roche mère."
+                }
+              ]
+            },
+            {
+              "key": "Espécies invasoras",
+              "label": {
+                "pt": "Espécies invasoras",
+                "en": "Invasive species",
+                "es": "Especies invasoras",
+                "fr": "Espèces invasives"
+              },
+              "desc": {
+                "pt": "Presença de espécies exóticas que competem e ameaçam a vegetação nativa",
+                "en": "Presence of exotic species that compete with and threaten native vegetation",
+                "es": "Presencia de especies exóticas que compiten y amenazan la vegetación nativa",
+                "fr": "Présence d'espèces exotiques qui concurrencent et menacent la végétation native"
+              },
+              "magnitude_desc": [
+                {
+                  "pt": "Presença pontual sem dominância; cobertura de invasoras < 25% — regeneração nativa não comprometida.",
+                  "en": "Scattered presence without dominance; invasive cover < 25% — native regeneration not compromised.",
+                  "es": "Presencia puntual sin dominancia; cobertura de invasoras < 25% — regeneración nativa no comprometida.",
+                  "fr": "Présence ponctuelle sans dominance ; couverture des invasives < 25 % — régénération native non compromise."
+                },
+                {
+                  "pt": "Co-dominância com espécies nativas; cobertura 25–75% — regeneração natural dificultada.",
+                  "en": "Co-dominance with native species; cover 25–75% — natural regeneration hindered.",
+                  "es": "Co-dominancia con especies nativas; cobertura 25–75% — regeneración natural dificultada.",
+                  "fr": "Co-dominance avec les espèces natives ; couverture 25–75 % — régénération naturelle entravée."
+                },
+                {
+                  "pt": "Dominância total; cobertura > 75% — regeneração nativa suprimida, intervenção necessária.",
+                  "en": "Total dominance; cover > 75% — native regeneration suppressed, intervention required.",
+                  "es": "Dominancia total; cobertura > 75% — regeneración nativa suprimida, intervención necesaria.",
+                  "fr": "Dominance totale ; couverture > 75 % — régénération native supprimée, intervention nécessaire."
+                }
+              ]
+            },
+            {
+              "key": "Fogo",
+              "label": {
+                "pt": "Fogo",
+                "en": "Fire",
+                "es": "Fuego",
+                "fr": "Feu"
+              },
+              "desc": {
+                "pt": "Queimadas recentes ou antigas; evidências de incêndios florestais",
+                "en": "Recent or old burns; evidence of forest fires",
+                "es": "Quemas recientes o antiguas; evidencias de incendios forestales",
+                "fr": "Brûlages récents ou anciens ; traces d'incendies de forêt"
+              },
+              "magnitude_desc": [
+                {
+                  "pt": "Fogo de baixa intensidade; danos restritos ao estrato herbáceo — troncos e copa intactos.",
+                  "en": "Low-intensity fire; damage restricted to the herbaceous layer — trunks and crown intact.",
+                  "es": "Fuego de baja intensidad; daños restringidos al estrato herbáceo — troncos y copa intactos.",
+                  "fr": "Feu de faible intensité ; dommages limités à la strate herbacée — troncs et couronnes intacts."
+                },
+                {
+                  "pt": "Queimada de média intensidade; danos ao sub-bosque e arbustos; troncos chamuscados mas vivos.",
+                  "en": "Medium-intensity fire; damage to understorey and shrubs; scorched but living trunks.",
+                  "es": "Quema de media intensidad; daños en el sotobosque y arbustos; troncos chamuscados pero vivos.",
+                  "fr": "Feu de moyenne intensité ; dommages au sous-bois et aux arbustes ; troncs calcinés mais vivants."
+                },
+                {
+                  "pt": "Incêndio de alta intensidade; mortalidade de árvores e colapso do dossel; solo exposto.",
+                  "en": "High-intensity wildfire; tree mortality and canopy collapse; exposed soil.",
+                  "es": "Incendio de alta intensidad; mortalidad de árboles y colapso del dosel; suelo expuesto.",
+                  "fr": "Incendie de haute intensité ; mortalité des arbres et effondrement de la canopée ; sol exposé."
+                }
+              ]
+            },
+            {
+              "key": "Geada",
+              "label": {
+                "pt": "Geada",
+                "en": "Frost",
+                "es": "Helada",
+                "fr": "Gel"
+              },
+              "desc": {
+                "pt": "Danos à vegetação causados por temperaturas abaixo de zero",
+                "en": "Damage to vegetation caused by below-zero temperatures",
+                "es": "Daños a la vegetación causados por temperaturas bajo cero",
+                "fr": "Dommages à la végétation causés par des températures inférieures à zéro"
+              },
+              "magnitude_desc": [
+                {
+                  "pt": "Danos foliares pontuais em espécies sensíveis; estrutura e estrato lenhoso intactos.",
+                  "en": "Localised foliar damage in sensitive species; structure and woody layer intact.",
+                  "es": "Daños foliares puntuales en especies sensibles; estructura y estrato leñoso intactos.",
+                  "fr": "Dommages foliaires localisés chez les espèces sensibles ; structure et strate ligneuse intactes."
+                },
+                {
+                  "pt": "Necrose de ramos e parte aérea; retardo no desenvolvimento; seca de ponteiros evidente.",
+                  "en": "Branch and shoot necrosis; delayed development; evident dieback of tips.",
+                  "es": "Necrosis de ramas y parte aérea; retraso en el desarrollo; seca de puntas evidente.",
+                  "fr": "Nécrose des branches et des pousses ; développement ralenti ; dépérissement des extrémités évident."
+                },
+                {
+                  "pt": "Mortalidade de indivíduos; comprometimento generalizado da comunidade vegetal.",
+                  "en": "Individual plant mortality; widespread impairment of the plant community.",
+                  "es": "Mortalidad de individuos; compromiso generalizado de la comunidad vegetal.",
+                  "fr": "Mortalité d'individus ; atteinte généralisée de la communauté végétale."
+                }
+              ]
+            },
+            {
+              "key": "Mineração",
+              "label": {
+                "pt": "Mineração",
+                "en": "Mining",
+                "es": "Minería",
+                "fr": "Extraction Minière"
+              },
+              "desc": {
+                "pt": "Extração de minerais; áreas degradadas por atividade mineral ou de exploração",
+                "en": "Mineral extraction; areas degraded by mining or exploration activities",
+                "es": "Extracción de minerales; áreas degradadas por actividad minera o de explotación",
+                "fr": "Extraction de minéraux ; zones dégradées par des activités d'extraction ou d'exploration minière"
+              },
+              "magnitude_desc": [
+                {
+                  "pt": "Extração localizada < 5% da área; cicatrizes superficiais com potencial de recolonização natural.",
+                  "en": "Localised extraction < 5% of the area; surface scars with natural recolonisation potential.",
+                  "es": "Extracción localizada < 5% del área; cicatrices superficiales con potencial de recolonización natural.",
+                  "fr": "Extraction localisée < 5 % de la zone ; cicatrices superficielles avec potentiel de recolonisation naturelle."
+                },
+                {
+                  "pt": "Cavas e pilhas de rejeito evidentes; instabilidade de encostas; cobertura vegetal > 50% suprimida.",
+                  "en": "Visible pits and waste piles; slope instability; vegetation cover > 50% suppressed.",
+                  "es": "Cavas y pilas de residuos evidentes; inestabilidad de taludes; cobertura vegetal > 50% suprimida.",
+                  "fr": "Excavations et haldes visibles ; instabilité des versants ; couvert végétal > 50 % supprimé."
+                },
+                {
+                  "pt": "Degradação total do solo e vegetação na área; sem potencial de recuperação natural.",
+                  "en": "Total soil and vegetation degradation in the area; no natural recovery potential.",
+                  "es": "Degradación total del suelo y la vegetación en el área; sin potencial de recuperación natural.",
+                  "fr": "Dégradation totale du sol et de la végétation dans la zone ; aucun potentiel de récupération naturelle."
+                }
+              ]
+            },
+            {
+              "key": "Seca",
+              "label": {
+                "pt": "Seca",
+                "en": "Drought",
+                "es": "Sequía",
+                "fr": "Sécheresse"
+              },
+              "desc": {
+                "pt": "Estresse hídrico prolongado; sinais de déficit de água na vegetação",
+                "en": "Prolonged water stress; signs of water deficit in vegetation",
+                "es": "Estrés hídrico prolongado; signos de déficit de agua en la vegetación",
+                "fr": "Stress hydrique prolongé ; signes de déficit hydrique dans la végétation"
+              },
+              "magnitude_desc": [
+                {
+                  "pt": "Murcha reversível e folhagem amarelada em espécies sensíveis; sem mortalidade observada.",
+                  "en": "Reversible wilting and yellowing foliage in sensitive species; no mortality observed.",
+                  "es": "Marchitamiento reversible y follaje amarillento en especies sensibles; sin mortalidad observada.",
+                  "fr": "Flétrissement réversible et jaunissement du feuillage chez les espèces sensibles ; aucune mortalité observée."
+                },
+                {
+                  "pt": "Desfolhamento precoce e seca de ponteiros; estresse generalizado; cursos d'água intermitentes.",
+                  "en": "Early leaf drop and dieback of tips; widespread stress; intermittent water courses.",
+                  "es": "Defoliación prematura y seca de puntas; estrés generalizado; cursos de agua intermitentes.",
+                  "fr": "Chute précoce des feuilles et dépérissement des extrémités ; stress généralisé ; cours d'eau intermittents."
+                },
+                {
+                  "pt": "Mortalidade de indivíduos e colapso da cobertura vegetal; solo exposto por ressecamento.",
+                  "en": "Individual mortality and vegetation cover collapse; soil exposed by desiccation.",
+                  "es": "Mortalidad de individuos y colapso de la cobertura vegetal; suelo expuesto por desecación.",
+                  "fr": "Mortalité d'individus et effondrement du couvert végétal ; sol exposé par dessiccation."
+                }
+              ]
+            },
+            {
+              "key": "Sobrepastoreio",
+              "label": {
+                "pt": "Sobrepastoreio",
+                "en": "Overgrazing",
+                "es": "Sobrepastoreo",
+                "fr": "Surpâturage"
+              },
+              "desc": {
+                "pt": "Danos por pastagem excessiva de animais; compactação e perda de cobertura vegetal",
+                "en": "Damage from excessive animal grazing; compaction and loss of vegetation cover",
+                "es": "Daños por pastoreo excesivo de animales; compactación y pérdida de cobertura vegetal",
+                "fr": "Dommages dus au surpâturage animal ; compaction et perte du couvert végétal"
+              },
+              "magnitude_desc": [
+                {
+                  "pt": "Pressão leve; cobertura herbácea preservada com sinais pontuais de pisoteio.",
+                  "en": "Light pressure; herbaceous cover preserved with localised signs of trampling.",
+                  "es": "Presión leve; cobertura herbácea preservada con señales puntuales de pisoteo.",
+                  "fr": "Pression légère ; couvert herbacé préservé avec signes localisés de piétinement."
+                },
+                {
+                  "pt": "Cobertura herbácea reduzida > 50%; compactação superficial visível; trilhas de gado frequentes.",
+                  "en": "Herbaceous cover reduced > 50%; visible surface compaction; frequent cattle trails.",
+                  "es": "Cobertura herbácea reducida > 50%; compactación superficial visible; senderos de ganado frecuentes.",
+                  "fr": "Couvert herbacé réduit > 50 % ; compaction superficielle visible ; sentiers de bétail fréquents."
+                },
+                {
+                  "pt": "Solo compactado e nu com crostas superficiais; ausência de regeneração; erosão laminar incipiente.",
+                  "en": "Compacted bare soil with surface crusts; no regeneration; incipient sheet erosion.",
+                  "es": "Suelo compactado y desnudo con costras superficiales; ausencia de regeneración; erosión laminar incipiente.",
+                  "fr": "Sol nu compacté avec croûtes superficielles ; absence de régénération ; érosion en nappe incipiente."
+                }
+              ]
+            },
+            {
+              "key": "Soterramento",
+              "label": {
+                "pt": "Soterramento",
+                "en": "Burial",
+                "es": "Enterramiento",
+                "fr": "Enfouissement"
+              },
+              "desc": {
+                "pt": "Deposição excessiva de sedimentos sobre a vegetação; assoreamento",
+                "en": "Excessive sediment deposition over vegetation; sedimentation",
+                "es": "Deposición excesiva de sedimentos sobre la vegetación; sedimentación",
+                "fr": "Dépôt excessif de sédiments sur la végétation ; sédimentation"
+              },
+              "magnitude_desc": [
+                {
+                  "pt": "Deposição fina < 5 cm; vegetação adaptada ou em recuperação espontânea.",
+                  "en": "Fine deposition < 5 cm; vegetation adapted or in spontaneous recovery.",
+                  "es": "Deposición fina < 5 cm; vegetación adaptada o en recuperación espontánea.",
+                  "fr": "Dépôt fin < 5 cm ; végétation adaptée ou en récupération spontanée."
+                },
+                {
+                  "pt": "Camada de sedimentos 5–20 cm; soterramento parcial de indivíduos; assoreamento de drenagens.",
+                  "en": "Sediment layer 5–20 cm; partial burial of individuals; drainage siltation.",
+                  "es": "Capa de sedimentos 5–20 cm; enterramiento parcial de individuos; colmatación de drenajes.",
+                  "fr": "Couche de sédiments 5–20 cm ; enfouissement partiel d'individus ; envasement des drains."
+                },
+                {
+                  "pt": "Espessura > 20 cm; soterramento total de indivíduos com mortalidade generalizada.",
+                  "en": "Thickness > 20 cm; total burial of individuals with widespread mortality.",
+                  "es": "Espesor > 20 cm; enterramiento total de individuos con mortalidad generalizada.",
+                  "fr": "Épaisseur > 20 cm ; enfouissement total d'individus avec mortalité généralisée."
+                }
+              ]
+            },
+            {
+              "key": "Supressão vegetal",
+              "label": {
+                "pt": "Supressão vegetal",
+                "en": "Vegetation removal",
+                "es": "Supresión vegetal",
+                "fr": "Suppression végétale"
+              },
+              "desc": {
+                "pt": "Remoção ou corte intencional da vegetação; desmatamento e limpeza de terreno",
+                "en": "Intentional removal or cutting of vegetation; deforestation and land clearing",
+                "es": "Remoción o corte intencional de la vegetación; deforestación y limpieza de terreno",
+                "fr": "Enlèvement ou coupe intentionnelle de la végétation ; déforestation et défrichement"
+              },
+              "magnitude_desc": [
+                {
+                  "pt": "Corte seletivo de espécies; estrutura e dossel preservados — sem alteração fisionômica significativa.",
+                  "en": "Selective cutting of species; structure and canopy preserved — no significant physiognomic change.",
+                  "es": "Corte selectivo de especies; estructura y dosel preservados — sin alteración fisionómica significativa.",
+                  "fr": "Coupe sélective d'espèces ; structure et canopée préservées — pas de changement physionomique significatif."
+                },
+                {
+                  "pt": "Abertura de clareiras > 20% da área; estrutura parcialmente comprometida; sub-bosque exposto.",
+                  "en": "Clearings > 20% of the area; structure partially compromised; understorey exposed.",
+                  "es": "Apertura de claros > 20% del área; estructura parcialmente comprometida; sotobosque expuesto.",
+                  "fr": "Trouées > 20 % de la zone ; structure partiellement compromise ; sous-bois exposé."
+                },
+                {
+                  "pt": "Remoção total da cobertura vegetal; solo exposto; perda irreversível da estrutura fisionômica.",
+                  "en": "Total removal of vegetation cover; bare soil; irreversible loss of physiognomic structure.",
+                  "es": "Remoción total de la cobertura vegetal; suelo expuesto; pérdida irreversible de la estructura fisionómica.",
+                  "fr": "Suppression totale du couvert végétal ; sol nu ; perte irréversible de la structure physionomique."
+                }
+              ]
+            }
+          ],
+          "config": {
+            "magnitude_options": [
+              {
+                "pt": "Ocasional",
+                "en": "Occasional",
+                "es": "Ocasional",
+                "fr": "Occasionnel"
+              },
+              {
+                "pt": "Comum",
+                "en": "Common",
+                "es": "Común",
+                "fr": "Courant"
+              },
+              {
+                "pt": "Crítico",
+                "en": "Critical",
+                "es": "Crítico",
+                "fr": "Critique"
+              }
+            ]
+          },
+          "desc": {
+            "pt": "Registro das perturbações de origem antrópica ou natural que afetam o estado atual da unidade de paisagem. Os impactos e suas magnitudes são utilizados pelo algoritmo de nomenclatura autônoma do Nomos para qualificar o estado evolutivo da paisagem (progressivo ou regressivo) na designação padronizada da unidade.",
+            "en": "Record of anthropic or natural disturbances affecting the current state of the landscape unit. Impacts and their magnitudes are used by the Nomos autonomous naming algorithm to qualify the evolutionary state of the landscape (progressive or regressive) in the standardized unit designation.",
+            "es": "Registro de las perturbaciones de origen antrópico o natural que afectan el estado actual de la unidad de paisaje. Los impactos y sus magnitudes son utilizados por el algoritmo de denominación autónoma de Nomos para calificar el estado evolutivo del paisaje (progresivo o regresivo) en la designación estandarizada de la unidad.",
+            "fr": "Relevé des perturbations d'origine anthropique ou naturelle affectant l'état actuel de l'unité de paysage. Les impacts et leurs magnitudes sont utilisés par l'algorithme de dénomination autonome de Nomos pour qualifier l'état évolutif du paysage (progressif ou régressif) dans la désignation standardisée de l'unité."
+          }
+        }
+      ]
+    },
+    {
+      "id": "media",
+      "title": {
+        "pt": "Fotos",
+        "en": "Photos",
+        "es": "Fotos",
+        "fr": "Photos"
+      },
+      "fields": [
+        {
+          "key": "photos",
+          "label": {
+            "pt": "Fotos do Ponto de Coleta",
+            "en": "Plot Photos",
+            "es": "Fotos del Punto de Recoleción",
+            "fr": "Photos du Point de Collecte"
+          },
+          "type": "photo_input",
+          "helper_text": {
+            "pt": "Tire fotos ou selecione da galeria.",
+            "en": "Take photos or select from gallery.",
+            "es": "Tome fotos o seleccione de la galería.",
+            "fr": "Prenez des photos ou sélectionnez depuis la galerie."
+          },
+          "desc": {
+            "pt": "Registro fotográfico vinculado ao ponto de coleta. As fotos devem documentar a fisionomia geral da parcela, detalhes estruturais da vegetação (estratos, formas de vida dominantes), características do solo visível e impactos observados. Recomenda-se ao menos uma foto panorâmica e uma foto de detalhe por ponto.",
+            "en": "Photographic record linked to the collection point. Photos should document the general physiognomy of the plot, structural details of vegetation (strata, dominant life forms), visible soil characteristics and observed impacts. At least one panoramic photo and one detail photo per point are recommended.",
+            "es": "Registro fotográfico vinculado al punto de recolección. Las fotos deben documentar la fisonomía general de la parcela, detalles estructurales de la vegetación (estratos, formas de vida dominantes), características del suelo visible e impactos observados. Se recomienda al menos una foto panorámica y una foto de detalle por punto.",
+            "fr": "Relevé photographique lié au point de collecte. Les photos doivent documenter la physionomie générale de la parcelle, les détails structurels de la végétation (strates, formes de vie dominantes), les caractéristiques du sol visible et les impacts observés. Au moins une photo panoramique et une photo de détail par point sont recommandées."
+          }
+        }
+      ]
+    },
+    {
+      "id": "comments",
+      "title": {
+        "pt": "Notas Adicionais",
+        "en": "Additional Notes",
+        "es": "Notas Adicionales",
+        "fr": "Notes Complémentaires"
+      },
+      "fields": [
+        {
+          "key": "additional_notes",
+          "label": {
+            "pt": "Observações de Campo",
+            "en": "Field Observations",
+            "es": "Observaciones de Campo",
+            "fr": "Observations de Terrain"
+          },
+          "type": "notes_list",
+          "desc": {
+            "pt": "Campo de texto livre para registro de informações complementares que não se enquadram nos campos estruturados do protocolo. Pode incluir: observações sobre a fauna, características hidrológicas relevantes, feições geomorfológicas incomuns, contexto histórico de uso da terra, dúvidas para verificação em laboratório ou qualquer outra informação julgada relevante pelo pesquisador.",
+            "en": "Free text field for recording complementary information that does not fit the structured fields of the protocol. May include: observations on fauna, relevant hydrological characteristics, unusual geomorphological features, historical land use context, questions for laboratory verification or any other information deemed relevant by the researcher.",
+            "es": "Campo de texto libre para registrar información complementaria que no se ajusta a los campos estructurados del protocolo. Puede incluir: observaciones sobre la fauna, características hidrológicas relevantes, rasgos geomorfológicos inusuales, contexto histórico de uso del suelo, dudas para verificación en laboratorio o cualquier otra información considerada relevante por el investigador.",
+            "fr": "Champ de texte libre pour enregistrer des informations complémentaires ne rentrant pas dans les champs structurés du protocole. Peut inclure : observations sur la faune, caractéristiques hydrologiques relevant, formes géomorphologiques inhabituelles, contexte historique d'utilisation des terres, questions à vérifier en laboratoire ou toute autre information jugée pertinente par le chercheur."
+          }
+        },
+        {
+          "key": "audio_notes",
+          "label": {
+            "pt": "Notas de Áudio",
+            "en": "Audio Notes",
+            "es": "Notas de Audio",
+            "fr": "Notes Audio"
+          },
+          "type": "audio_notes_input",
+          "helper_text": {
+            "pt": "Grave notas de áudio para descrever detalhes do campo.",
+            "en": "Record audio notes to describe field details.",
+            "es": "Grabe notas de audio para describir detalles del campo.",
+            "fr": "Enregistrez des notes audio pour décrire les détails de terrain."
+          }
+        }
+      ]
+    }
+  ]
+}
