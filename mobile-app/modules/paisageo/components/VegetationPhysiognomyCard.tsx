@@ -164,7 +164,7 @@ export default function VegetationPhysiognomyCard({
             mode="outlined"
             value={physiognomyComplement}
             onChangeText={handleComplementChange}
-            placeholder={t("survey.physiognomyComplementPlaceholder") || "E.g.: an unusual stratum, an imprecise boundary between physiognomies..."}
+            placeholder={t("survey.physiognomyComplementPlaceholder") || "E.g.: dominance of a species or genus, a trait worth highlighting in the vegetation..."}
             multiline
             style={styles.textInput}
           />

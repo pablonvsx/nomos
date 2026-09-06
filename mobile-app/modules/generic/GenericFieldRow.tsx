@@ -27,17 +27,29 @@ interface Props {
    *  show `description` as an always-visible caption instead (see below),
    *  so they don't need this wired in. */
   onInfoPress?: (text: string) => void;
+  /** Option values that should render disabled (checked-but-inert stays
+   *  possible; this only blocks *checking* it) - e.g. vegetation's
+   *  context_flags, disabled per option when the Küchler matrix isn't in a
+   *  state where that flag would have any effect (see
+   *  VegetationModuleRenderer.tsx). Purely external/dynamic, so it isn't
+   *  part of FieldSchema/SelectOption in protocol-kernel/types.ts. */
+  disabledOptionValues?: Set<string>;
 }
 
 /** Converts the kernel's options (SelectOption[]) to the format FieldRenderer/SurveySelect
- *  expect: {value, label, desc}. Used equally by radio, select and checkbox. */
-export function resolveOptions(field: FieldSchema, language: LanguageCode): any[] | undefined {
+ *  expect: {value, label, desc, disabled}. Used equally by radio, select and checkbox. */
+export function resolveOptions(
+  field: FieldSchema,
+  language: LanguageCode,
+  disabledOptionValues?: Set<string>,
+): any[] | undefined {
   if (!field.options || field.options.length === 0) return undefined;
 
   return field.options.map((o) => ({
     value: o.value,
     label: o.label[language] ?? o.label["pt"] ?? o.value,
     desc: o.desc ? (o.desc[language] ?? o.desc["pt"]) : undefined,
+    disabled: disabledOptionValues?.has(o.value) ?? false,
   }));
 }
 
@@ -51,7 +63,7 @@ export function resolveOptions(field: FieldSchema, language: LanguageCode): any[
 // the form) - without this, and without stabilizing the `field` object below,
 // every select/checkbox/radio/confirm_checkbox row would re-render and defeat
 // FieldRenderer's/SurveySelect's own memoization on every unrelated change.
-export const GenericFieldRow = React.memo(function GenericFieldRow({ field, value, onChange, language, projectId, surveyPointId, onInfoPress }: Props) {
+export const GenericFieldRow = React.memo(function GenericFieldRow({ field, value, onChange, language, projectId, surveyPointId, onInfoPress, disabledOptionValues }: Props) {
   const theme = useTheme();
   const renderAs = field.renderAs ?? field.type;
   const label = field.label[language] ?? field.label["pt"] ?? field.id;
@@ -77,7 +89,7 @@ export const GenericFieldRow = React.memo(function GenericFieldRow({ field, valu
       type: renderAs,
       label,
       required: field.required,
-      options: resolveOptions(field, language),
+      options: resolveOptions(field, language, disabledOptionValues),
       min: field.min,
       max: field.max,
       unit: field.unit,
@@ -92,7 +104,7 @@ export const GenericFieldRow = React.memo(function GenericFieldRow({ field, valu
       hideLabel: field.hideLabel,
       desc: description,
     }),
-    [field, language, renderAs, label, description],
+    [field, language, renderAs, label, description, disabledOptionValues],
   );
 
   return (

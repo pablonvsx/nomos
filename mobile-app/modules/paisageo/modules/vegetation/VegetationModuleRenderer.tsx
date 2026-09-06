@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, View } from "react-native";
 import { Card, IconButton, Text, useTheme } from "react-native-paper";
 import KuchlerMatrix from "@/modules/paisageo/components/KuchlerMatrix";
@@ -13,7 +13,7 @@ import type {
 import { KUCHLER_CONFIG } from "./kuchler-config";
 import { VEGETATION_STRUCTURE_SECTION_TITLE } from "./section-titles";
 import { vegetationSchema } from "./schema";
-import type { ContextFlag } from "@/modules/paisageo/services/vegetation_classifier";
+import { getEligibleContextFlags, type ContextFlag } from "@/modules/paisageo/services/vegetation_classifier";
 
 // The other vegetation fields (homogeneity confirmation, conservation
 // status/land use) are not part of this renderer - they're plain generic
@@ -174,6 +174,35 @@ export const VegetationModuleRenderer = React.memo(function VegetationModuleRend
     : undefined;
   const activeFlagsCount = data.context_flags?.length ?? 0;
 
+  // Only a flag whose condition is already met in the matrix actually
+  // affects the computed physiognomy (see getEligibleContextFlags) - the
+  // others render checked-but-inert with no feedback, so their checkboxes
+  // are disabled until the matrix reaches that condition.
+  const eligibleContextFlags = useMemo(
+    () => getEligibleContextFlags(data.raw_formula ?? ""),
+    [data.raw_formula],
+  );
+  const disabledContextFlagValues = useMemo(
+    () =>
+      new Set(
+        (contextFlagsField.options ?? [])
+          .filter((o) => !eligibleContextFlags.has(o.value as ContextFlag))
+          .map((o) => o.value),
+      ),
+    [eligibleContextFlags],
+  );
+
+  // If a flag was checked while eligible and the matrix is then edited so
+  // it no longer applies, drop it instead of leaving it checked-and-disabled
+  // (which would contradict "can't be checked").
+  useEffect(() => {
+    const current = dataRef.current.context_flags ?? [];
+    const stillEligible = current.filter((f) => eligibleContextFlags.has(f));
+    if (stillEligible.length !== current.length) {
+      onChangeRef.current({ ...dataRef.current, context_flags: stillEligible });
+    }
+  }, [eligibleContextFlags]);
+
   return (
     <Card mode="elevated" style={{ marginBottom: 24, borderRadius: 12 }}>
       <Card.Title
@@ -233,6 +262,7 @@ export const VegetationModuleRenderer = React.memo(function VegetationModuleRend
                 onChange={handleContextFlagsChange}
                 language={language}
                 onInfoPress={onInfoPress}
+                disabledOptionValues={disabledContextFlagValues}
               />
             )}
           </View>

@@ -1,15 +1,17 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, StyleSheet, ScrollView, Linking } from "react-native";
 import {
   List,
   Switch,
   Text,
+  Chip,
   Divider,
   useTheme as usePaperTheme,
   Dialog,
   Portal,
   RadioButton,
   Button,
+  MD3Theme,
 } from "react-native-paper";
 import { Stack, router } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -17,18 +19,64 @@ import { useTheme } from "@/contexts/theme-context";
 import { useI18n } from "@/contexts/i18n-context";
 import { getAvailableLanguages } from "@/utils/i18n";
 import { useDialog } from "@/hooks/use-dialog";
+import { useGoogleAccount } from "@/hooks/use-google-account";
+import { APIKeyManager } from "@/core/species-catalog/api-key-manager";
 import { SpeciesLinkSettingsModal } from "@/components/settings/SpeciesLinkSettingsModal";
+import { GoogleAccountSettingsModal } from "@/components/settings/GoogleAccountSettingsModal";
+
+function StatusChip({ active, label, theme }: { active: boolean; label: string; theme: MD3Theme }) {
+  return (
+    <Chip
+      compact
+      style={[
+        styles.statusChip,
+        {
+          backgroundColor: active
+            ? (theme.dark ? "rgba(76, 175, 80, 0.30)" : "rgba(76, 175, 80, 0.15)")
+            : theme.colors.errorContainer,
+        },
+      ]}
+      textStyle={[
+        styles.statusChipText,
+        {
+          color: active
+            ? (theme.dark ? "#a5d6a7" : "#2e7d32")
+            : theme.colors.onErrorContainer,
+        },
+      ]}
+    >
+      {label}
+    </Chip>
+  );
+}
 
 export default function SettingsScreen() {
   const paperTheme = usePaperTheme();
   const { isDarkMode, toggleTheme } = useTheme();
   const { currentLanguage, setLanguage, t } = useI18n();
   const { showDialog } = useDialog();
+  const {
+    account: googleAccount,
+    isConnecting: isConnectingGoogle,
+    error: googleError,
+    connect: connectGoogle,
+    disconnect: disconnectGoogle,
+  } = useGoogleAccount();
   const [languageDialogVisible, setLanguageDialogVisible] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage);
   const [speciesLinkModalVisible, setSpeciesLinkModalVisible] = useState(false);
+  const [googleAccountModalVisible, setGoogleAccountModalVisible] = useState(false);
+  const [speciesLinkConfigured, setSpeciesLinkConfigured] = useState(false);
 
   const availableLanguages = getAvailableLanguages();
+
+  const refreshSpeciesLinkStatus = () => {
+    APIKeyManager.hasSpeciesLinkApiKey().then(setSpeciesLinkConfigured);
+  };
+
+  useEffect(() => {
+    refreshSpeciesLinkStatus();
+  }, []);
 
   const openGitHub = () => {
     Linking.openURL("https://github.com/pablonvsx/nomos");
@@ -158,7 +206,39 @@ export default function SettingsScreen() {
             title={t("species.speciesLinkIntegration")}
             description={t("species.speciesLinkDescription")}
             left={(props) => <List.Icon {...props} icon="link-variant" />}
+            right={() => (
+              <StatusChip
+                active={speciesLinkConfigured}
+                label={
+                  speciesLinkConfigured
+                    ? t("species.configured")
+                    : t("species.notConfigured")
+                }
+                theme={paperTheme}
+              />
+            )}
             onPress={() => setSpeciesLinkModalVisible(true)}
+            titleStyle={styles.itemTitle}
+            descriptionStyle={styles.itemDescription}
+            descriptionNumberOfLines={0}
+          />
+
+          <List.Item
+            title={t("settings.googleAccountTitle")}
+            description={t("settings.googleAccountDescription")}
+            left={(props) => <List.Icon {...props} icon="google" />}
+            right={() => (
+              <StatusChip
+                active={!!googleAccount}
+                label={
+                  googleAccount
+                    ? t("settings.connected")
+                    : t("settings.notConnected")
+                }
+                theme={paperTheme}
+              />
+            )}
+            onPress={() => setGoogleAccountModalVisible(true)}
             titleStyle={styles.itemTitle}
             descriptionStyle={styles.itemDescription}
             descriptionNumberOfLines={0}
@@ -256,7 +336,21 @@ export default function SettingsScreen() {
       {/* SpeciesLink Settings Modal */}
       <SpeciesLinkSettingsModal
         visible={speciesLinkModalVisible}
-        onDismiss={() => setSpeciesLinkModalVisible(false)}
+        onDismiss={() => {
+          setSpeciesLinkModalVisible(false);
+          refreshSpeciesLinkStatus();
+        }}
+      />
+
+      {/* Google Account Settings Modal */}
+      <GoogleAccountSettingsModal
+        visible={googleAccountModalVisible}
+        onDismiss={() => setGoogleAccountModalVisible(false)}
+        account={googleAccount}
+        isConnecting={isConnectingGoogle}
+        error={googleError}
+        onConnect={connectGoogle}
+        onDisconnect={disconnectGoogle}
       />
     </ScrollView>
   );
@@ -299,5 +393,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginRight: 8,
     opacity: 0.7,
+  },
+  statusChip: {
+    alignSelf: "center",
+  },
+  statusChipText: {
+    fontSize: 12,
+    lineHeight: 14,
   },
 });

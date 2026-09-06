@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { RadioButton, Checkbox, Text, useTheme, IconButton } from "react-native-paper";
 
-type SelectOption = string | { label: string; value?: string; desc?: string };
+type SelectOption = string | { label: string; value?: string; desc?: string; disabled?: boolean };
 
 interface Props {
   options: SelectOption[];
@@ -21,10 +21,10 @@ interface Props {
   inlineDesc?: boolean;
 }
 
-// Normalize option to { label, value, desc }
-function resolveOption(opt: SelectOption): { label: string; value: string; desc?: string } {
-  if (typeof opt === "string") return { label: opt, value: opt };
-  return { label: opt.label, value: opt.value ?? opt.label, desc: opt.desc };
+// Normalize option to { label, value, desc, disabled }
+function resolveOption(opt: SelectOption): { label: string; value: string; desc?: string; disabled: boolean } {
+  if (typeof opt === "string") return { label: opt, value: opt, disabled: false };
+  return { label: opt.label, value: opt.value ?? opt.label, desc: opt.desc, disabled: opt.disabled ?? false };
 }
 
 function SurveySelect({
@@ -76,27 +76,30 @@ function SurveySelect({
   const rightColumn = useMemo(() => options.slice(midPoint), [options, midPoint]);
 
   const renderOptionRow = useCallback((opt: SelectOption, mode: "radio" | "checkbox") => {
-    const { label: optLabel, value: optValue, desc: optDesc } = resolveOption(opt);
+    const { label: optLabel, value: optValue, desc: optDesc, disabled: optDisabled } = resolveOption(opt);
     const isSelected =
       mode === "checkbox"
         ? localMultipleValue.includes(optValue)
         : localSingleValue === optValue;
 
-    const handlePress = () =>
+    const handlePress = () => {
+      if (optDisabled) return;
       mode === "checkbox" ? handleMultipleToggle(optValue) : handleSingleChange(optValue);
+    };
+    const optTextColor = optDisabled ? theme.colors.onSurfaceDisabled : theme.colors.onSurface;
 
     if (inlineDesc) {
       return (
         <View key={optValue} style={styles.optionBlock}>
           <View style={styles.optionRow}>
             {mode === "checkbox" ? (
-              <Checkbox status={isSelected ? "checked" : "unchecked"} onPress={handlePress} />
+              <Checkbox status={isSelected ? "checked" : "unchecked"} onPress={handlePress} disabled={optDisabled} />
             ) : (
-              <RadioButton value={optValue} />
+              <RadioButton value={optValue} disabled={optDisabled} />
             )}
             <Text
               onPress={handlePress}
-              style={[styles.optionText, { color: theme.colors.onSurface }]}
+              style={[styles.optionText, { color: optTextColor }]}
             >
               {optLabel}
             </Text>
@@ -116,13 +119,13 @@ function SurveySelect({
     return (
       <View key={optValue} style={styles.optionRow}>
         {mode === "checkbox" ? (
-          <Checkbox status={isSelected ? "checked" : "unchecked"} onPress={handlePress} />
+          <Checkbox status={isSelected ? "checked" : "unchecked"} onPress={handlePress} disabled={optDisabled} />
         ) : (
-          <RadioButton value={optValue} />
+          <RadioButton value={optValue} disabled={optDisabled} />
         )}
         <Text
           onPress={handlePress}
-          style={[styles.optionText, { color: theme.colors.onSurface }]}
+          style={[styles.optionText, { color: optTextColor }]}
         >
           {optLabel}
         </Text>
@@ -137,7 +140,7 @@ function SurveySelect({
         ) : null}
       </View>
     );
-  }, [localMultipleValue, localSingleValue, handleMultipleToggle, handleSingleChange, theme.colors.onSurface, theme.colors.secondary, theme.colors.onSurfaceVariant, inlineDesc, onInfoPress]);
+  }, [localMultipleValue, localSingleValue, handleMultipleToggle, handleSingleChange, theme.colors.onSurface, theme.colors.onSurfaceDisabled, theme.colors.secondary, theme.colors.onSurfaceVariant, inlineDesc, onInfoPress]);
 
   return (
     <View style={styles.container}>

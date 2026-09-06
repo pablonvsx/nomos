@@ -418,3 +418,37 @@ export const classifyVegetation = (
     groupName,
   };
 };
+
+// --- CONTEXT FLAG ELIGIBILITY ---
+
+/**
+ * Which context flags would actually affect the classification of the
+ * current matrix state. Mirrors the exact conditions checked inside
+ * getC1Type/getC2Type/getC3Type above - used by the UI to disable a flag's
+ * checkbox when marking it would have no effect (see schema.ts option
+ * `desc` for the same conditions in prose).
+ */
+export function getEligibleContextFlags(rawFormula: string): Set<ContextFlag> {
+  const components = parseRawFormula(rawFormula);
+  if (components.length === 0) return new Set();
+
+  const groups = groupByLifeForm(components);
+  const dominant = getDominantGroup(groups);
+  if (!dominant) return new Set();
+
+  const groupCode = getVegClass(dominant, groups);
+
+  const eligible = new Set<ContextFlag>();
+  if (groupCode === 'C1') eligible.add('mangrove');
+  if (
+    dominant.code === 'D' &&
+    dominant.leafAdaptation !== 's' &&
+    dominant.leafAdaptation !== 'h' &&
+    (groupCode === 'C1' || groupCode === 'C2')
+  ) {
+    eligible.add('spiny');
+  }
+  if (groupCode === 'C3') eligible.add('semi-lignified');
+
+  return eligible;
+}
