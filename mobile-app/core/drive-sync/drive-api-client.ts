@@ -148,6 +148,15 @@ export async function uploadBinaryFile(
   return response.json();
 }
 
+export async function downloadBinaryFile(fileId: string, destinationUri: string): Promise<void> {
+  const headers = await authHeaders();
+  await File.downloadFileAsync(
+    `${DRIVE_API_BASE}/files/${fileId}?alt=media`,
+    new File(destinationUri),
+    { headers, idempotent: true }
+  );
+}
+
 export async function readJsonFile<T = unknown>(fileId: string): Promise<T> {
   const headers = await authHeaders();
   const response = await fetch(`${DRIVE_API_BASE}/files/${fileId}?alt=media`, { headers });

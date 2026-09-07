@@ -23,6 +23,7 @@ export interface CreatePointInput {
   modules: Record<string, string>;     // moduleId → already-serialized data_json
   approval_status?: "local" | "pending" | "approved" | "rejected";
   created_by?: string | null;
+  id?: string; // if provided (sync), use this uuid instead of generating a new one
 }
 
 export type UpdatePointInput = Partial<Omit<CreatePointInput, "project_id" | "protocol_id">>;
@@ -34,7 +35,7 @@ export type UpdatePointInput = Partial<Omit<CreatePointInput, "project_id" | "pr
 export async function createPoint(input: CreatePointInput): Promise<string | null> {
   try {
     const now = new Date().toISOString();
-    const id = generatePointId();
+    const id = input.id ?? generatePointId();
 
     // Next point_number for the project
     const maxRow = await db.getFirstAsync<{ max_num: number | null }>(
@@ -109,6 +110,19 @@ export async function getPoint(
   } catch (error) {
     console.error("Error loading point:", error);
     return null;
+  }
+}
+
+export async function pointExists(pointId: string): Promise<boolean> {
+  try {
+    const row = await db.getFirstAsync<{ id: string }>(
+      "SELECT id FROM points WHERE id = ? LIMIT 1",
+      [pointId],
+    );
+    return !!row;
+  } catch (error) {
+    console.error("Error checking point existence:", error);
+    return false;
   }
 }
 

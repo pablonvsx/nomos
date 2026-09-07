@@ -32,6 +32,7 @@ import { useStableTextInput } from "@/hooks/use-stable-text-input";
 import { useBottomContentPadding } from "@/hooks/use-bottom-content-padding";
 import { useGoogleAccount } from "@/hooks/use-google-account";
 import { createCollaborativeProjectStructure, isProjectAdmin } from "@/core/drive-sync/project-drive-service";
+import { syncProjectFromDrive } from "@/core/drive-sync/project-sync-service";
 import { upsertProjectMember } from "@/db/queries/project-members";
 
 // Internal imports
@@ -102,6 +103,8 @@ export default function UnifiedProjectDetailsScreen() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [isMakingCollaborative, setIsMakingCollaborative] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncDialogVisible, setSyncDialogVisible] = useState(false);
 
   // Vegetation Classification States
   const [vegClassificationSelectorVisible, setVegClassificationSelectorVisible] = useState(false);
@@ -360,6 +363,33 @@ export default function UnifiedProjectDetailsScreen() {
       },
       () => {},
     );
+  };
+
+  const handleSyncProject = () => setSyncDialogVisible(true);
+
+  const handleConfirmSync = async (includeMedia: boolean) => {
+    setSyncDialogVisible(false);
+    if (!project) return;
+    setIsSyncing(true);
+    try {
+      const result = await syncProjectFromDrive(project.id, { includeMedia }, registry);
+      await loadProjectData();
+      alert(
+        t("common.success"),
+        includeMedia
+          ? t("projectView.syncSummaryWithMedia", {
+              imported: result.imported,
+              skipped: result.skipped,
+              media: result.mediaDownloaded,
+            })
+          : t("projectView.syncSummary", { imported: result.imported, skipped: result.skipped }),
+      );
+    } catch (error) {
+      console.error("Error syncing project:", error);
+      alert(t("common.error"), t("projectView.syncError"));
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   // [File Upload Handlers - Mapping and Route]
@@ -931,6 +961,18 @@ export default function UnifiedProjectDetailsScreen() {
                 },
               ]
             : []),
+          ...(project && project.is_collaborative
+            ? [
+                {
+                  icon: "cloud-sync-outline",
+                  label: t("projectView.syncProject"),
+                  onPress: isSyncing ? () => {} : handleSyncProject,
+                  color: paperTheme.dark
+                    ? paperTheme.colors.onSurface
+                    : paperTheme.colors.primary,
+                },
+              ]
+            : []),
           ...(surveyPoints.length > 0 && manifest?.provides?.some(c => c.id === "kuchler.classifyVegetation")
             ? [
                 {
@@ -988,6 +1030,28 @@ export default function UnifiedProjectDetailsScreen() {
             <Button onPress={() => setEditDialogVisible(false)}>{t("common.cancel")}</Button>
             <Button onPress={() => handleSaveEdit(nameInput.value, descriptionInput.value)}>{t("common.save")}</Button>
           </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      <Portal>
+        <Dialog visible={syncDialogVisible} onDismiss={() => setSyncDialogVisible(false)}>
+          <Dialog.Title>{t("projectView.syncProject")}</Dialog.Title>
+          <Dialog.Content>
+            <Text>{t("projectView.syncChooseOption")}</Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => handleConfirmSync(false)}>{t("projectView.syncDataOnly")}</Button>
+            <Button onPress={() => handleConfirmSync(true)}>{t("projectView.syncDataAndMedia")}</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      <Portal>
+        <Dialog visible={isSyncing} dismissable={false}>
+          <Dialog.Content style={{ alignItems: "center", paddingVertical: 24 }}>
+            <ActivityIndicator size="large" />
+            <Text style={{ marginTop: 16 }}>{t("projectView.syncing")}</Text>
+          </Dialog.Content>
         </Dialog>
       </Portal>
 
