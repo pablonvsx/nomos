@@ -578,6 +578,7 @@
     "syncSummary": "{{imported}} point(s) importé(s), {{skipped}} déjà existant(s) ignoré(s).",
     "syncSummaryWithMedia": "{{imported}} point(s) importé(s), {{skipped}} déjà existant(s) ignoré(s), {{media}} média(s) téléchargé(s).",
     "syncError": "Erreur lors de la synchronisation du projet.",
+    "collabSettings": "Paramètres de Collaboration",
     "noData": "Aucune Donnée",
     "noDataToExport": "Ce projet ne possède aucun point de collecte à exporter.",
     "noMediaToExport": "Ce projet ne possède aucune photo à exporter.",
@@ -605,6 +606,21 @@
     "exportedPhotos": "photo(s) exportée(s) !",
     "mediaExportDialogTitle": "Exporter les Médias : {{name}}",
     "export": "Exporter"
+  },
+  "projectCollabSettings": {
+    "title": "Paramètres de Collaboration",
+    "notAuthorized": "Vous n'avez pas la permission d'accéder à cette page.",
+    "loadError": "Erreur lors du chargement des paramètres de collaboration.",
+    "saveError": "Erreur lors de l'enregistrement de la modification.",
+    "autoApproveDefaultTitle": "Approuver automatiquement les nouveaux points par défaut",
+    "autoApproveDefaultDescription": "Lorsque activé, les points soumis par des collaborateurs sans réglage propre sont approuvés automatiquement.",
+    "membersTitle": "Membres",
+    "memberAutoApproveLegend": "Choisissez comment approuver les points soumis par chaque membre : hériter du réglage par défaut du projet, toujours approuver automatiquement, ou toujours exiger une révision manuelle.",
+    "roleAdmin": "Admin",
+    "roleCollaborator": "Collaborateur",
+    "inherit": "Hériter",
+    "alwaysApprove": "Approuver",
+    "alwaysReview": "Réviser"
   },
   "projectApprovals": {
     "title": "Approbations en Attente",

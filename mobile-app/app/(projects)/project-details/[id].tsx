@@ -959,6 +959,14 @@ export default function UnifiedProjectDetailsScreen() {
                     ? paperTheme.colors.onSurface
                     : paperTheme.colors.primary,
                 },
+                {
+                  icon: "account-cog-outline",
+                  label: t("projectView.collabSettings"),
+                  onPress: () => router.push(`/project-collab-settings/${project.id}` as any),
+                  color: paperTheme.dark
+                    ? paperTheme.colors.onSurface
+                    : paperTheme.colors.primary,
+                },
               ]
             : []),
           ...(project && project.is_collaborative

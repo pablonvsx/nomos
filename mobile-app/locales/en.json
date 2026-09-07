@@ -578,6 +578,7 @@
     "syncSummary": "{{imported}} point(s) imported, {{skipped}} already existing skipped.",
     "syncSummaryWithMedia": "{{imported}} point(s) imported, {{skipped}} already existing skipped, {{media}} media file(s) downloaded.",
     "syncError": "Error syncing the project.",
+    "collabSettings": "Collaboration Settings",
     "noData": "No Data",
     "noDataToExport": "This project has no collection points to export.",
     "noMediaToExport": "This project has no photos to export.",
@@ -605,6 +606,21 @@
     "exportedPhotos": "photo(s) exported!",
     "mediaExportDialogTitle": "Export Media: {{name}}",
     "export": "Export"
+  },
+  "projectCollabSettings": {
+    "title": "Collaboration Settings",
+    "notAuthorized": "You don't have permission to access this page.",
+    "loadError": "Error loading collaboration settings.",
+    "saveError": "Error saving the change.",
+    "autoApproveDefaultTitle": "Auto-approve new points by default",
+    "autoApproveDefaultDescription": "When enabled, points submitted by collaborators without their own setting are approved automatically.",
+    "membersTitle": "Members",
+    "memberAutoApproveLegend": "Choose how to approve points submitted by each member: inherit the project default, always approve automatically, or always require manual review.",
+    "roleAdmin": "Admin",
+    "roleCollaborator": "Collaborator",
+    "inherit": "Inherit",
+    "alwaysApprove": "Approve",
+    "alwaysReview": "Review"
   },
   "projectApprovals": {
     "title": "Pending Approvals",

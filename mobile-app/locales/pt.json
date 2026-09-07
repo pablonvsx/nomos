@@ -578,6 +578,7 @@
     "syncSummary": "{{imported}} ponto(s) importado(s), {{skipped}} já existente(s) ignorado(s).",
     "syncSummaryWithMedia": "{{imported}} ponto(s) importado(s), {{skipped}} já existente(s) ignorado(s), {{media}} mídia(s) baixada(s).",
     "syncError": "Erro ao sincronizar o projeto.",
+    "collabSettings": "Configurações de Colaboração",
     "noData": "Sem Dados",
     "noDataToExport": "Este projeto não possui pontos de coleta para exportar.",
     "noMediaToExport": "Este projeto não possui fotos para exportar.",
@@ -605,6 +606,21 @@
     "exportedPhotos": "foto(s) exportada(s)!",
     "mediaExportDialogTitle": "Exportar Mídias: {{name}}",
     "export": "Exportar"
+  },
+  "projectCollabSettings": {
+    "title": "Configurações de Colaboração",
+    "notAuthorized": "Você não tem permissão para acessar esta página.",
+    "loadError": "Erro ao carregar as configurações de colaboração.",
+    "saveError": "Erro ao salvar a alteração.",
+    "autoApproveDefaultTitle": "Auto-aprovar novos pontos por padrão",
+    "autoApproveDefaultDescription": "Quando ativado, pontos enviados por colaboradores sem uma configuração própria são aprovados automaticamente.",
+    "membersTitle": "Membros",
+    "memberAutoApproveLegend": "Escolha como aprovar os pontos enviados por cada membro: herdar o padrão do projeto, aprovar sempre automaticamente, ou sempre exigir revisão manual.",
+    "roleAdmin": "Admin",
+    "roleCollaborator": "Colaborador",
+    "inherit": "Herdar",
+    "alwaysApprove": "Aprovar",
+    "alwaysReview": "Revisar"
   },
   "projectApprovals": {
     "title": "Aprovações Pendentes",
