@@ -18,6 +18,8 @@ import { File, Paths } from "expo-file-system";
 import { useAlertDialog } from "@/hooks/use-dialog";
 import { useI18n } from "@/contexts/i18n-context";
 import { BUTTON_RADIUS, SEGMENTED_BUTTONS_SHAPE_THEME } from "@/constants/shape";
+import { useGoogleAccount } from "@/hooks/use-google-account";
+import { JoinSharedProjectDialog } from "@/components/projects/JoinSharedProjectDialog";
 
 // Internal imports: Database queries and Types
 import { getAllProjects } from "@/db/queries/projects";
@@ -39,6 +41,8 @@ export default function ProjectsScreen() {
   const { t, currentLanguage } = useI18n();
   const registry = useProtocolRegistry();
   const lang = (currentLanguage as string) ?? "pt";
+  const { account: googleAccount } = useGoogleAccount();
+  const [joinDialogVisible, setJoinDialogVisible] = useState(false);
 
   // State Management
   const [activeTab, setActiveTab] = useState<"projects" | "protocols">(
@@ -590,6 +594,18 @@ export default function ProjectsScreen() {
                     ? paperTheme.colors.onSurface
                     : paperTheme.colors.primary,
                 },
+                ...(googleAccount
+                  ? [
+                      {
+                        icon: "folder-network",
+                        label: t("projectsList.joinSharedProject"),
+                        onPress: () => setJoinDialogVisible(true),
+                        color: paperTheme.dark
+                          ? paperTheme.colors.onSurface
+                          : paperTheme.colors.primary,
+                      },
+                    ]
+                  : []),
               ]
             : [
                 {
@@ -625,6 +641,16 @@ export default function ProjectsScreen() {
         pointerEvents="none"
         style={{
           height: insets.bottom,
+        }}
+      />
+
+      <JoinSharedProjectDialog
+        visible={joinDialogVisible}
+        onClose={() => setJoinDialogVisible(false)}
+        userEmail={googleAccount?.email ?? ""}
+        onJoined={(newProjectId) => {
+          setJoinDialogVisible(false);
+          router.push(`/project-details/${newProjectId}` as any);
         }}
       />
     </View>

@@ -30,6 +30,9 @@ import { useAlertDialog } from "@/hooks/use-dialog";
 import { CardHeaderIconButton } from "@/components/ui/CardHeaderIconButton";
 import { useStableTextInput } from "@/hooks/use-stable-text-input";
 import { useBottomContentPadding } from "@/hooks/use-bottom-content-padding";
+import { useGoogleAccount } from "@/hooks/use-google-account";
+import { createCollaborativeProjectStructure } from "@/core/drive-sync/project-drive-service";
+import { upsertProjectMember } from "@/db/queries/project-members";
 
 // Internal imports
 import {
@@ -37,6 +40,7 @@ import {
   updateProject,
   deleteProject,
   updateProjectGeoJSON,
+  setProjectCollaborative,
 } from "@/db/queries/projects";
 import { getPointsByProject, classifyProjectPoints, getPointsWithModulesByProject } from "@/db/queries/points";
 import { buildPointEnvelope } from "@/db/mappers/point.mapper";
@@ -86,6 +90,7 @@ export default function UnifiedProjectDetailsScreen() {
   const registry = useProtocolRegistry();
   const bus = useCapabilityBus();
   const { clearMapData } = useMapData();
+  const { account: googleAccount } = useGoogleAccount();
 
   // State Management
   const [project, setProject] = useState<Project | null>(null);
@@ -95,6 +100,7 @@ export default function UnifiedProjectDetailsScreen() {
   const [isExporting, setIsExporting] = useState(false);
   const [isClassifying, setIsClassifying] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [isMakingCollaborative, setIsMakingCollaborative] = useState(false);
 
   // Vegetation Classification States
   const [vegClassificationSelectorVisible, setVegClassificationSelectorVisible] = useState(false);
@@ -302,6 +308,38 @@ export default function UnifiedProjectDetailsScreen() {
       t("common.delete"),
       t("common.cancel"),
       true,
+    );
+  };
+
+  // Handle making the project collaborative (Drive-backed)
+  const handleMakeCollaborative = () => {
+    if (!project || !googleAccount) return;
+
+    confirm(
+      t("projectView.makeCollaborative"),
+      t("projectView.makeCollaborativeConfirm"),
+      async () => {
+        setIsMakingCollaborative(true);
+        try {
+          const { driveFolderId } = await createCollaborativeProjectStructure({
+            projectName: project.name,
+            protocolId: project.protocol_id,
+            protocolSource: project.protocol_source,
+            creatorEmail: googleAccount.email,
+            autoApproveDefault: Boolean(project.auto_approve_default),
+          });
+          await setProjectCollaborative(project.id, driveFolderId, Boolean(project.auto_approve_default));
+          await upsertProjectMember(project.id, googleAccount.email, "admin", "herda_projeto");
+          await loadProjectData();
+          alert(t("common.success"), t("projectView.makeCollaborativeSuccess"));
+        } catch (error) {
+          console.error("Error making project collaborative:", error);
+          alert(t("common.error"), t("projectView.makeCollaborativeError"));
+        } finally {
+          setIsMakingCollaborative(false);
+        }
+      },
+      () => {},
     );
   };
 
@@ -850,6 +888,18 @@ export default function UnifiedProjectDetailsScreen() {
               ? paperTheme.colors.onSurface
               : paperTheme.colors.primary,
           },
+          ...(project && !project.is_collaborative && googleAccount
+            ? [
+                {
+                  icon: "google-drive",
+                  label: t("projectView.makeCollaborative"),
+                  onPress: isMakingCollaborative ? () => {} : handleMakeCollaborative,
+                  color: paperTheme.dark
+                    ? paperTheme.colors.onSurface
+                    : paperTheme.colors.primary,
+                },
+              ]
+            : []),
           ...(surveyPoints.length > 0 && manifest?.provides?.some(c => c.id === "kuchler.classifyVegetation")
             ? [
                 {

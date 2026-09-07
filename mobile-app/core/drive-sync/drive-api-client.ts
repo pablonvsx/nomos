@@ -62,6 +62,20 @@ export async function listChildren(parentId: string): Promise<DriveFile[]> {
   return data.files ?? [];
 }
 
+export async function listSharedFolders(): Promise<DriveFile[]> {
+  const headers = await authHeaders();
+  const query = encodeURIComponent(
+    "sharedWithMe = true and mimeType = 'application/vnd.google-apps.folder' and trashed = false and name contains 'Nomos_'"
+  );
+  const response = await fetch(
+    `${DRIVE_API_BASE}/files?q=${query}&fields=files(id,name,mimeType,parents,modifiedTime)&pageSize=100`,
+    { headers }
+  );
+  if (!response.ok) await parseDriveError(response);
+  const data = await response.json();
+  return data.files ?? [];
+}
+
 export async function uploadJsonFile(name: string, parentId: string, content: unknown): Promise<DriveFile> {
   const headers = await authHeaders();
   const metadata = { name, parents: [parentId], mimeType: 'application/json' };

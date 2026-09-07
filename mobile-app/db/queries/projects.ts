@@ -127,6 +127,26 @@ export async function updateProject(
 }
 
 /**
+ * Marks a project as collaborative, associating it with a Google Drive folder.
+ */
+export async function setProjectCollaborative(
+  projectId: number,
+  driveFolderId: string,
+  autoApproveDefault: boolean,
+): Promise<boolean> {
+  try {
+    await db.runAsync(
+      `UPDATE projects SET is_collaborative = 1, drive_folder_id = ?, auto_approve_default = ?, last_updated = ? WHERE id = ?`,
+      [driveFolderId, autoApproveDefault ? 1 : 0, new Date().toISOString(), projectId],
+    );
+    return true;
+  } catch (error) {
+    console.error("Error setting project as collaborative:", error);
+    return false;
+  }
+}
+
+/**
  * Deletes a project and all its associated data.
  */
 export async function deleteProject(projectId: number): Promise<boolean> {
