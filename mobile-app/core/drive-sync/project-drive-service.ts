@@ -33,6 +33,13 @@ async function ensureNomosRootFolder(): Promise<string> {
   return created.id;
 }
 
+export async function ensureFolder(name: string, parentId: string): Promise<string> {
+  const existing = await findChildByName(parentId, name);
+  if (existing) return existing.id;
+  const created = await createFolder(name, parentId);
+  return created.id;
+}
+
 export interface CreateCollaborativeProjectParams {
   projectName: string;
   protocolId: string;

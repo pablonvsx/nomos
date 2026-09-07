@@ -1,3 +1,4 @@
+import { File } from 'expo-file-system';
 import { getDriveAccessToken } from '@/core/google-auth/google-auth-service';
 
 const DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
@@ -109,6 +110,38 @@ export async function updateJsonFile(fileId: string, content: unknown): Promise<
       method: 'PATCH',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify(content),
+    }
+  );
+  if (!response.ok) await parseDriveError(response);
+  return response.json();
+}
+
+export async function uploadBinaryFile(
+  name: string,
+  parentId: string,
+  localUri: string,
+  mimeType: string
+): Promise<DriveFile> {
+  const headers = await authHeaders();
+  const base64Content = await new File(localUri).base64();
+  const metadata = { name, parents: [parentId], mimeType };
+  const boundary = 'nomos-boundary-' + Math.random().toString(36).slice(2);
+  const body =
+    `--${boundary}\r\n` +
+    `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
+    `${JSON.stringify(metadata)}\r\n` +
+    `--${boundary}\r\n` +
+    `Content-Type: ${mimeType}\r\n` +
+    `Content-Transfer-Encoding: base64\r\n\r\n` +
+    `${base64Content}\r\n` +
+    `--${boundary}--`;
+
+  const response = await fetch(
+    `${DRIVE_UPLOAD_BASE}/files?uploadType=multipart&fields=id,name,mimeType,parents`,
+    {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': `multipart/related; boundary=${boundary}` },
+      body,
     }
   );
   if (!response.ok) await parseDriveError(response);

@@ -21,6 +21,8 @@ export interface CreatePointInput {
   point_size?: number | null;
   schema_version: string;              // manifest version (applied to all modules)
   modules: Record<string, string>;     // moduleId → already-serialized data_json
+  approval_status?: "local" | "pending" | "approved" | "rejected";
+  created_by?: string | null;
 }
 
 export type UpdatePointInput = Partial<Omit<CreatePointInput, "project_id" | "protocol_id">>;
@@ -139,6 +141,8 @@ export async function updatePoint(
     if (updates.audio_notes !== undefined) { fields.push("audio_notes = ?"); values.push(updates.audio_notes ?? null); }
     if (updates.additional_notes !== undefined) { fields.push("additional_notes = ?"); values.push(updates.additional_notes ?? null); }
     if (updates.point_size !== undefined) { fields.push("point_size = ?"); values.push(updates.point_size ?? null); }
+    if (updates.approval_status !== undefined) { fields.push("approval_status = ?"); values.push(updates.approval_status); }
+    if (updates.created_by !== undefined) { fields.push("created_by = ?"); values.push(updates.created_by ?? null); }
 
     values.push(pointId);
     await db.runAsync(

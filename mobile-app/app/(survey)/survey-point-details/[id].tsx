@@ -21,6 +21,7 @@ import {
   Dialog,
   Divider,
   Modal,
+  Chip,
 } from "react-native-paper";
 import {
   useRouter,
@@ -43,6 +44,7 @@ import {
 // DB imports
 import { getPoint, deletePoint } from "@/db/queries/points";
 import { getProjectById } from "@/db/queries/projects";
+import { submitPointToProject } from "@/core/drive-sync/point-submission-service";
 import { getCustomProtocolById } from "@/db/queries/custom-protocols";
 import { getSpeciesByPoint } from "@/db/queries/species";
 import { Point, PointModule, Project, CustomProtocol, Species } from "@/types/database";
@@ -231,6 +233,7 @@ export default function UnifiedSurveyPointViewScreen() {
   const [project, setProject] = useState<Project | null>(null);
   const [customProtocol, setCustomProtocol] = useState<CustomProtocol | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [fabOpen, setFabOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
@@ -400,6 +403,26 @@ export default function UnifiedSurveyPointViewScreen() {
       t("common.cancel"),
       true,
     );
+  };
+
+  const handleSubmitPoint = async () => {
+    if (!point || !project) return;
+    setIsSubmitting(true);
+    try {
+      const result = await submitPointToProject(point.id, project.id, registry);
+      await loadData();
+      alert(
+        t("common.success"),
+        result.status === "approved"
+          ? t("surveyView.submitApprovedMessage")
+          : t("surveyView.submitPendingMessage"),
+      );
+    } catch (error) {
+      console.error("Error submitting point:", error);
+      alert(t("common.error"), t("surveyView.submitError"));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEdit = () => {
@@ -626,6 +649,11 @@ export default function UnifiedSurveyPointViewScreen() {
               <Text variant="titleMedium" style={{ color: paperTheme.colors.primary }}>
                 {project.name}
               </Text>
+              {project.is_collaborative ? (
+                <Chip compact style={{ alignSelf: "flex-start", marginTop: 8 }}>
+                  {t(`surveyView.status_${point.approval_status ?? "local"}`)}
+                </Chip>
+              ) : null}
               <Divider style={{ marginVertical: 12 }} />
               <View style={styles.twoColumnRow}>
                 <View style={{ flex: 1 }}>
@@ -921,6 +949,16 @@ export default function UnifiedSurveyPointViewScreen() {
             onPress: () => { if (!isNavigating) handleEditLocation(); },
             color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
           },
+          ...(project && project.is_collaborative && point && point.approval_status !== "approved"
+            ? [
+                {
+                  icon: "cloud-upload",
+                  label: t("surveyView.submitToProject"),
+                  onPress: isSubmitting ? () => {} : handleSubmitPoint,
+                  color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
+                },
+              ]
+            : []),
           {
             icon: "delete",
             label: t("common.delete"),
@@ -936,6 +974,15 @@ export default function UnifiedSurveyPointViewScreen() {
           },
         }}
       />
+
+      <Portal>
+        <Dialog visible={isSubmitting} dismissable={false}>
+          <Dialog.Content style={{ alignItems: "center", paddingVertical: 24 }}>
+            <ActivityIndicator size="large" />
+            <Text style={{ marginTop: 16 }}>{t("surveyView.submitting")}</Text>
+          </Dialog.Content>
+        </Dialog>
+      </Portal>
 
       <Portal>
         <Modal
