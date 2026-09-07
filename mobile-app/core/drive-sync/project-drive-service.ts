@@ -85,6 +85,11 @@ export async function getManifest(driveFolderId: string): Promise<ProjectManifes
   return readJsonFile<ProjectManifest>(manifestFile.id);
 }
 
+export async function isProjectAdmin(driveFolderId: string, email: string): Promise<boolean> {
+  const manifest = await getManifest(driveFolderId);
+  return manifest.members.some((m) => m.email === email && m.role === 'admin');
+}
+
 export async function updateManifest(driveFolderId: string, manifest: ProjectManifest): Promise<void> {
   const manifestFile = await findChildByName(driveFolderId, 'manifest.json');
   if (!manifestFile) throw new Error('manifest.json não encontrado na pasta do projeto.');

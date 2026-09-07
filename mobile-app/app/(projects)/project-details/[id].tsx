@@ -31,7 +31,7 @@ import { CardHeaderIconButton } from "@/components/ui/CardHeaderIconButton";
 import { useStableTextInput } from "@/hooks/use-stable-text-input";
 import { useBottomContentPadding } from "@/hooks/use-bottom-content-padding";
 import { useGoogleAccount } from "@/hooks/use-google-account";
-import { createCollaborativeProjectStructure } from "@/core/drive-sync/project-drive-service";
+import { createCollaborativeProjectStructure, isProjectAdmin } from "@/core/drive-sync/project-drive-service";
 import { upsertProjectMember } from "@/db/queries/project-members";
 
 // Internal imports
@@ -101,6 +101,7 @@ export default function UnifiedProjectDetailsScreen() {
   const [isClassifying, setIsClassifying] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [isMakingCollaborative, setIsMakingCollaborative] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Vegetation Classification States
   const [vegClassificationSelectorVisible, setVegClassificationSelectorVisible] = useState(false);
@@ -256,6 +257,24 @@ export default function UnifiedProjectDetailsScreen() {
       loadProjectData();
     }, [loadProjectData]),
   );
+
+  // Live admin check (against manifest.json on Drive, not the local
+  // project_members copy, which can be stale if another admin promoted
+  // someone recently) - drives the "Aprovações Pendentes" FAB action below.
+  useEffect(() => {
+    if (!project || !project.is_collaborative || !project.drive_folder_id || !googleAccount) {
+      setIsAdmin(false);
+      return;
+    }
+    let cancelled = false;
+    isProjectAdmin(project.drive_folder_id, googleAccount.email)
+      .then((result) => { if (!cancelled) setIsAdmin(result); })
+      .catch((error) => {
+        console.error("Error checking project admin role:", error);
+        if (!cancelled) setIsAdmin(false);
+      });
+    return () => { cancelled = true; };
+  }, [project, googleAccount]);
 
   // Handle edit dialog save. Takes the new name/description as arguments
   // instead of reading them off state: the Save button used to call
@@ -894,6 +913,18 @@ export default function UnifiedProjectDetailsScreen() {
                   icon: "google-drive",
                   label: t("projectView.makeCollaborative"),
                   onPress: isMakingCollaborative ? () => {} : handleMakeCollaborative,
+                  color: paperTheme.dark
+                    ? paperTheme.colors.onSurface
+                    : paperTheme.colors.primary,
+                },
+              ]
+            : []),
+          ...(project && project.is_collaborative && isAdmin
+            ? [
+                {
+                  icon: "clipboard-check-outline",
+                  label: t("projectView.pendingApprovals"),
+                  onPress: () => router.push(`/project-approvals/${project.id}` as any),
                   color: paperTheme.dark
                     ? paperTheme.colors.onSurface
                     : paperTheme.colors.primary,

@@ -67,6 +67,7 @@ export async function submitPointToProject(
 
   const payload = {
     ...envelope,
+    approval_status: status,
     submitted_by: account.email,
     submitted_at: new Date().toISOString(),
   };

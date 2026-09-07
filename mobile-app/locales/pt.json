@@ -569,6 +569,7 @@
     "makeCollaborativeConfirm": "Isso vai criar uma pasta no seu Google Drive para compartilhar este projeto com colaboradores. Deseja continuar?",
     "makeCollaborativeSuccess": "Projeto colaborativo criado com sucesso!",
     "makeCollaborativeError": "Erro ao criar projeto colaborativo.",
+    "pendingApprovals": "Aprovações Pendentes",
     "noData": "Sem Dados",
     "noDataToExport": "Este projeto não possui pontos de coleta para exportar.",
     "noMediaToExport": "Este projeto não possui fotos para exportar.",
@@ -596,6 +597,22 @@
     "exportedPhotos": "foto(s) exportada(s)!",
     "mediaExportDialogTitle": "Exportar Mídias: {{name}}",
     "export": "Exportar"
+  },
+  "projectApprovals": {
+    "title": "Aprovações Pendentes",
+    "notAuthorized": "Você não tem permissão para acessar esta página.",
+    "loadError": "Erro ao carregar aprovações pendentes.",
+    "empty": "Nenhum ponto pendente de aprovação.",
+    "pointLabel": "Ponto {{number}}",
+    "photoCount": "{{count}} foto(s)",
+    "submittedBy": "Enviado por: {{email}}",
+    "approve": "Aprovar",
+    "reject": "Rejeitar",
+    "approveError": "Erro ao aprovar o ponto.",
+    "rejectDialogTitle": "Motivo da Rejeição",
+    "rejectReasonLabel": "Descreva o motivo da rejeição",
+    "rejectReasonRequired": "Informe um motivo para a rejeição.",
+    "rejectError": "Erro ao rejeitar o ponto."
   },
   "mapView": {
     "title": "Mapa do Projeto",
