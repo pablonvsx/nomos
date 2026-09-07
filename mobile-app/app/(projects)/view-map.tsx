@@ -182,7 +182,7 @@ function ViewMapScreen() {
 
              // Priority 1: Highlight Point
              if (highlightSurveyPointId && finalPoints.length > 0) {
-               const p = finalPoints.find((x: Point) => x.id === parseInt(highlightSurveyPointId));
+               const p = finalPoints.find((x: Point) => x.id === highlightSurveyPointId);
                if (p) {
                  mapRef.current.animateToRegion({
                    latitude: p.lat, longitude: p.lon,
@@ -257,7 +257,7 @@ function ViewMapScreen() {
   const renderedMarkers = useMemo(() => {
     if (!shouldRenderContent || !surveyPoints.length) return null;
     return surveyPoints.map(p => {
-      const isHigh = highlightSurveyPointId && p.id === parseInt(highlightSurveyPointId);
+      const isHigh = highlightSurveyPointId && p.id === highlightSurveyPointId;
       return (
         <Marker
           key={`p-${p.id}`}

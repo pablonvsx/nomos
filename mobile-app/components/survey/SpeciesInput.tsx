@@ -46,7 +46,7 @@ import { useBottomContentPadding } from "@/hooks/use-bottom-content-padding";
 
 interface Props {
   projectId: number;
-  surveyPointId: number;
+  surveyPointId: string;
   value?: Species[]; // Current species list
   onChange: (species: Species[]) => void;
   editable?: boolean;

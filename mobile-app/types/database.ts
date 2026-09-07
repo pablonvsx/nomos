@@ -29,12 +29,23 @@ export interface Project {
   last_classified_at?: string; // Optional timestamp of the last classification operation
   vegetation_classification_type?: "standard" | "custom"; // Vegetation classification type: 'standard' (Nomos decision tree) or 'custom' (user-defined)
   active_custom_vegetation_classification_id?: number; // ID of the active custom vegetation classification, if type is 'custom'
+  is_collaborative: 0 | 1; // Flag indicating whether the project is shared via Google Drive (0 = no, 1 = yes)
+  drive_folder_id?: string | null; // Google Drive folder id backing the project, when collaborative
+  auto_approve_default: 0 | 1; // Default auto-approve behavior for new members (0 = no, 1 = yes)
+}
+
+// A member of a collaborative project (Drive-based collaboration, future use)
+export interface ProjectMember {
+  project_id: number;
+  member_email: string;
+  role: string; // 'admin' | 'collaborator'
+  auto_approve: string; // 'herda_projeto' | 'true' | 'false'
 }
 
 // Ponto de levantamento (schema-driven, Fase 5+)
 // Representa uma linha da tabela `points`
 export interface Point {
-  id: number;
+  id: string; // Client-generated UUID
   project_id: number;
   protocol_id: string;          // "paisageo" | "custom"
   point_number: number;
@@ -49,11 +60,13 @@ export interface Point {
   point_size?: number | null;   // plot size (provisional)
   created_at: string;
   updated_at: string;
+  created_by?: string | null; // Email or device id of the creator; not populated yet
+  approval_status?: "local" | "pending" | "approved" | "rejected";
 }
 
 // A point's module data (one point_modules row)
 export interface PointModule {
-  point_id: number;
+  point_id: string;
   module_id: string;
   schema_version: string;
   data_json: string;            // ModuleDescriptor's serialize()
@@ -231,7 +244,7 @@ export type ProjectSpeciesCommonNameInput = Omit<
 export interface Species {
   id: number; // Auto-generated unique identifier
   project_id: number; // Associated project ID
-  point_id: number; // Associated point ID (tabela points)
+  point_id: string; // Associated point ID (tabela points)
   scientific_name?: string; // Latin name (optional, but at least one name is required)
   common_names?: string[]; // Popular/common names (optional, but at least one name is required); UI convention is a single semicolon-separated text field
   genus?: string; // Genus classification (optional)
@@ -246,7 +259,7 @@ export type SpeciesInput = Omit<Species, "id" | "created_at" | "last_updated">;
 
 // Statistics about species diversity at a survey point
 export interface SpeciesDiversity {
-  point_id: number; // ID do ponto
+  point_id: string; // ID do ponto
   total_species_count: number; // Number of unique species at this point
   total_individuals: number; // Total number of individuals (sum of all abundances)
   species_list: Array<{

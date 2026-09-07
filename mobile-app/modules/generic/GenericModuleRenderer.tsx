@@ -10,7 +10,7 @@ interface Props {
   onChange: (next: Record<string, unknown>) => void;
   language: LanguageCode;
   projectId?: number;
-  surveyPointId?: number;
+  surveyPointId?: string;
 }
 
 // Memoized: the survey form keeps every module's data in one shared state

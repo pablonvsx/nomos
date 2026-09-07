@@ -38,7 +38,7 @@ interface FieldRendererProps {
   onChange: (value: any) => void;
   onInfoPress?: (text: string) => void;
   projectId?: number;
-  surveyPointId?: number;
+  surveyPointId?: string;
 }
 
 function TagsInput({

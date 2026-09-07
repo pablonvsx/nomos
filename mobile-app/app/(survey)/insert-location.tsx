@@ -277,7 +277,7 @@ function InsertLocationScreen() {
 
     if (isEditMode) {
       try {
-        const ok = await updatePoint(parseInt(surveyPointId as string), {
+        const ok = await updatePoint(surveyPointId as string, {
           lat,
           lon,
           altitude: altitude ? Number(altitude) : null,

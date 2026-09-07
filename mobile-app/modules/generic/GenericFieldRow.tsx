@@ -20,7 +20,7 @@ interface Props {
   onChange: (value: unknown) => void;
   language: LanguageCode;
   projectId?: number;
-  surveyPointId?: number;
+  surveyPointId?: string;
   /** Shows a help-text bubble - forwarded to FieldRenderer, which uses it for
    *  types that already draw their own "i" icon (select/checkbox/radio/
    *  confirm_checkbox). PAISAGEO fields rely on this; custom-protocol fields

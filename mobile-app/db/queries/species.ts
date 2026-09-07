@@ -99,7 +99,7 @@ export async function getSpeciesById(speciesId: number): Promise<Species | null>
  * @param pointId ID of the point
  * @returns Array of species at this point
  */
-export async function getSpeciesByPoint(pointId: number): Promise<Species[]> {
+export async function getSpeciesByPoint(pointId: string): Promise<Species[]> {
   try {
     const rows = await db.getAllAsync<SpeciesDbRow>(
       "SELECT * FROM species WHERE point_id = ? ORDER BY scientific_name, common_names",
@@ -285,7 +285,7 @@ export async function deleteSpecies(speciesId: number): Promise<boolean> {
  * @returns Diversity statistics
  */
 export async function getSpeciesDiversityByPoint(
-  pointId: number,
+  pointId: string,
 ): Promise<SpeciesDiversity> {
   try {
     const rows = await db.getAllAsync<SpeciesDbRow>(
@@ -395,7 +395,7 @@ export async function getUniqueSpeicesInProject(projectId: number): Promise<Spec
       ...catalogRows.map((row) => ({
         id: row.id,
         project_id: row.project_id,
-        point_id: 0,
+        point_id: "",
         scientific_name: row.scientific_name,
         common_names: row.common_names?.map((cn) => cn.common_name) ?? [],
         abundance: 1,

@@ -7,7 +7,7 @@ import { parsePhotoUris } from "@/db/mappers/json-utils";
 // ──────────────────────────────────────────────
 
 export interface PointDbRow {
-  id: number;
+  id: string;
   project_id: number;
   protocol_id: string;
   point_number: number;

@@ -18,7 +18,7 @@ const SPECIES_COLUMNS = [
 
 async function fetchSpeciesRow(pointId: string): Promise<Array<string | null>> {
   try {
-    const species = await getSpeciesByPoint(parseInt(pointId));
+    const species = await getSpeciesByPoint(pointId);
     if (!species || species.length === 0) return ["", "", "", ""];
     // Names of the same species are joined with ", "; different species stay separated by "; ".
     const namesOf = (s: (typeof species)[number]) => (s.common_names ?? []).join(", ");

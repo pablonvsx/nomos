@@ -25,7 +25,7 @@ export function mapProjectSpeciesCatalogToSpeciesSuggestion(
   return {
     id: row.id,
     project_id: row.project_id,
-    point_id: 0,
+    point_id: "",
     scientific_name: row.scientific_name ?? undefined,
     common_names: row.common_names?.map((cn) => cn.common_name) ?? [],
     abundance: 1,

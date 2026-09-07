@@ -2,6 +2,7 @@ import { db } from "@/db/initialize";
 import type { Point, PointModule, PointWithModules } from "@/types/database";
 import type { ProtocolRegistry } from "@/protocol-kernel/types";
 import { buildPointWithModules } from "@/db/mappers/point.mapper";
+import { generatePointId } from "@/utils/uuid";
 
 // ──────────────────────────────────────────────
 // Input types
@@ -28,9 +29,10 @@ export type UpdatePointInput = Partial<Omit<CreatePointInput, "project_id" | "pr
 // Database functions
 // ──────────────────────────────────────────────
 
-export async function createPoint(input: CreatePointInput): Promise<number | null> {
+export async function createPoint(input: CreatePointInput): Promise<string | null> {
   try {
     const now = new Date().toISOString();
+    const id = generatePointId();
 
     // Next point_number for the project
     const maxRow = await db.getFirstAsync<{ max_num: number | null }>(
@@ -39,13 +41,14 @@ export async function createPoint(input: CreatePointInput): Promise<number | nul
     );
     const point_number = (maxRow?.max_num ?? 0) + 1;
 
-    const result = await db.runAsync(
+    await db.runAsync(
       `INSERT INTO points
-         (project_id, protocol_id, point_number, lat, lon, altitude,
+         (id, project_id, protocol_id, point_number, lat, lon, altitude,
           generated_name, photos, audio_notes, additional_notes, point_size,
           created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
+        id,
         input.project_id,
         input.protocol_id,
         point_number,
@@ -62,15 +65,12 @@ export async function createPoint(input: CreatePointInput): Promise<number | nul
       ],
     );
 
-    const pointId = result.lastInsertRowId;
-    if (!pointId) return null;
-
     // Write modules
     for (const [module_id, data_json] of Object.entries(input.modules)) {
       await db.runAsync(
         `INSERT INTO point_modules (point_id, module_id, schema_version, data_json)
          VALUES (?, ?, ?, ?)`,
-        [pointId, module_id, input.schema_version, data_json],
+        [id, module_id, input.schema_version, data_json],
       );
     }
 
@@ -81,7 +81,7 @@ export async function createPoint(input: CreatePointInput): Promise<number | nul
       [now, input.project_id],
     );
 
-    return pointId;
+    return id;
   } catch (error) {
     console.error("Error creating point:", error);
     return null;
@@ -89,7 +89,7 @@ export async function createPoint(input: CreatePointInput): Promise<number | nul
 }
 
 export async function getPoint(
-  pointId: number,
+  pointId: string,
 ): Promise<{ point: Point; modules: PointModule[] } | null> {
   try {
     const point = await db.getFirstAsync<Point>(
@@ -123,7 +123,7 @@ export async function getPointsByProject(projectId: number): Promise<Point[]> {
 }
 
 export async function updatePoint(
-  pointId: number,
+  pointId: string,
   updates: UpdatePointInput,
 ): Promise<boolean> {
   try {
@@ -175,7 +175,7 @@ export async function updatePoint(
   }
 }
 
-export async function deletePoint(pointId: number): Promise<boolean> {
+export async function deletePoint(pointId: string): Promise<boolean> {
   try {
     // Fetch project_id and point_number before deleting
     const row = await db.getFirstAsync<{ project_id: number; point_number: number }>(
@@ -240,7 +240,7 @@ export async function getPointsWithModulesByProject(
       ids,
     );
 
-    const modulesByPoint = new Map<number, PointModule[]>();
+    const modulesByPoint = new Map<string, PointModule[]>();
     for (const mod of allModules) {
       const list = modulesByPoint.get(mod.point_id) ?? [];
       list.push(mod);
@@ -258,7 +258,7 @@ export async function getPointsWithModulesByProject(
 
 export async function classifyProjectPoints(projectId: number): Promise<boolean> {
   try {
-    const points = await db.getAllAsync<{ id: number; generated_name: string | null }>(
+    const points = await db.getAllAsync<{ id: string; generated_name: string | null }>(
       `SELECT id, generated_name FROM points
        WHERE project_id = ? ORDER BY point_number ASC, id ASC`,
       [projectId],

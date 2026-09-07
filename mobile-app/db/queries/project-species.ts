@@ -615,7 +615,7 @@ export async function searchProjectSpeciesCatalogAutocomplete(
       results.push({
         id: row.id,
         project_id: projectId,
-        point_id: 0,
+        point_id: "",
         scientific_name: row.scientific_name,
         family: row.family,
         genus: row.genus,

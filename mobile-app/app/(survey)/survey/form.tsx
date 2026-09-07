@@ -290,7 +290,7 @@ export default function SurveyFormScreen() {
   const [speciesValue, setSpeciesValue] = useState<string>("[]");
   const [vegClassificationType, setVegClassificationType] = useState<"standard" | "custom">("standard");
   const [customVegClasses, setCustomVegClasses] = useState<VegetationClass[]>([]);
-  const [tempSurveyPointId] = useState(-Date.now());
+  const [tempSurveyPointId] = useState(() => `temp-${Date.now()}`);
 
   // --- Shared state ---
   const [isSaving, setIsSaving] = useState(false);
@@ -352,7 +352,7 @@ export default function SurveyFormScreen() {
         return;
       }
 
-      const result = await getPoint(parseInt(surveyPointId as string));
+      const result = await getPoint(surveyPointId as string);
       if (result) {
         const { point, modules: pointModules } = result;
         setOriginalLocation({
@@ -589,11 +589,11 @@ export default function SurveyFormScreen() {
         ? originalLocation.altitude ?? null
         : altitude ? Number(altitude) : null;
 
-      let savedPointId: number | null = null;
+      let savedPointId: string | null = null;
       let success = false;
 
       if (isEditMode && surveyPointId) {
-        success = await updatePoint(parseInt(surveyPointId as string), {
+        success = await updatePoint(surveyPointId as string, {
           lat,
           lon,
           altitude: alt,
@@ -605,7 +605,7 @@ export default function SurveyFormScreen() {
           schema_version: "1.0.0",
           modules,
         });
-        savedPointId = parseInt(surveyPointId as string);
+        savedPointId = surveyPointId as string;
       } else {
         savedPointId = await createPoint({
           project_id: Number(projectId),
@@ -687,7 +687,7 @@ export default function SurveyFormScreen() {
       let success = false;
 
       if (isEditMode && surveyPointId) {
-        success = await updatePoint(parseInt(surveyPointId as string), {
+        success = await updatePoint(surveyPointId as string, {
           lat,
           lon,
           altitude: alt,
@@ -721,7 +721,7 @@ export default function SurveyFormScreen() {
   };
 
   const surveyPointIdForMedia = isEditMode
-    ? surveyPointId ? Number(surveyPointId) : undefined
+    ? surveyPointId ? (surveyPointId as string) : undefined
     : tempSurveyPointId;
 
   // Renders one module's card - the specialized *ModuleRenderer if the kernel

@@ -327,8 +327,7 @@ export default function UnifiedSurveyPointViewScreen() {
     if (!id) return;
     setIsLoading(true);
     try {
-      const pointId = parseInt(id);
-      const result = await getPoint(pointId);
+      const result = await getPoint(id);
 
       if (!result) {
         console.error(`Point not found. ID: ${id}`);

@@ -12,7 +12,7 @@ interface Props {
   onChange: (nextItems: Record<string, unknown>[]) => void;
   language: LanguageCode;
   projectId?: number;
-  surveyPointId?: number;
+  surveyPointId?: string;
 }
 
 /**
