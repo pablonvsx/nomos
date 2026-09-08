@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from "react";
-import { View, FlatList, StyleSheet } from "react-native";
+import React, { useState, useCallback, useEffect } from "react";
+import { View, FlatList, ScrollView, StyleSheet } from "react-native";
 import {
   FAB,
   Card,
@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   SegmentedButtons,
   IconButton,
+  Dialog,
+  Portal,
   useTheme as usePaperTheme,
 } from "react-native-paper";
 import { useRouter, useFocusEffect, Stack } from "expo-router";
@@ -48,7 +50,7 @@ export default function ProjectsScreen() {
   const { t, currentLanguage } = useI18n();
   const registry = useProtocolRegistry();
   const lang = (currentLanguage as string) ?? "pt";
-  const { account: googleAccount } = useGoogleAccount();
+  const { account: googleAccount, connect, isConnecting } = useGoogleAccount();
 
   // State Management
   const [activeTab, setActiveTab] = useState<"projects" | "protocols">(
@@ -66,6 +68,8 @@ export default function ProjectsScreen() {
     {},
   );
   const [unsyncedCounts, setUnsyncedCounts] = useState<Record<number, number>>({});
+  const [driveDialogVisible, setDriveDialogVisible] = useState(false);
+  const [isLoadingDriveProjects, setIsLoadingDriveProjects] = useState(false);
   const [driveAvailableProjects, setDriveAvailableProjects] = useState<SharedProjectOption[]>([]);
   const [downloadingFolderId, setDownloadingFolderId] = useState<string | null>(null);
 
@@ -121,14 +125,23 @@ export default function ProjectsScreen() {
     }
   }, [alert, t]);
 
-  // Optional "available on Drive" section: never blocks the main screen or
-  // shows an error - the local project list is the real content, this is
-  // extra. Silently empties out on any failure (no account, offline, etc).
-  const loadDriveAvailableProjects = useCallback(async () => {
+  // 2. Lifecycle Hook: Refreshes data when screen comes into focus
+  // Essential for updating the list after creating a new project and returning here
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData]),
+  );
+
+  // Fetches the "load from Drive" dialog's list on demand - this is now an
+  // explicit, user-triggered action (via the FAB), not a silent background
+  // check, so failures are surfaced instead of swallowed.
+  const refreshDriveAvailableProjects = useCallback(async () => {
     if (!googleAccount) {
       setDriveAvailableProjects([]);
       return;
     }
+    setIsLoadingDriveProjects(true);
     try {
       const [allDriveProjects, usedFolderIds] = await Promise.all([
         listAllDriveProjects(),
@@ -139,17 +152,19 @@ export default function ProjectsScreen() {
     } catch (error) {
       console.error("Error loading available Drive projects:", error);
       setDriveAvailableProjects([]);
+      alert(t("common.error"), t("projectsList.driveListError"));
+    } finally {
+      setIsLoadingDriveProjects(false);
     }
-  }, [googleAccount]);
+  }, [googleAccount, alert, t]);
 
-  // 2. Lifecycle Hook: Refreshes data when screen comes into focus
-  // Essential for updating the list after creating a new project and returning here
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-      loadDriveAvailableProjects();
-    }, [loadData, loadDriveAvailableProjects]),
-  );
+  // Fetch when the dialog opens, and again if the user connects their
+  // Google account while the dialog is already open.
+  useEffect(() => {
+    if (driveDialogVisible && googleAccount) {
+      refreshDriveAvailableProjects();
+    }
+  }, [googleAccount, driveDialogVisible, refreshDriveAvailableProjects]);
 
   const handleDownloadDriveProject = async (option: SharedProjectOption) => {
     if (!googleAccount) return;
@@ -158,7 +173,7 @@ export default function ProjectsScreen() {
       const { projectId } = await joinAndCreateLocalProject(option.driveFolderId, googleAccount.email);
       const syncResult = await syncProjectFromDrive(projectId, { includeMedia: false }, registry);
       await loadData();
-      await loadDriveAvailableProjects();
+      await refreshDriveAvailableProjects();
       alert(t("common.success"), t("projectsList.downloadSummary", { imported: syncResult.imported }));
     } catch (error) {
       console.error("Error downloading Drive project:", error);
@@ -557,37 +572,6 @@ export default function ProjectsScreen() {
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderProjectCard}
             contentContainerStyle={styles.listContent}
-            ListFooterComponent={
-              driveAvailableProjects.length > 0 ? (
-                <View style={styles.driveAvailableSection}>
-                  <Text variant="titleMedium" style={{ color: paperTheme.colors.primary, marginBottom: 8 }}>
-                    {t("projectsList.availableOnDrive")}
-                  </Text>
-                  {driveAvailableProjects.map((option) => (
-                    <Card key={option.driveFolderId} style={[styles.card, { backgroundColor: paperTheme.colors.surface }]}>
-                      <Card.Content style={styles.driveAvailableRow}>
-                        <View style={{ flex: 1 }}>
-                          <Text variant="bodyMedium" style={{ fontWeight: "bold" }} numberOfLines={1}>
-                            {option.manifest.project_name}
-                          </Text>
-                          <Chip compact icon="account-group" style={{ alignSelf: "flex-start", marginTop: 4 }}>
-                            {t("projectsList.collaborative")}
-                          </Chip>
-                        </View>
-                        <Button
-                          mode="contained"
-                          loading={downloadingFolderId === option.driveFolderId}
-                          disabled={downloadingFolderId !== null}
-                          onPress={() => handleDownloadDriveProject(option)}
-                        >
-                          {t("projectsList.download")}
-                        </Button>
-                      </Card.Content>
-                    </Card>
-                  ))}
-                </View>
-              ) : null
-            }
             ListEmptyComponent={
               <View style={styles.emptyState}>
                 <Text
@@ -693,6 +677,14 @@ export default function ProjectsScreen() {
                     ? paperTheme.colors.onSurface
                     : paperTheme.colors.primary,
                 },
+                {
+                  icon: "folder-download-outline",
+                  label: t("projectsList.loadFromDrive"),
+                  onPress: () => setDriveDialogVisible(true),
+                  color: paperTheme.dark
+                    ? paperTheme.colors.onSurface
+                    : paperTheme.colors.primary,
+                },
               ]
             : [
                 {
@@ -723,6 +715,62 @@ export default function ProjectsScreen() {
           },
         }}
       />
+
+      <Portal>
+        <Dialog
+          visible={driveDialogVisible}
+          onDismiss={() => setDriveDialogVisible(false)}
+          style={{ maxHeight: "70%" }}
+        >
+          <Dialog.Title>{t("projectsList.availableOnDrive")}</Dialog.Title>
+          <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
+            <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 8 }}>
+              {isLoadingDriveProjects ? (
+                <ActivityIndicator animating size="large" style={{ marginVertical: 24 }} color={paperTheme.colors.primary} />
+              ) : !googleAccount ? (
+                <View style={{ alignItems: "center", paddingVertical: 16 }}>
+                  <Text variant="bodyMedium" style={{ textAlign: "center", marginBottom: 16 }}>
+                    {t("projectsList.driveConnectRequired")}
+                  </Text>
+                  <Button mode="contained" onPress={connect} loading={isConnecting} disabled={isConnecting} icon="google">
+                    {t("settings.googleAccountConnect")}
+                  </Button>
+                </View>
+              ) : driveAvailableProjects.length === 0 ? (
+                <Text variant="bodyMedium" style={{ textAlign: "center", paddingVertical: 16 }}>
+                  {t("projectsList.noNewDriveProjects")}
+                </Text>
+              ) : (
+                driveAvailableProjects.map((option) => (
+                  <Card key={option.driveFolderId} style={[styles.card, { backgroundColor: paperTheme.colors.surface }]}>
+                    <Card.Content style={styles.driveAvailableRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text variant="bodyMedium" style={{ fontWeight: "bold" }} numberOfLines={1}>
+                          {option.manifest.project_name}
+                        </Text>
+                        <Chip compact icon="account-group" style={{ alignSelf: "flex-start", marginTop: 4 }}>
+                          {t("projectsList.collaborative")}
+                        </Chip>
+                      </View>
+                      <Button
+                        mode="contained"
+                        loading={downloadingFolderId === option.driveFolderId}
+                        disabled={downloadingFolderId !== null}
+                        onPress={() => handleDownloadDriveProject(option)}
+                      >
+                        {t("projectsList.download")}
+                      </Button>
+                    </Card.Content>
+                  </Card>
+                ))
+              )}
+            </ScrollView>
+          </Dialog.ScrollArea>
+          <Dialog.Actions>
+            <Button onPress={() => setDriveDialogVisible(false)}>{t("common.close")}</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
 
       <View
         pointerEvents="none"
@@ -764,9 +812,6 @@ const styles = StyleSheet.create({
   collaborativeBadgeRow: {
     flexDirection: "row",
     gap: 4,
-  },
-  driveAvailableSection: {
-    marginTop: 8,
   },
   driveAvailableRow: {
     flexDirection: "row",

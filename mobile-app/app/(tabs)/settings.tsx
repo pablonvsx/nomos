@@ -20,7 +20,6 @@ import { useI18n } from "@/contexts/i18n-context";
 import { getAvailableLanguages } from "@/utils/i18n";
 import { useDialog, useAlertDialog } from "@/hooks/use-dialog";
 import { useGoogleAccount } from "@/hooks/use-google-account";
-import { createFolder } from "@/core/drive-sync/drive-api-client";
 import { APIKeyManager } from "@/core/species-catalog/api-key-manager";
 import { SpeciesLinkSettingsModal } from "@/components/settings/SpeciesLinkSettingsModal";
 import { GoogleAccountSettingsModal } from "@/components/settings/GoogleAccountSettingsModal";
@@ -69,7 +68,6 @@ export default function SettingsScreen() {
   const [speciesLinkModalVisible, setSpeciesLinkModalVisible] = useState(false);
   const [googleAccountModalVisible, setGoogleAccountModalVisible] = useState(false);
   const [speciesLinkConfigured, setSpeciesLinkConfigured] = useState(false);
-  const [isTestingDrive, setIsTestingDrive] = useState(false);
 
   const availableLanguages = getAvailableLanguages();
 
@@ -89,20 +87,6 @@ export default function SettingsScreen() {
     Linking.openURL(
       "https://drive.google.com/drive/folders/1Ikc18svAf_pBV3j8QSXvILa6XqKRPcRI?usp=sharing"
     );
-  };
-
-  // Temporary validation button for drive-sync phase 2 — remove once phase 3
-  // (real project folder structure) exercises the Drive client end-to-end.
-  const handleTestDrive = async () => {
-    setIsTestingDrive(true);
-    try {
-      const folder = await createFolder("Nomos - Teste");
-      alert("Drive OK", `Pasta criada com sucesso. ID: ${folder.id}`);
-    } catch (err) {
-      alert("Erro ao testar Drive", err instanceof Error ? err.message : String(err));
-    } finally {
-      setIsTestingDrive(false);
-    }
   };
 
   const handleLanguageChange = async () => {
@@ -260,20 +244,6 @@ export default function SettingsScreen() {
             descriptionStyle={styles.itemDescription}
             descriptionNumberOfLines={0}
           />
-
-          {/* Temporary: validates the Drive client end-to-end before phase 3 */}
-          {googleAccount && (
-            <Button
-              mode="contained"
-              onPress={handleTestDrive}
-              loading={isTestingDrive}
-              disabled={isTestingDrive}
-              style={styles.testDriveButton}
-              icon="google-drive"
-            >
-              Testar Drive
-            </Button>
-          )}
         </List.Section>
 
         <Divider />
@@ -431,9 +401,5 @@ const styles = StyleSheet.create({
   statusChipText: {
     fontSize: 12,
     lineHeight: 14,
-  },
-  testDriveButton: {
-    marginHorizontal: 16,
-    marginTop: 4,
   },
 });

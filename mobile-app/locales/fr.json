@@ -527,7 +527,11 @@
     "availableOnDrive": "Disponibles sur Drive",
     "download": "Télécharger",
     "downloadSummary": "{{imported}} point(s) importé(s).",
-    "downloadError": "Erreur lors du téléchargement du projet depuis Drive."
+    "downloadError": "Erreur lors du téléchargement du projet depuis Drive.",
+    "loadFromDrive": "Charger depuis Drive",
+    "driveConnectRequired": "Connectez votre compte Google pour voir les projets disponibles sur Drive.",
+    "noNewDriveProjects": "Aucun nouveau projet trouvé sur Drive.",
+    "driveListError": "Impossible de charger les projets depuis Drive."
   },
   "projectView": {
     "title": "Détails du Projet",
