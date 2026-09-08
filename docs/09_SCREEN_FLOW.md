@@ -36,6 +36,8 @@ flowchart TD
     Details -->|"species catalog"| SpeciesCatalog["species-catalog/[id].tsx"]
     Details -->|"new point: capture GPS"| InsertLocation["insert-location.tsx"]
     Details -->|"open existing point"| PointDetails["survey-point-details/[id].tsx"]
+    Details -->|"router.push('/project-collaboration/[id]')"| Collab["project-collaboration/[id].tsx<br/>make collaborative · members · submit/sync"]
+    Collab -->|"router.push('/project-approvals/[id]')"| Approvals["project-approvals/[id].tsx<br/>admin: approve/reject pending submissions"]
 
     InsertLocation -->|"router.push('/survey/form?...')"| Form["survey/form.tsx<br/>Manifest-driven form"]
     PointDetails -->|"edit point"| Form
@@ -55,6 +57,15 @@ Verified points (file:line):
   - `projects.tsx` (Protocols tab) → `router.push('/protocol/tutorials')`, with no protocol pre-selected.
   - `protocol/native-catalog.tsx:228` → `router.push('/protocol/tutorials?protocolId=${selected.id}')`, with the catalog's currently-displayed protocol.
   - `project-details/[id].tsx:627` → `router.push('/protocol/tutorials?protocolId=${manifestId}')`, where `manifestId = resolveManifestId(project)` — `"paisageo"` for native projects and always `"custom"` for Personalized-protocol projects, so the same button works for both cases with no conditional logic in the screen.
+- `project-details/[id].tsx:893` → `router.push('/project-collaboration/${project.id}')` — the only entry point into the collaboration hub, from a menu action on the details screen.
+- `project-collaboration/[id].tsx:585` → `router.push('/project-approvals/${project.id}')` — admin-only button inside the collaboration hub, leading to the pending-submissions queue.
+
+## Google account and joining a collaborative project
+
+Two collaboration entry points are **not** part of the `router.push` graph above, because neither is a dedicated route:
+
+- **Connecting a Google account**: `app/(tabs)/settings.tsx:227-246` — a "Google Account" row in Settings opens `GoogleAccountSettingsModal` (a modal, not a screen), which calls `connect()`/`disconnect()` from `useGoogleAccount()` (`hooks/use-google-account.ts`) to sign in/out. This is a prerequisite for every other collaboration flow, but it's reached from the Settings tab, not from a project screen.
+- **Joining an existing collaborative project**: there is no dedicated "join" screen or deep link. `app/(projects)/projects.tsx` has a Drive-folder picker dialog (`driveDialogVisible`) that lists the caller's shared Drive folders (`listAllDriveProjects`) and, on selecting one, `handleDownloadDriveProject` (`projects.tsx:169-184`) calls `joinAndCreateLocalProject(driveFolderId, googleAccount.email)` (`core/drive-sync/project-drive-service.ts`) directly, then `syncProjectFromDrive` to pull the initial data down — all inside that one dialog, without navigating anywhere else.
 
 ## End-to-end user flow: create project → collect → export
 
@@ -69,7 +80,7 @@ flowchart LR
     F --> G["7. Share file<br/>writeAndShare() (expo-sharing)"]
 ```
 
-This is the flow that exercises the architecture end to end: the protocol choice in (1) determines, via `resolveManifestId()`, which `ProtocolManifest` the details screen (2) consults to know which modules to show and which exporter to use; the form (4) uses a `ModuleRendererBinding` or `GenericModuleRenderer` depending on whether the module has a specialized renderer or not (see [01_ARCHITECTURE.md](01_ARCHITECTURE.md) and [12_FAQ.md](12_FAQ.md)); and export (6) uses the same generic engine regardless of which protocol was chosen in (1).
+This is the flow that exercises the architecture end to end: the protocol choice in (1) determines, via `resolveManifestId()`, which `ProtocolManifest` the details screen (2) consults to know which modules to show and which exporter to use; the form (4) uses a `ModuleRendererBinding` or `GenericModuleRenderer` depending on whether the module has a specialized renderer or not (see [01_ARCHITECTURE.md](01_ARCHITECTURE.md) and [13_FAQ.md](13_FAQ.md)); and export (6) uses the same generic engine regardless of which protocol was chosen in (1).
 
 ## Specialized vs. generic renderer, inside the form
 

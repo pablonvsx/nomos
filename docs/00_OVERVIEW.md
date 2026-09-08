@@ -25,6 +25,10 @@ Two protocols exist today: **`paisageo`** (scientific, with 3 modules: vegetatio
 2. The CSV/GeoJSON exporter already knows how to handle variable-cardinality structures (N soil layers, N vegetation strata, N impacts) because each module's schema describes that variation (`ModuleSchema.dynamic`), and the generic engine (`core/export/generic-export-engine.ts` + `core/schema/dynamic-columns.ts`) expands the columns on its own.
 3. A protocol can reuse an entire scientific module from another (e.g. custom attaching PAISAGEO's geoecological constraints module) without a direct import between protocols, only going through the `modules/registry.ts` catalog.
 
+## Collaborative projects
+
+A project doesn't have to stay on one device. It can be made collaborative, backed by a shared Google Drive folder: an admin invites collaborators by email, each collaborator submits points for approval (or auto-approval, depending on the project's policy), and the admin's local SQLite stays the source of truth once a sync pulls the approved points back down. This is layered entirely on top of the existing offline-first model — a collaborative project still works fully offline between syncs. See [12_COLLABORATION.md](12_COLLABORATION.md) for the full picture.
+
 ## Navigation map: if you want to understand X, read Y
 
 | To understand... | Read |
@@ -40,7 +44,8 @@ Two protocols exist today: **`paisageo`** (scientific, with 3 modules: vegetatio
 | Which screens exist and how the user navigates between them | [09_SCREEN_FLOW.md](09_SCREEN_FLOW.md) |
 | How to create a brand-new scientific protocol | [10_GUIDE_NEW_PROTOCOL.md](10_GUIDE_NEW_PROTOCOL.md) |
 | How to add a module to an already-existing protocol | [11_GUIDE_NEW_MODULE.md](11_GUIDE_NEW_MODULE.md) |
-| Quick answers to recurring questions | [12_FAQ.md](12_FAQ.md) |
+| How Google Drive-based collaborative projects work | [12_COLLABORATION.md](12_COLLABORATION.md) |
+| Quick answers to recurring questions | [13_FAQ.md](13_FAQ.md) |
 
 ## About this documentation's fidelity
 

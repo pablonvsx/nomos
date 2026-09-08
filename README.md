@@ -48,6 +48,7 @@ Beyond data collection based on the primary methodological instrument, the app a
 - **Species catalog integration.** Connects to GBIF and SpeciesLink for taxonomic verification during collection.
 - **Structured exports.** Outputs data as GeoJSON and CSV, and packages field media into a compressed archive, ready for use in GIS and statistical software.
 - **Multilingual interface.** Available in Portuguese, English, Spanish, and French.
+- **Collaborative projects.** A project can be shared with a small team via Google Drive — invite collaborators by email, submit points for admin approval (or auto-approval), and sync approved data back down — while collection itself stays fully offline-first. See [docs/12_COLLABORATION.md](docs/12_COLLABORATION.md).
 
 ---
 

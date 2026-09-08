@@ -86,6 +86,14 @@ Supported languages: pt (primary), en, es, fr (`locales/{pt,en,es,fr}.json`).
 | `expo-secure-store` | ~15.0.8 | GBIF/SpeciesLink API keys (`core/species-catalog/api-key-manager.ts`) |
 | `@react-native-community/netinfo` | 11.4.1 | Connectivity state |
 
+## Authentication and cloud sync (Google)
+
+| Package | Version | Use |
+|---|---|---|
+| `@react-native-google-signin/google-signin` | ^16.1.5 | Google Sign-In and Drive OAuth token (`core/google-auth/google-auth-service.ts`), scoped to `drive.file` only |
+
+Collaborative projects are built on top of this: `core/drive-sync/` talks to the raw Google Drive REST API (no separate Drive SDK dependency — see `core/drive-sync/drive-api-client.ts`) using the access token this package provides. Details in [12_COLLABORATION.md](12_COLLABORATION.md).
+
 ## Other relevant Expo dependencies
 
 `expo-constants`, `expo-haptics`, `expo-splash-screen`, `expo-status-bar`, `expo-system-ui`, `expo-updates`, `expo-web-browser`, `expo-symbols`, `expo-dev-client`, `expo-asset`, `expo-font`.

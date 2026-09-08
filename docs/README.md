@@ -16,8 +16,9 @@ Documentation kept faithful to Nomos's actual code (not to old planning specs), 
 10. [09_SCREEN_FLOW.md](09_SCREEN_FLOW.md) — the real navigation map between screens and the end-to-end user flow (create project → collect → export).
 11. [10_GUIDE_NEW_PROTOCOL.md](10_GUIDE_NEW_PROTOCOL.md) — step-by-step guide to implementing a brand-new scientific protocol.
 12. [11_GUIDE_NEW_MODULE.md](11_GUIDE_NEW_MODULE.md) — smaller-scope guide: adding a module to an already-existing protocol.
-13. [12_FAQ.md](12_FAQ.md) — short answers to recurring questions, with file/line references.
+13. [12_COLLABORATION.md](12_COLLABORATION.md) — Google Drive-based collaborative projects: roles, invites, submission/approval, and sync.
+14. [13_FAQ.md](13_FAQ.md) — short answers to recurring questions, with file/line references.
 
 ## Suggested reading order
 
-For a first complete read-through: 00 → 01 → 02 → 05 → 06 → 07 → 09, then 10/11 when you're actually extending the app. 03, 04, 08, and 12 are for ad-hoc lookup.
+For a first complete read-through: 00 → 01 → 02 → 05 → 06 → 07 → 09 → 12, then 10/11 when you're actually extending the app. 03, 04, 08, and 13 are for ad-hoc lookup.

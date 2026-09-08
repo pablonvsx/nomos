@@ -8,6 +8,8 @@ Nomos follows a one-way dependency rule, enforced in the code itself and verifie
 graph TD
     DB["db/<br/>SQLite (points, point_modules, projects, species...)"]
     CORE["core/<br/>map · species-catalog · media · fields · generic export · schema/"]
+    GAUTH["core/google-auth/<br/>Google Sign-In, Drive OAuth token"]
+    DRIVESYNC["core/drive-sync/<br/>Drive REST client, project manifest, sync, approvals"]
     KERNEL["protocol-kernel/<br/>types · registry · capability-bus"]
     BOOTSTRAP["modules/bootstrap.ts<br/>composition root: registers the concrete protocols"]
     PAISAGEO["modules/paisageo/<br/>manifest · modules/ · capabilities/ · exporter"]
@@ -17,6 +19,10 @@ graph TD
     CTX["contexts/protocol-registry-context.tsx<br/>instantiates the kernel singletons"]
 
     CORE -. "import type" .-> KERNEL
+    DRIVESYNC -. "import type" .-> KERNEL
+    DRIVESYNC --> DB
+    APP --> GAUTH
+    APP --> DRIVESYNC
     PAISAGEO --> CORE
     CUSTOM --> CORE
     PAISAGEO -. "import type" .-> KERNEL
@@ -44,7 +50,7 @@ graph TD
 
 Inviolable rules (verified against the code, not just stated):
 
-1. **`core/` only imports from `protocol-kernel/` via `import type`, never by value.** `core/schema/` (`module-schema.ts`, `dynamic-columns.ts` — includes `buildColumns`, used by `core/export/generic-export-engine.ts`) only references kernel types (`ModuleSchema`, `ColumnPlan`, etc.), never values. `core/` never imports from `modules/<protocol>/` or `app/` in any form.
+1. **`core/` only imports from `protocol-kernel/` via `import type`, never by value.** `core/schema/` (`module-schema.ts`, `dynamic-columns.ts` — includes `buildColumns`, used by `core/export/generic-export-engine.ts`) only references kernel types (`ModuleSchema`, `ColumnPlan`, etc.), never values. `core/drive-sync/point-submission-service.ts` and `project-sync-service.ts` follow the same rule, importing only `type { ProtocolRegistry }`. `core/` never imports from `modules/<protocol>/` or `app/` in any form. One thing this rule does *not* cover: `core/drive-sync/` (unlike the rest of `core/`) imports directly from `db/queries/*` — `project-drive-service.ts`, `project-sync-service.ts`, `point-submission-service.ts`, and `reference-data-sync-service.ts` all read/write projects, points, project members, and custom protocols through the query layer. This edge isn't in `layer-rules.test.ts`'s rule table, so it isn't a violation, but it is a real dependency worth knowing about — collaboration sync is the one place `core/` talks to SQLite directly instead of leaving that to `app/`. `core/google-auth/` has no `db/` dependency at all. See [12_COLLABORATION.md](12_COLLABORATION.md).
 2. **`protocol-kernel/` never imports from `core/`, `modules/<protocol>/`, or `app/`, in any form.** The kernel (`types.ts`, `registry.ts`, `capability-bus.ts`) doesn't know any concrete protocol — that's the job of the composition root, `modules/bootstrap.ts` (see next section). `AudioNote`, `MediaFiles`, and `ProtocolExporter` are defined exactly once, in `protocol-kernel/types.ts` (`ProtocolExporter` there already includes `extractMedia`); `core/export/types.ts` just re-exports the same types (`export type {...} from "@/protocol-kernel/types"`) — this eliminates the type cycle that used to exist from the same interface being duplicated across the two files.
 3. **Protocols can import from `core/` and `protocol-kernel/`, never directly from each other.** `modules/paisageo/services/export.ts` imports `buildProtocolExportPlan` from `core/export/generic-export-engine`; no file in `modules/custom/` imports from `modules/paisageo/` directly (verified by direct code search and enforced by a test, see item 4). The static check for this rule is permanent and generalized to any number of protocols: `protocol-kernel/__tests__/layer-rules.test.ts`.
 4. **Cross-protocol communication goes through the `modules/registry.ts` aggregator, not through `CapabilityBus`.** The `CapabilityBus` still exists in the kernel and is used to expose a protocol's scientific capabilities to the UI (e.g. `kuchler.classifyVegetation`, `landscape.generateName`, both from PAISAGEO), but today no protocol consumes another protocol's capability through it — when custom needs to reuse an entire PAISAGEO scientific module, it does so through the `modules/registry.ts` catalog (`getSharedModule`, `listBuilderAttachableModules`), detailed in [06_KERNEL_AND_CAPABILITIES.md](06_KERNEL_AND_CAPABILITIES.md).
@@ -82,7 +88,7 @@ ThemeProvider → I18nProvider → MapDataProvider → ProtocolKernelProvider �
 
 ## Note: `Renderer` doesn't live inside `ModuleDescriptor`
 
-An earlier design draft called for a `ModuleDescriptor` with a `Renderer: React.ComponentType<...>` field embedded directly in it. In the actual code (`protocol-kernel/types.ts`), that doesn't exist: `ModuleDescriptor` only has `id`, `title`, `schema`, `serialize`, `deserialize` — it's purely data, with no UI at all. The link to a React component lives in two separate interfaces instead: `ModuleRendererBinding` (interactive renderer, used during collection) and `ModuleReadOnlyRendererBinding` (read-only renderer, used on the details screen), both "outside the kernel, in the presentation layer" (per the source code's own comment). Each protocol declares its bindings separately (e.g. `modules/paisageo/renderers.ts` and `modules/paisageo/read-only-renderers.ts`), and something (today, `protocol-registry-context.tsx`) has to register them by hand into the respective registries. This keeps the kernel 100% React-agnostic, but it means registering a new module has *three* possible registration points (manifest, interactive renderer, and optionally the read-only one), not just one (see [12_FAQ.md](12_FAQ.md)).
+An earlier design draft called for a `ModuleDescriptor` with a `Renderer: React.ComponentType<...>` field embedded directly in it. In the actual code (`protocol-kernel/types.ts`), that doesn't exist: `ModuleDescriptor` only has `id`, `title`, `schema`, `serialize`, `deserialize` — it's purely data, with no UI at all. The link to a React component lives in two separate interfaces instead: `ModuleRendererBinding` (interactive renderer, used during collection) and `ModuleReadOnlyRendererBinding` (read-only renderer, used on the details screen), both "outside the kernel, in the presentation layer" (per the source code's own comment). Each protocol declares its bindings separately (e.g. `modules/paisageo/renderers.ts` and `modules/paisageo/read-only-renderers.ts`), and something (today, `protocol-registry-context.tsx`) has to register them by hand into the respective registries. This keeps the kernel 100% React-agnostic, but it means registering a new module has *three* possible registration points (manifest, interactive renderer, and optionally the read-only one), not just one (see [13_FAQ.md](13_FAQ.md)).
 
 ## Data layer
 

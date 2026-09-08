@@ -33,6 +33,8 @@ app/
 │   ├── projects.tsx            project list
 │   ├── project/new.tsx         create project
 │   ├── project-details/[id].tsx        the SINGLE details screen (PAISAGEO and custom)
+│   ├── project-collaboration/[id].tsx  collaboration hub: make collaborative, member auto-approval, submit/resync points
+│   ├── project-approvals/[id].tsx      admin queue: approve/reject pending submissions on Drive
 │   ├── protocol/builder.tsx    the "Personalized" protocol builder
 │   ├── protocol/native-catalog.tsx  catalog/picker of native scientific protocols (today only paisageo)
 │   ├── protocol/tutorials.tsx  tutorials screen (protocol picker + step-by-step guide), reads constants/protocol-tutorials.ts
@@ -50,7 +52,7 @@ See [09_SCREEN_FLOW.md](09_SCREEN_FLOW.md) for the full navigation map between t
 
 ## `core/`
 
-Protocol-agnostic services and components — never imports from `modules/` or `app/`, no exceptions. Imports from `protocol-kernel/` only via `import type` (never by value) — a documented, test-verified exception (see [01_ARCHITECTURE.md](01_ARCHITECTURE.md)).
+Protocol-agnostic services and components — never imports from `modules/` or `app/`, no exceptions. Imports from `protocol-kernel/` only via `import type` (never by value) — a documented, test-verified exception (see [01_ARCHITECTURE.md](01_ARCHITECTURE.md)). One sub-folder, `drive-sync/`, also imports directly from `db/queries/*` (collaboration sync needs to read/write projects, points, and members) — the only place in `core/` that talks to SQLite directly; see [12_COLLABORATION.md](12_COLLABORATION.md).
 
 ```
 core/
@@ -63,13 +65,23 @@ core/
 │   ├── module-schema.ts     validateModuleSchema
 │   ├── dynamic-columns.ts   buildColumns (dynamic column expansion, used by generic-export-engine.ts)
 │   └── __tests__/
-└── species-catalog/
-    ├── gbif.ts                    GBIF integration
-    ├── specieslink.ts              SpeciesLink integration
-    ├── api-key-manager.ts          API keys (expo-secure-store)
-    ├── group-by-taxonomy.ts        groups search results by taxonomy
-    ├── search-progress.ts          batch-search progress state (UI)
-    └── species-catalog-sharing.ts  JSON catalog export/import
+├── species-catalog/
+│   ├── gbif.ts                    GBIF integration
+│   ├── specieslink.ts              SpeciesLink integration
+│   ├── api-key-manager.ts          API keys (expo-secure-store)
+│   ├── group-by-taxonomy.ts        groups search results by taxonomy
+│   ├── search-progress.ts          batch-search progress state (UI)
+│   └── species-catalog-sharing.ts  JSON catalog export/import
+├── google-auth/
+│   └── google-auth-service.ts      signInWithGoogle, getCurrentGoogleAccount, signOutFromGoogle, getDriveAccessToken (drive.file scope only)
+└── drive-sync/
+    ├── drive-api-client.ts              raw Google Drive REST v3 wrapper (createFolder, shareWithEmail, uploadJsonFile...)
+    ├── project-drive-service.ts         manifest, membership, invites, promotion, join (inviteCollaboratorByEmail, promoteToAdmin...)
+    ├── project-sync-service.ts          pulls approved points/members from Drive into local SQLite
+    ├── point-submission-service.ts      uploads a local point to Drive for approval
+    ├── approval-service.ts              admin approve/reject queue for pending submissions
+    ├── reference-data-sync-service.ts   shared species catalog / vegetation classification sync
+    └── point-label.ts                   pure display-label helper
 ```
 
 ## `modules/`
@@ -209,6 +221,7 @@ hooks/
 ├── use-stable-text-input.ts     avoids re-injecting `value` into a focused TextInput (Android flicker bug)
 ├── use-bottom-content-padding.ts  bottom padding to clear floating UI/safe area
 ├── use-scroll-overflow.ts       tracks whether scrollable content overflows its container
+├── use-google-account.ts        wraps core/google-auth/google-auth-service.ts (account, connect, disconnect)
 └── use-color-scheme.ts (+.web.ts)
 ```
 
