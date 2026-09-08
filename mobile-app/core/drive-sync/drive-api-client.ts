@@ -178,33 +178,6 @@ export async function shareWithEmail(
   if (!response.ok) await parseDriveError(response);
 }
 
-export async function setAnyoneWithLinkPermission(fileId: string, role: 'writer' | 'reader'): Promise<void> {
-  const headers = await authHeaders();
-  const response = await fetch(`${DRIVE_API_BASE}/files/${fileId}/permissions`, {
-    method: 'POST',
-    headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type: 'anyone', role }),
-  });
-  if (!response.ok) await parseDriveError(response);
-}
-
-export async function revokeAnyoneWithLinkPermission(fileId: string): Promise<void> {
-  const headers = await authHeaders();
-  const listResponse = await fetch(
-    `${DRIVE_API_BASE}/files/${fileId}/permissions?fields=permissions(id,type)`,
-    { headers }
-  );
-  if (!listResponse.ok) await parseDriveError(listResponse);
-  const { permissions } = await listResponse.json();
-  const anyonePermission = permissions?.find((p: { type: string }) => p.type === 'anyone');
-  if (!anyonePermission) return;
-  const deleteResponse = await fetch(
-    `${DRIVE_API_BASE}/files/${fileId}/permissions/${anyonePermission.id}`,
-    { method: 'DELETE', headers }
-  );
-  if (!deleteResponse.ok) await parseDriveError(deleteResponse);
-}
-
 export async function moveFile(
   fileId: string,
   newParentId: string,
