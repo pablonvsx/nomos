@@ -12,7 +12,7 @@ A project doesn't have to stay on one device. It can be made **collaborative**, 
 - `getDriveAccessToken(): Promise<string>` — used by every `core/drive-sync/` call to build request headers
 - `isCancelledSignIn(error: unknown): boolean`
 
-`hooks/use-google-account.ts` is the thin React wrapper (`{ account, isConnecting, error, connect, disconnect }`), consumed from the Google Account row in Settings (`app/(tabs)/settings.tsx:227-246`, opening `GoogleAccountSettingsModal`). Note: while the project is in "Testing" publishing status on Google Cloud Console, the OAuth grant expires 7 days after consent — an external operational constraint, not something the code controls.
+`hooks/use-google-account.ts` is the thin React wrapper (`{ account, isConnecting, error, connect, disconnect }`), consumed from the Google Account row in Settings (`app/(tabs)/settings.tsx:227-246`, opening `GoogleAccountSettingsModal`). The OAuth app is published on Google Cloud Console in "In production" status, so the grant doesn't carry the 7-day expiry that applies only to apps still in "Testing" status.
 
 ## The `core/drive-sync/` layer
 
@@ -130,7 +130,6 @@ The only invite mechanism is by email, through `inviteCollaboratorByEmail`. Invi
 
 - No edit history — an overwrite is always "last write wins."
 - Permissions are enforced in the app UI, not at the Drive file level (see Roles and permissions above).
-- In "Testing" publishing status on Google Cloud Console, the OAuth grant expires every 7 days.
 - `manifest.json` is read and rewritten whole, with no concurrency control — two people editing it at nearly the same time can overwrite each other's change.
 - Archiving a decided submission into `_reviewed/` isn't atomic with writing its new status: a network failure between the two steps leaves the file with the right status but outside `_reviewed/`, so it gets needlessly re-read until the next approve/reject attempt (which self-corrects).
 - The immediate push of a manually-added species/vegetation-classification entry (`pushSpeciesEntryIfCollaborative`/`pushVegetationClassificationIfCollaborative`) is fire-and-forget and doesn't check whether the file already exists on Drive — a narrow race between adding an item and syncing at nearly the same time can produce a duplicate file, later reconciled as two local rows on another device.
