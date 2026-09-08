@@ -39,6 +39,7 @@ import {
   updateOwnCollectorCode,
   removeCollaborator,
   promoteToAdmin,
+  inviteCollaboratorByEmail,
   type ProjectManifest,
 } from "@/core/drive-sync/project-drive-service";
 import { syncProjectFromDrive } from "@/core/drive-sync/project-sync-service";
@@ -67,6 +68,9 @@ export default function ProjectCollaborationScreen() {
   const [syncDialogVisible, setSyncDialogVisible] = useState(false);
   const [collectorCodeDialogVisible, setCollectorCodeDialogVisible] = useState(false);
   const [isSavingCollectorCode, setIsSavingCollectorCode] = useState(false);
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteResetKey, setInviteResetKey] = useState(0);
+  const inviteEmailInput = useStableTextInput(`invite-${inviteResetKey}`, "");
 
   const ownMember = manifest?.members.find((m) => m.email === googleAccount?.email);
   const collectorCodeInput = useStableTextInput(
@@ -289,6 +293,37 @@ export default function ProjectCollaborationScreen() {
     );
   };
 
+  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+  const handleInviteCollaborator = async () => {
+    const email = inviteEmailInput.value.trim();
+    if (!project?.drive_folder_id || !manifest || !googleAccount || !isValidEmail(email)) return;
+    setIsInviting(true);
+    try {
+      const updated = await inviteCollaboratorByEmail(project.drive_folder_id, googleAccount.email, email);
+      const newMember = updated.members.find((m) => m.email === email);
+      if (newMember) {
+        await upsertProjectMember(
+          project.id,
+          newMember.email,
+          newMember.role,
+          newMember.auto_approve,
+          newMember.collector_code,
+        );
+      }
+      setManifest(updated);
+      setInviteResetKey((k) => k + 1);
+    } catch (error) {
+      console.error("Error inviting collaborator:", error);
+      alert(
+        t("common.error"),
+        error instanceof Error ? error.message : t("projectCollaboration.inviteError"),
+      );
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
   const handleSubmitPoint = async (point: Point) => {
     if (!project) return;
     setSubmittingPointId(point.id);
@@ -426,6 +461,31 @@ export default function ProjectCollaborationScreen() {
             <Text variant="titleMedium" style={[styles.sectionTitle, { color: paperTheme.colors.primary }]}>
               {t("projectCollaboration.membersTitle")}
             </Text>
+
+            <Card style={styles.card}>
+              <Card.Content>
+                <Text variant="labelLarge" style={{ marginBottom: 8 }}>
+                  {t("projectCollaboration.inviteMemberLabel")}
+                </Text>
+                <TextInput
+                  key={inviteEmailInput.resetKey}
+                  label={t("projectCollaboration.inviteEmailLabel")}
+                  mode="outlined"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  {...inviteEmailInput.inputProps}
+                />
+                <Button
+                  mode="contained"
+                  style={{ marginTop: 12 }}
+                  loading={isInviting}
+                  disabled={isInviting || !isValidEmail(inviteEmailInput.value)}
+                  onPress={handleInviteCollaborator}
+                >
+                  {t("projectCollaboration.inviteButton")}
+                </Button>
+              </Card.Content>
+            </Card>
 
             <Card style={styles.card}>
               <List.Item

@@ -217,14 +217,34 @@ export async function resolveProjectDriveIds(
   return updatedManifest.drive_ids!;
 }
 
-export async function inviteCollaboratorByEmail(driveFolderId: string, email: string): Promise<void> {
-  await shareWithEmail(driveFolderId, email, 'writer');
+export async function inviteCollaboratorByEmail(
+  driveFolderId: string,
+  callerEmail: string,
+  emailToInvite: string
+): Promise<ProjectManifest> {
   const manifest = await getManifest(driveFolderId);
-  if (!manifest.members.some((m) => m.email === email)) {
-    const collectorCode = deriveDefaultCollectorCode(email, manifest.members.map((m) => m.collector_code));
-    manifest.members.push({ email, role: 'collaborator', auto_approve: 'herda_projeto', collector_code: collectorCode });
-    await updateManifest(driveFolderId, manifest);
+
+  const caller = manifest.members.find((m) => m.email === callerEmail);
+  if (!caller || caller.role !== 'admin') {
+    throw new Error('Apenas administradores podem convidar novos colaboradores.');
   }
+
+  if (manifest.members.some((m) => m.email === emailToInvite)) {
+    throw new Error('Essa pessoa já é membro do projeto.');
+  }
+
+  await shareWithEmail(driveFolderId, emailToInvite, 'writer');
+
+  const collectorCode = deriveDefaultCollectorCode(emailToInvite, manifest.members.map((m) => m.collector_code));
+  manifest.members.push({
+    email: emailToInvite,
+    role: 'collaborator',
+    auto_approve: 'herda_projeto',
+    collector_code: collectorCode,
+  });
+  await updateManifest(driveFolderId, manifest);
+
+  return manifest;
 }
 
 export interface SharedProjectOption {
