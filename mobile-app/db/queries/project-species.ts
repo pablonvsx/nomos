@@ -12,6 +12,7 @@ import {
   ProjectSpeciesCommonNameInput,
   Species,
 } from "@/types/database";
+import { generateUuid } from "@/utils/uuid";
 
 const VALID_CATALOG_SOURCES: ProjectSpeciesCatalog["source"][] = [
   "gbif",
@@ -78,6 +79,7 @@ export async function getProjectSpeciesCatalogByProject(
         created_at: sp.created_at,
         last_updated: sp.last_updated,
         common_names: commonNames,
+        uuid: sp.uuid ?? null,
       });
     }
 
@@ -120,6 +122,7 @@ export async function getProjectSpeciesById(
       created_at: species.created_at,
       last_updated: species.last_updated,
       common_names: commonNames,
+      uuid: species.uuid ?? null,
     };
   } catch (error) {
     console.error("Error fetching species:", error);
@@ -135,11 +138,11 @@ export async function createProjectSpecies(
 ): Promise<number | null> {
   try {
     const now = new Date().toISOString();
-    
+
     const result = await db.runAsync(
-      `INSERT INTO project_species_catalog 
-       (project_id, scientific_name, family, genus, gbif_id, source, created_at, last_updated)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO project_species_catalog
+       (project_id, scientific_name, family, genus, gbif_id, source, created_at, last_updated, uuid)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.project_id,
         data.scientific_name,
@@ -149,6 +152,7 @@ export async function createProjectSpecies(
         data.source || "manual",
         now,
         now,
+        data.uuid ?? generateUuid(),
       ],
     );
 
@@ -166,6 +170,41 @@ export async function createProjectSpecies(
     return speciesId;
   } catch (error) {
     console.error("Error creating species:", error);
+    return null;
+  }
+}
+
+/**
+ * Backfills the uuid of a species catalog entry created before this column
+ * existed, so it stops being silently skipped by reference-data sync.
+ */
+export async function setProjectSpeciesUuid(
+  id: number,
+  uuid: string,
+): Promise<void> {
+  await db.runAsync(
+    "UPDATE project_species_catalog SET uuid = ? WHERE id = ?",
+    [uuid, id],
+  );
+}
+
+/**
+ * Finds the local id of a species catalog entry by its gbif_id, used to
+ * reconcile a UNIQUE(project_id, gbif_id) conflict during reference-data
+ * sync (see reference-data-sync-service.ts).
+ */
+export async function getProjectSpeciesIdByGbifId(
+  projectId: number,
+  gbifId: string,
+): Promise<number | null> {
+  try {
+    const row = await db.getFirstAsync<{ id: number }>(
+      "SELECT id FROM project_species_catalog WHERE project_id = ? AND gbif_id = ?",
+      [projectId, gbifId],
+    );
+    return row?.id ?? null;
+  } catch (error) {
+    console.error("Error fetching species id by gbif_id:", error);
     return null;
   }
 }
@@ -460,9 +499,10 @@ export async function importSpeciesFromGBIF(
     gbif_id?: string;
     commonNames: Array<{ name: string; language: string }>;
   }>,
-): Promise<{ inserted: number; skipped: number }> {
+): Promise<{ inserted: number; skipped: number; insertedIds: number[] }> {
   let inserted = 0;
   let skipped = 0;
+  const insertedIds: number[] = [];
 
   try {
     for (const result of gbifResults) {
@@ -490,6 +530,7 @@ export async function importSpeciesFromGBIF(
 
       if (speciesId) {
         inserted++;
+        insertedIds.push(speciesId);
       } else {
         skipped++;
       }
@@ -498,7 +539,7 @@ export async function importSpeciesFromGBIF(
     console.error("Error importing species from GBIF:", error);
   }
 
-  return { inserted, skipped };
+  return { inserted, skipped, insertedIds };
 }
 
 /**
@@ -655,9 +696,10 @@ export async function importSpeciesFromSpeciesLink(
       stateProvince?: string;
     };
   }>,
-): Promise<{ inserted: number; skipped: number }> {
+): Promise<{ inserted: number; skipped: number; insertedIds: number[] }> {
   let inserted = 0;
   let skipped = 0;
+  const insertedIds: number[] = [];
 
   try {
     for (const result of speciesLinkResults) {
@@ -685,6 +727,7 @@ export async function importSpeciesFromSpeciesLink(
 
       if (speciesId) {
         inserted++;
+        insertedIds.push(speciesId);
       } else {
         skipped++;
       }
@@ -693,7 +736,7 @@ export async function importSpeciesFromSpeciesLink(
     console.error("Error importing species from SpeciesLink:", error);
   }
 
-  return { inserted, skipped };
+  return { inserted, skipped, insertedIds };
 }
 
 /**

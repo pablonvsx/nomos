@@ -1,6 +1,6 @@
 // src/app/project-details/[id].tsx
 // Paisageo / official protocol project details screen
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { View, ScrollView, StyleSheet, FlatList } from "react-native";
 import {
   Text,
@@ -30,28 +30,24 @@ import { useAlertDialog } from "@/hooks/use-dialog";
 import { CardHeaderIconButton } from "@/components/ui/CardHeaderIconButton";
 import { useStableTextInput } from "@/hooks/use-stable-text-input";
 import { useBottomContentPadding } from "@/hooks/use-bottom-content-padding";
-import { useGoogleAccount } from "@/hooks/use-google-account";
-import { createCollaborativeProjectStructure, isProjectAdmin } from "@/core/drive-sync/project-drive-service";
-import { syncProjectFromDrive } from "@/core/drive-sync/project-sync-service";
-import { upsertProjectMember } from "@/db/queries/project-members";
-
 // Internal imports
 import {
   getProjectById,
   updateProject,
   deleteProject,
   updateProjectGeoJSON,
-  setProjectCollaborative,
 } from "@/db/queries/projects";
 import { getPointsByProject, classifyProjectPoints, getPointsWithModulesByProject } from "@/db/queries/points";
+import { getProjectMembers } from "@/db/queries/project-members";
 import { buildPointEnvelope } from "@/db/mappers/point.mapper";
+import { getPointDisplayLabel, toMemberLiteList } from "@/core/drive-sync/point-label";
 import {
   getActiveVegetationClassificationConfig,
   getVegetationClassificationById,
   setActiveVegetationClassification,
   getVegetationClassificationsByProject,
 } from "@/db/queries/vegetation-classifications";
-import { Project, Point, VegetationClassification, CustomProtocol } from "@/types/database";
+import { Project, Point, VegetationClassification, CustomProtocol, ProjectMember } from "@/types/database";
 import type { PointEnvelope, ProjectRef, LanguageCode } from "@/protocol-kernel/types";
 import { useI18n } from "@/contexts/i18n-context";
 import { parseJsonText } from "@/db/mappers/json-utils";
@@ -91,20 +87,16 @@ export default function UnifiedProjectDetailsScreen() {
   const registry = useProtocolRegistry();
   const bus = useCapabilityBus();
   const { clearMapData } = useMapData();
-  const { account: googleAccount } = useGoogleAccount();
 
   // State Management
   const [project, setProject] = useState<Project | null>(null);
   const [protocolLabel, setProtocolLabel] = useState<string>("");
   const [surveyPoints, setSurveyPoints] = useState<Point[]>([]);
+  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [isClassifying, setIsClassifying] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
-  const [isMakingCollaborative, setIsMakingCollaborative] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncDialogVisible, setSyncDialogVisible] = useState(false);
 
   // Vegetation Classification States
   const [vegClassificationSelectorVisible, setVegClassificationSelectorVisible] = useState(false);
@@ -247,6 +239,18 @@ export default function UnifiedProjectDetailsScreen() {
         console.error("Error loading survey points:", pointsError);
         setSurveyPoints([]);
       }
+
+      if (projectData.is_collaborative) {
+        try {
+          const members = await getProjectMembers(projectData.id);
+          setProjectMembers(members);
+        } catch (membersError) {
+          console.error("Error loading project members:", membersError);
+          setProjectMembers([]);
+        }
+      } else {
+        setProjectMembers([]);
+      }
     } catch (error) {
       console.error("Error loading project:", error);
       alert(t("common.error"), t("projectView.loadError"));
@@ -260,24 +264,6 @@ export default function UnifiedProjectDetailsScreen() {
       loadProjectData();
     }, [loadProjectData]),
   );
-
-  // Live admin check (against manifest.json on Drive, not the local
-  // project_members copy, which can be stale if another admin promoted
-  // someone recently) - drives the "Aprovações Pendentes" FAB action below.
-  useEffect(() => {
-    if (!project || !project.is_collaborative || !project.drive_folder_id || !googleAccount) {
-      setIsAdmin(false);
-      return;
-    }
-    let cancelled = false;
-    isProjectAdmin(project.drive_folder_id, googleAccount.email)
-      .then((result) => { if (!cancelled) setIsAdmin(result); })
-      .catch((error) => {
-        console.error("Error checking project admin role:", error);
-        if (!cancelled) setIsAdmin(false);
-      });
-    return () => { cancelled = true; };
-  }, [project, googleAccount]);
 
   // Handle edit dialog save. Takes the new name/description as arguments
   // instead of reading them off state: the Save button used to call
@@ -331,65 +317,6 @@ export default function UnifiedProjectDetailsScreen() {
       t("common.cancel"),
       true,
     );
-  };
-
-  // Handle making the project collaborative (Drive-backed)
-  const handleMakeCollaborative = () => {
-    if (!project || !googleAccount) return;
-
-    confirm(
-      t("projectView.makeCollaborative"),
-      t("projectView.makeCollaborativeConfirm"),
-      async () => {
-        setIsMakingCollaborative(true);
-        try {
-          const { driveFolderId } = await createCollaborativeProjectStructure({
-            projectName: project.name,
-            protocolId: project.protocol_id,
-            protocolSource: project.protocol_source,
-            creatorEmail: googleAccount.email,
-            autoApproveDefault: Boolean(project.auto_approve_default),
-          });
-          await setProjectCollaborative(project.id, driveFolderId, Boolean(project.auto_approve_default));
-          await upsertProjectMember(project.id, googleAccount.email, "admin", "herda_projeto");
-          await loadProjectData();
-          alert(t("common.success"), t("projectView.makeCollaborativeSuccess"));
-        } catch (error) {
-          console.error("Error making project collaborative:", error);
-          alert(t("common.error"), t("projectView.makeCollaborativeError"));
-        } finally {
-          setIsMakingCollaborative(false);
-        }
-      },
-      () => {},
-    );
-  };
-
-  const handleSyncProject = () => setSyncDialogVisible(true);
-
-  const handleConfirmSync = async (includeMedia: boolean) => {
-    setSyncDialogVisible(false);
-    if (!project) return;
-    setIsSyncing(true);
-    try {
-      const result = await syncProjectFromDrive(project.id, { includeMedia }, registry);
-      await loadProjectData();
-      alert(
-        t("common.success"),
-        includeMedia
-          ? t("projectView.syncSummaryWithMedia", {
-              imported: result.imported,
-              skipped: result.skipped,
-              media: result.mediaDownloaded,
-            })
-          : t("projectView.syncSummary", { imported: result.imported, skipped: result.skipped }),
-      );
-    } catch (error) {
-      console.error("Error syncing project:", error);
-      alert(t("common.error"), t("projectView.syncError"));
-    } finally {
-      setIsSyncing(false);
-    }
   };
 
   // [File Upload Handlers - Mapping and Route]
@@ -577,6 +504,13 @@ export default function UnifiedProjectDetailsScreen() {
       setIsExporting(true);
       const pointsWithMods = await getPointsWithModulesByProject(parseInt(id), registry);
       const envelopes = pointsWithMods.map(buildPointEnvelope);
+      if (project.is_collaborative) {
+        const membersLite = toMemberLiteList(projectMembers);
+        envelopes.forEach((env, i) => {
+          const createdBy = pointsWithMods[i].created_by;
+          env.collectorCode = membersLite.find((m) => m.email === createdBy)?.collector_code;
+        });
+      }
       await mf.exporter({ bus }).exportGeoJSON(envelopes, buildProjectRef(project), currentLanguage as LanguageCode);
     } catch (error) {
       console.error("Error exporting GeoJSON:", error);
@@ -597,6 +531,13 @@ export default function UnifiedProjectDetailsScreen() {
       setIsExporting(true);
       const pointsWithMods = await getPointsWithModulesByProject(parseInt(id), registry);
       const envelopes = pointsWithMods.map(buildPointEnvelope);
+      if (project.is_collaborative) {
+        const membersLite = toMemberLiteList(projectMembers);
+        envelopes.forEach((env, i) => {
+          const createdBy = pointsWithMods[i].created_by;
+          env.collectorCode = membersLite.find((m) => m.email === createdBy)?.collector_code;
+        });
+      }
       await mf.exporter({ bus }).exportCSV(envelopes, buildProjectRef(project), currentLanguage as LanguageCode);
     } catch (error) {
       console.error("Error exporting CSV:", error);
@@ -635,6 +576,11 @@ export default function UnifiedProjectDetailsScreen() {
   const renderSurveyPoint = ({ item }: { item: Point }) => {
     const surveyRoute = `/survey-point-details/${item.id}?projectId=${project?.id}`;
     const pointLabel = t("surveyView.point");
+    const pointDisplayLabel = getPointDisplayLabel(
+      { pointNumber: item.point_number, createdBy: item.created_by ?? null },
+      Boolean(project?.is_collaborative),
+      toMemberLiteList(projectMembers),
+    );
 
     const handleNavigateToPoint = () => {
       if (isNavigating) return;
@@ -653,7 +599,7 @@ export default function UnifiedProjectDetailsScreen() {
           <View style={styles.pointHeader}>
             <View style={{ flex: 1, paddingLeft: 40 }}>
               <Text variant="titleMedium" style={{ fontWeight: "bold" }}>
-                {pointLabel} {item.point_number}
+                {pointLabel} {pointDisplayLabel}
               </Text>
               
               {item.landscape_class_id && (
@@ -937,44 +883,14 @@ export default function UnifiedProjectDetailsScreen() {
               ? paperTheme.colors.onSurface
               : paperTheme.colors.primary,
           },
-          ...(project && !project.is_collaborative && googleAccount
+          ...(project
             ? [
                 {
-                  icon: "google-drive",
-                  label: t("projectView.makeCollaborative"),
-                  onPress: isMakingCollaborative ? () => {} : handleMakeCollaborative,
-                  color: paperTheme.dark
-                    ? paperTheme.colors.onSurface
-                    : paperTheme.colors.primary,
-                },
-              ]
-            : []),
-          ...(project && project.is_collaborative && isAdmin
-            ? [
-                {
-                  icon: "clipboard-check-outline",
-                  label: t("projectView.pendingApprovals"),
-                  onPress: () => router.push(`/project-approvals/${project.id}` as any),
-                  color: paperTheme.dark
-                    ? paperTheme.colors.onSurface
-                    : paperTheme.colors.primary,
-                },
-                {
-                  icon: "account-cog-outline",
-                  label: t("projectView.collabSettings"),
-                  onPress: () => router.push(`/project-collab-settings/${project.id}` as any),
-                  color: paperTheme.dark
-                    ? paperTheme.colors.onSurface
-                    : paperTheme.colors.primary,
-                },
-              ]
-            : []),
-          ...(project && project.is_collaborative
-            ? [
-                {
-                  icon: "cloud-sync-outline",
-                  label: t("projectView.syncProject"),
-                  onPress: isSyncing ? () => {} : handleSyncProject,
+                  icon: project.is_collaborative ? "account-group" : "google-drive",
+                  label: project.is_collaborative
+                    ? t("projectView.collaborationHub")
+                    : t("projectView.makeCollaborative"),
+                  onPress: () => router.push(`/project-collaboration/${project.id}` as any),
                   color: paperTheme.dark
                     ? paperTheme.colors.onSurface
                     : paperTheme.colors.primary,
@@ -1038,28 +954,6 @@ export default function UnifiedProjectDetailsScreen() {
             <Button onPress={() => setEditDialogVisible(false)}>{t("common.cancel")}</Button>
             <Button onPress={() => handleSaveEdit(nameInput.value, descriptionInput.value)}>{t("common.save")}</Button>
           </Dialog.Actions>
-        </Dialog>
-      </Portal>
-
-      <Portal>
-        <Dialog visible={syncDialogVisible} onDismiss={() => setSyncDialogVisible(false)}>
-          <Dialog.Title>{t("projectView.syncProject")}</Dialog.Title>
-          <Dialog.Content>
-            <Text>{t("projectView.syncChooseOption")}</Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => handleConfirmSync(false)}>{t("projectView.syncDataOnly")}</Button>
-            <Button onPress={() => handleConfirmSync(true)}>{t("projectView.syncDataAndMedia")}</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
-
-      <Portal>
-        <Dialog visible={isSyncing} dismissable={false}>
-          <Dialog.Content style={{ alignItems: "center", paddingVertical: 24 }}>
-            <ActivityIndicator size="large" />
-            <Text style={{ marginTop: 16 }}>{t("projectView.syncing")}</Text>
-          </Dialog.Content>
         </Dialog>
       </Portal>
 

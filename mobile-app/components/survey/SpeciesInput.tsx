@@ -39,6 +39,7 @@ import {
   projectSpeciesExists,
   getProjectSpeciesById,
 } from "@/db/queries/project-species";
+import { pushSpeciesEntryIfCollaborative } from "@/core/drive-sync/reference-data-sync-service";
 import { useI18n } from "@/contexts/i18n-context";
 import { useAlertDialog } from "@/hooks/use-dialog";
 import { BUTTON_RADIUS } from "@/constants/shape";
@@ -330,10 +331,13 @@ export default function SpeciesInput({
           })),
         });
 
-        if (catalogSpeciesId && catalogSpecies.length > 0) {
+        if (catalogSpeciesId) {
           const created = await getProjectSpeciesById(catalogSpeciesId);
           if (created) {
-            setCatalogSpecies((prev) => [...prev, created]);
+            if (catalogSpecies.length > 0) {
+              setCatalogSpecies((prev) => [...prev, created]);
+            }
+            pushSpeciesEntryIfCollaborative(projectId, created);
           }
         }
       }

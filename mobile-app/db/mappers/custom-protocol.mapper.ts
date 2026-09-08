@@ -10,6 +10,7 @@ interface CustomProtocolDbBase {
   schema?: string | null;
   created_at: string;
   updated_at: string;
+  uuid?: string | null;
 }
 
 export type CustomProtocolDbRow = CustomProtocolDbBase;
@@ -38,6 +39,7 @@ export function mapCustomProtocolFromDb(row: CustomProtocolDbRow): CustomProtoco
     ),
     created_at: row.created_at,
     updated_at: row.updated_at,
+    uuid: row.uuid ?? null,
   };
 }
 

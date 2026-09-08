@@ -31,6 +31,7 @@ const BASE_POINT_COLUMNS: PointColumnDef[] = [
   { key: "latitude",     label: "latitude",     getValue: (p) => p.lat },
   { key: "longitude",    label: "longitude",    getValue: (p) => p.lon },
   { key: "altitude",     label: "altitude",     getValue: (p) => p.altitude ?? null },
+  { key: "collector_code", label: "collector_code", getValue: (p) => p.collectorCode ?? null },
 ];
 
 /**

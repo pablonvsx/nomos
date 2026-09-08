@@ -23,6 +23,8 @@ export interface CreatePointInput {
   modules: Record<string, string>;     // moduleId → already-serialized data_json
   approval_status?: "local" | "pending" | "approved" | "rejected";
   created_by?: string | null;
+  rejection_reason?: string | null;
+  drive_synced_at?: string | null;
   id?: string; // if provided (sync), use this uuid instead of generating a new one
 }
 
@@ -48,8 +50,9 @@ export async function createPoint(input: CreatePointInput): Promise<string | nul
       `INSERT INTO points
          (id, project_id, protocol_id, point_number, lat, lon, altitude,
           generated_name, photos, audio_notes, additional_notes, point_size,
-          created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          created_at, updated_at, created_by, approval_status, rejection_reason,
+          drive_synced_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         input.project_id,
@@ -65,6 +68,10 @@ export async function createPoint(input: CreatePointInput): Promise<string | nul
         input.point_size ?? null,
         now,
         now,
+        input.created_by ?? null,
+        input.approval_status ?? "local",
+        input.rejection_reason ?? null,
+        input.drive_synced_at ?? null,
       ],
     );
 
@@ -113,6 +120,19 @@ export async function getPoint(
   }
 }
 
+export async function getPointById(pointId: string): Promise<Point | null> {
+  try {
+    const point = await db.getFirstAsync<Point>(
+      "SELECT * FROM points WHERE id = ?",
+      [pointId],
+    );
+    return point ?? null;
+  } catch (error) {
+    console.error("Error loading point by id:", error);
+    return null;
+  }
+}
+
 export async function pointExists(pointId: string): Promise<boolean> {
   try {
     const row = await db.getFirstAsync<{ id: string }>(
@@ -157,6 +177,8 @@ export async function updatePoint(
     if (updates.point_size !== undefined) { fields.push("point_size = ?"); values.push(updates.point_size ?? null); }
     if (updates.approval_status !== undefined) { fields.push("approval_status = ?"); values.push(updates.approval_status); }
     if (updates.created_by !== undefined) { fields.push("created_by = ?"); values.push(updates.created_by ?? null); }
+    if (updates.rejection_reason !== undefined) { fields.push("rejection_reason = ?"); values.push(updates.rejection_reason ?? null); }
+    if (updates.drive_synced_at !== undefined) { fields.push("drive_synced_at = ?"); values.push(updates.drive_synced_at ?? null); }
 
     values.push(pointId);
     await db.runAsync(
@@ -236,6 +258,39 @@ export async function countPointsByProject(projectId: number): Promise<number> {
     return row?.count ?? 0;
   } catch (error) {
     console.error("Error counting points:", error);
+    return 0;
+  }
+}
+
+export async function getPendingPointsByProject(projectId: number): Promise<Point[]> {
+  try {
+    return await db.getAllAsync<Point>(
+      "SELECT * FROM points WHERE project_id = ? AND approval_status = 'pending' ORDER BY point_number ASC",
+      [projectId],
+    );
+  } catch (error) {
+    console.error("Error listing pending points:", error);
+    return [];
+  }
+}
+
+export async function updatePointApprovalStatus(
+  pointId: string,
+  status: "local" | "pending" | "approved" | "rejected",
+  rejectionReason?: string | null,
+): Promise<boolean> {
+  return updatePoint(pointId, { approval_status: status, rejection_reason: rejectionReason ?? null });
+}
+
+export async function getUnsyncedPointCount(projectId: number): Promise<number> {
+  try {
+    const row = await db.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) as count FROM points WHERE project_id = ? AND approval_status IN ('local', 'pending', 'rejected')",
+      [projectId],
+    );
+    return row?.count ?? 0;
+  } catch (error) {
+    console.error("Error counting unsynced points:", error);
     return 0;
   }
 }

@@ -8,9 +8,10 @@ import type { ModuleDescriptor, FieldSchema, LanguageCode } from "@/protocol-ker
 
 const PAISAGEO_MODULES = [geoecologicalConstraintsModule, vegetationModule, impactsModule];
 const LANG: LanguageCode = "pt";
-// 6 base columns (id, point_number, created_at, latitude, longitude, altitude)
-// + 3 PAISAGEO extras (generated_name, landscape_class_id, point_size).
-const POINT_COLUMN_COUNT = 6 + EXTRA_POINT_COLUMNS.length;
+// 7 base columns (id, point_number, created_at, latitude, longitude, altitude,
+// collector_code) + 3 PAISAGEO extras (generated_name, landscape_class_id,
+// point_size).
+const POINT_COLUMN_COUNT = 7 + EXTRA_POINT_COLUMNS.length;
 
 // --- Helpers ---
 
@@ -29,9 +30,9 @@ function makeSimpleModule(id: string, fields: FieldSchema[]): ModuleDescriptor {
 describe("buildProtocolExportPlan — column structure", () => {
   const plan = buildProtocolExportPlan(PAISAGEO_MODULES, PAISAGEO_POINTS, LANG, EXTRA_POINT_COLUMNS);
 
-  it("includes the 9 point-level fields at the start (6 base + 3 PAISAGEO extras)", () => {
+  it("includes the 10 point-level fields at the start (7 base + 3 PAISAGEO extras)", () => {
     const pointKeys = [
-      "id", "point_number", "created_at", "latitude", "longitude", "altitude",
+      "id", "point_number", "created_at", "latitude", "longitude", "altitude", "collector_code",
       "generated_name", "landscape_class_id", "point_size",
     ];
     const planKeys = plan.columns.slice(0, POINT_COLUMN_COUNT).map((c) => c.key);
@@ -95,17 +96,19 @@ describe("buildProtocolExportPlan — rowFor", () => {
     expect(row[3]).toBe(-8.0);                      // latitude
     expect(row[4]).toBe(-36.0);                     // longitude
     expect(row[5]).toBe(500);                       // altitude
-    expect(row[6]).toBe("SE_001");                  // generated_name
-    expect(row[7]).toBe(42);                        // landscape_class_id
-    expect(row[8]).toBe(20);                        // point_size
+    expect(row[6]).toBeNull();                      // collector_code (not a collaborative project)
+    expect(row[7]).toBe("SE_001");                  // generated_name
+    expect(row[8]).toBe(42);                        // landscape_class_id
+    expect(row[9]).toBe(20);                        // point_size
   });
 
   it("point 3: missing fields are null", () => {
     const row = plan.rowFor(PAISAGEO_POINTS[2]);
     expect(row[5]).toBeNull();  // altitude
-    expect(row[6]).toBeNull();  // generated_name
-    expect(row[7]).toBeNull();  // landscape_class_id
-    expect(row[8]).toBeNull();  // point_size
+    expect(row[6]).toBeNull();  // collector_code
+    expect(row[7]).toBeNull();  // generated_name
+    expect(row[8]).toBeNull();  // landscape_class_id
+    expect(row[9]).toBeNull();  // point_size
   });
 
   it("point 1: impacts correctly indexed (D4)", () => {

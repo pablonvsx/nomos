@@ -4,11 +4,13 @@ import {
   readJsonFile,
   updateJsonFile,
   uploadJsonFile,
+  moveFile,
 } from './drive-api-client';
-import { ensureFolder } from './project-drive-service';
+import { getManifest, resolveProjectDriveIds, ensureFolder } from './project-drive-service';
 
 export interface PendingSubmission {
   driveFileId: string;
+  emailFolderId: string;
   submitterEmail: string;
   pointUuid: string;
   content: Record<string, unknown>;
@@ -17,10 +19,10 @@ export interface PendingSubmission {
 export async function listPendingSubmissions(
   projectDriveFolderId: string
 ): Promise<PendingSubmission[]> {
-  const submissionsFolder = await findChildByName(projectDriveFolderId, 'submissions');
-  if (!submissionsFolder) return [];
+  const manifest = await getManifest(projectDriveFolderId);
+  const { submissions_folder_id: submissionsFolderId } = await resolveProjectDriveIds(projectDriveFolderId, manifest);
 
-  const emailFolders = await listChildren(submissionsFolder.id);
+  const emailFolders = await listChildren(submissionsFolderId);
   const result: PendingSubmission[] = [];
 
   for (const emailFolder of emailFolders) {
@@ -32,6 +34,7 @@ export async function listPendingSubmissions(
       if (content.approval_status === 'pending') {
         result.push({
           driveFileId: file.id,
+          emailFolderId: emailFolder.id,
           submitterEmail: emailFolder.name,
           pointUuid: file.name.replace('.json', ''),
           content,
@@ -43,11 +46,29 @@ export async function listPendingSubmissions(
   return result;
 }
 
+// Moves a decided submission's original file out of submissions/<email>/ and
+// into submissions/<email>/_reviewed/, so listPendingSubmissions stops
+// re-reading it on every future call.
+async function archiveDecidedSubmission(submission: PendingSubmission): Promise<void> {
+  const reviewedFolderId = await ensureFolder('_reviewed', submission.emailFolderId);
+  await moveFile(submission.driveFileId, reviewedFolderId, submission.emailFolderId);
+}
+
+function assertIsAdmin(manifest: Awaited<ReturnType<typeof getManifest>>, callerEmail: string): void {
+  const isAdmin = manifest.members.some((m) => m.email === callerEmail && m.role === 'admin');
+  if (!isAdmin) {
+    throw new Error('Apenas administradores podem aprovar ou rejeitar submissões.');
+  }
+}
+
 export async function approveSubmission(
   projectDriveFolderId: string,
-  submission: PendingSubmission
+  submission: PendingSubmission,
+  callerEmail: string
 ): Promise<void> {
-  const approvedFolderId = await ensureFolder('approved', projectDriveFolderId);
+  const manifest = await getManifest(projectDriveFolderId);
+  assertIsAdmin(manifest, callerEmail);
+  const { approved_folder_id: approvedFolderId } = await resolveProjectDriveIds(projectDriveFolderId, manifest);
   const updatedContent = { ...submission.content, approval_status: 'approved' };
 
   const existingApproved = await findChildByName(approvedFolderId, `${submission.pointUuid}.json`);
@@ -58,16 +79,22 @@ export async function approveSubmission(
   }
 
   await updateJsonFile(submission.driveFileId, updatedContent);
+  await archiveDecidedSubmission(submission);
 }
 
 export async function rejectSubmission(
+  projectDriveFolderId: string,
   submission: PendingSubmission,
-  reason: string
+  reason: string,
+  callerEmail: string
 ): Promise<void> {
+  const manifest = await getManifest(projectDriveFolderId);
+  assertIsAdmin(manifest, callerEmail);
   const updatedContent = {
     ...submission.content,
     approval_status: 'rejected',
     rejection_reason: reason,
   };
   await updateJsonFile(submission.driveFileId, updatedContent);
+  await archiveDecidedSubmission(submission);
 }

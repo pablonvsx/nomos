@@ -35,6 +35,7 @@ import { useAlertDialog } from "@/hooks/use-dialog";
 import { useBottomContentPadding } from "@/hooks/use-bottom-content-padding";
 import { useI18n } from "@/contexts/i18n-context";
 import { useMapData } from "@/contexts/map-data-context";
+import { useGoogleAccount } from "@/hooks/use-google-account";
 import {
   resolveManifestId,
   useProtocolRegistry,
@@ -44,10 +45,13 @@ import {
 // DB imports
 import { getPoint, deletePoint } from "@/db/queries/points";
 import { getProjectById } from "@/db/queries/projects";
+import { getProjectMembers } from "@/db/queries/project-members";
 import { submitPointToProject } from "@/core/drive-sync/point-submission-service";
+import { isProjectAdmin } from "@/core/drive-sync/project-drive-service";
 import { getCustomProtocolById } from "@/db/queries/custom-protocols";
 import { getSpeciesByPoint } from "@/db/queries/species";
-import { Point, PointModule, Project, CustomProtocol, Species } from "@/types/database";
+import { getPointDisplayLabel, toMemberLiteList } from "@/core/drive-sync/point-label";
+import { Point, PointModule, Project, CustomProtocol, Species, ProjectMember } from "@/types/database";
 import { parseJsonText, parsePhotoUris } from "@/db/mappers/json-utils";
 import { formatAzimuthDisplay } from "@/utils/azimuth";
 import SpeciesInput from "@/components/survey/SpeciesInput";
@@ -227,11 +231,14 @@ export default function UnifiedSurveyPointViewScreen() {
   const registry = useProtocolRegistry();
   const readOnlyRendererRegistry = useReadOnlyRendererRegistry();
   const bottomPadding = useBottomContentPadding(36); // extra clearance for the floating FAB.Group below the scroll
+  const { account: googleAccount } = useGoogleAccount();
 
   const [point, setPoint] = useState<Point | null>(null);
   const [pointModules, setPointModules] = useState<PointModule[]>([]);
   const [project, setProject] = useState<Project | null>(null);
+  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
   const [customProtocol, setCustomProtocol] = useState<CustomProtocol | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fabOpen, setFabOpen] = useState(false);
@@ -360,6 +367,31 @@ export default function UnifiedSurveyPointViewScreen() {
       }
       setProject(proj);
 
+      if (proj.is_collaborative) {
+        try {
+          const members = await getProjectMembers(proj.id);
+          setProjectMembers(members);
+        } catch (membersError) {
+          console.error("Error loading project members:", membersError);
+          setProjectMembers([]);
+        }
+
+        if (proj.drive_folder_id && googleAccount) {
+          try {
+            const admin = await isProjectAdmin(proj.drive_folder_id, googleAccount.email);
+            setIsAdmin(admin);
+          } catch (adminError) {
+            console.error("Error checking admin role:", adminError);
+            setIsAdmin(false);
+          }
+        } else {
+          setIsAdmin(false);
+        }
+      } else {
+        setProjectMembers([]);
+        setIsAdmin(false);
+      }
+
       if (resolveManifestId(proj) === "custom") {
         try {
           const prot = await getCustomProtocolById(Number(proj.protocol_id));
@@ -374,7 +406,7 @@ export default function UnifiedSurveyPointViewScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [id, projectId, alert, router, t]);
+  }, [id, projectId, alert, router, t, googleAccount]);
 
   useFocusEffect(
     useCallback(() => {
@@ -385,9 +417,15 @@ export default function UnifiedSurveyPointViewScreen() {
   const handleDelete = () => {
     if (!point) return;
 
+    const isApprovedCollaborativePoint =
+      Boolean(project?.is_collaborative) && point.approval_status === "approved";
+    const deleteMessage = isApprovedCollaborativePoint
+      ? t("surveyView.deletePointConfirmApprovedCollaborative")
+      : t("surveyView.deletePointConfirm");
+
     confirm(
       t("surveyView.deletePoint"),
-      t("surveyView.deletePointConfirm"),
+      deleteMessage,
       async () => {
         try {
           await deletePoint(point.id);
@@ -415,7 +453,9 @@ export default function UnifiedSurveyPointViewScreen() {
         t("common.success"),
         result.status === "approved"
           ? t("surveyView.submitApprovedMessage")
-          : t("surveyView.submitPendingMessage"),
+          : result.status === "updated"
+            ? t("surveyView.submitUpdatedMessage")
+            : t("surveyView.submitPendingMessage"),
       );
     } catch (error) {
       console.error("Error submitting point:", error);
@@ -622,7 +662,21 @@ export default function UnifiedSurveyPointViewScreen() {
     );
   }
 
+  // Editar/reenviar/excluir um ponto de projeto colaborativo é restrito a quem
+  // o criou (ou pontos ainda sem autor gravado) ou a um admin do projeto -
+  // ver seção 4 de COLABORACAO_REFERENCIA.md.
+  const canModify =
+    !project.is_collaborative ||
+    point.created_by === null ||
+    point.created_by === googleAccount?.email ||
+    isAdmin;
+
   const pointLabel = isOfficial ? t("surveyView.point") : t("surveyView.parcela");
+  const pointDisplayLabel = getPointDisplayLabel(
+    { pointNumber: point.point_number, createdBy: point.created_by ?? null },
+    Boolean(project.is_collaborative),
+    toMemberLiteList(projectMembers),
+  );
 
   // Derived data for the PAISAGEO session
   const conservationStatus = (officialModuleData["vegetation"] as any)?.conservation_status as string | undefined;
@@ -633,7 +687,7 @@ export default function UnifiedSurveyPointViewScreen() {
     <>
       <Stack.Screen
         options={{
-          title: `${pointLabel} ${point.point_number}`,
+          title: `${pointLabel} ${pointDisplayLabel}`,
           headerBackTitle: "",
         }}
       />
@@ -653,6 +707,11 @@ export default function UnifiedSurveyPointViewScreen() {
                 <Chip compact style={{ alignSelf: "flex-start", marginTop: 8 }}>
                   {t(`surveyView.status_${point.approval_status ?? "local"}`)}
                 </Chip>
+              ) : null}
+              {project.is_collaborative && point.approval_status === "rejected" && point.rejection_reason ? (
+                <Text variant="bodySmall" style={{ color: paperTheme.colors.error, marginTop: 4 }}>
+                  {t("surveyView.rejectionReasonLabel")}: {point.rejection_reason}
+                </Text>
               ) : null}
               <Divider style={{ marginVertical: 12 }} />
               <View style={styles.twoColumnRow}>
@@ -937,34 +996,44 @@ export default function UnifiedSurveyPointViewScreen() {
         color={paperTheme.colors.onPrimary}
         fabStyle={{ backgroundColor: paperTheme.colors.primary }}
         actions={[
-          {
-            icon: "pencil",
-            label: t("common.edit"),
-            onPress: () => { if (!isNavigating) handleEdit(); },
-            color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
-          },
-          {
-            icon: "map-marker-radius",
-            label: t("surveyView.editLocation"),
-            onPress: () => { if (!isNavigating) handleEditLocation(); },
-            color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
-          },
-          ...(project && project.is_collaborative && point && point.approval_status !== "approved"
+          ...(canModify
+            ? [
+                {
+                  icon: "pencil",
+                  label: t("common.edit"),
+                  onPress: () => { if (!isNavigating) handleEdit(); },
+                  color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
+                },
+                {
+                  icon: "map-marker-radius",
+                  label: t("surveyView.editLocation"),
+                  onPress: () => { if (!isNavigating) handleEditLocation(); },
+                  color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
+                },
+              ]
+            : []),
+          ...(project.is_collaborative && canModify
             ? [
                 {
                   icon: "cloud-upload",
-                  label: t("surveyView.submitToProject"),
+                  label: point.approval_status === "approved"
+                    ? t("surveyView.resendCorrection")
+                    : t("surveyView.submitToProject"),
                   onPress: isSubmitting ? () => {} : handleSubmitPoint,
                   color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
                 },
               ]
             : []),
-          {
-            icon: "delete",
-            label: t("common.delete"),
-            onPress: handleDelete,
-            color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
-          },
+          ...(canModify
+            ? [
+                {
+                  icon: "delete",
+                  label: t("common.delete"),
+                  onPress: handleDelete,
+                  color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
+                },
+              ]
+            : []),
         ]}
         onStateChange={({ open }) => setFabOpen(open)}
         theme={{
@@ -982,9 +1051,6 @@ export default function UnifiedSurveyPointViewScreen() {
             <Text style={{ marginTop: 16 }}>{t("surveyView.submitting")}</Text>
           </Dialog.Content>
         </Dialog>
-      </Portal>
-
-      <Portal>
         <Modal
           visible={!!galleryPhotos}
           onDismiss={() => setGalleryPhotos(null)}

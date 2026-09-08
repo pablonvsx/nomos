@@ -12,7 +12,9 @@ import Constants from 'expo-constants';
 
 import { getProjectById } from '@/db/queries/projects';
 import { getPointsByProject } from '@/db/queries/points';
-import { Project, Point } from '@/types/database';
+import { getProjectMembers } from '@/db/queries/project-members';
+import { getPointDisplayLabel, toMemberLiteList } from '@/core/drive-sync/point-label';
+import { Project, Point, ProjectMember } from '@/types/database';
 import { useI18n } from '@/contexts/i18n-context';
 import { useMapData } from '@/contexts/map-data-context';
 import { useAlertDialog } from '@/hooks/use-dialog';
@@ -45,6 +47,7 @@ function ViewMapScreen() {
 
   // Data state
   const [project, setProject] = useState<Project | null>(null);
+  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
   const [surveyPoints, setSurveyPoints] = useState<Point[]>([]);
   const [layerData, setLayerData] = useState<GeoJSONFeatureCollection | null>(null);
   const [routeData, setRouteData] = useState<GeoJSONFeatureCollection | null>(null);
@@ -109,7 +112,18 @@ function ViewMapScreen() {
           dataPromises.push(projPromise); // Index 0
           // The others depend on the project, so chain them after
         } else {
-          setProject(await getProjectById(id)); // Cache holds heavy data, but the project entity is lightweight
+          const cachedProj = await getProjectById(id); // Cache holds heavy data, but the project entity is lightweight
+          setProject(cachedProj);
+          if (cachedProj?.is_collaborative) {
+            try {
+              setProjectMembers(await getProjectMembers(id));
+            } catch (membersError) {
+              console.error('Error loading project members:', membersError);
+              setProjectMembers([]);
+            }
+          } else {
+            setProjectMembers([]);
+          }
         }
 
         // Fetches user location in parallel (permission was already requested on mount)
@@ -144,6 +158,17 @@ function ViewMapScreen() {
             return;
           }
           setProject(proj);
+
+          if (proj.is_collaborative) {
+            try {
+              setProjectMembers(await getProjectMembers(id));
+            } catch (membersError) {
+              console.error('Error loading project members:', membersError);
+              setProjectMembers([]);
+            }
+          } else {
+            setProjectMembers([]);
+          }
 
           const [points, layer, route] = await Promise.all([
              getPointsByProject(id),
@@ -256,19 +281,25 @@ function ViewMapScreen() {
   // Memoized renders
   const renderedMarkers = useMemo(() => {
     if (!shouldRenderContent || !surveyPoints.length) return null;
+    const membersLite = toMemberLiteList(projectMembers);
     return surveyPoints.map(p => {
       const isHigh = highlightSurveyPointId && p.id === highlightSurveyPointId;
+      const pointDisplayLabel = getPointDisplayLabel(
+        { pointNumber: p.point_number, createdBy: p.created_by ?? null },
+        Boolean(project?.is_collaborative),
+        membersLite,
+      );
       return (
         <Marker
           key={`p-${p.id}`}
           coordinate={{ latitude: p.lat, longitude: p.lon }}
-          title={p.generated_name || `${t('common.point')} ${p.point_number}`}
+          title={p.generated_name || `${t('common.point')} ${pointDisplayLabel}`}
           pinColor={isHigh ? '#00C853' : '#FFD700'}
           tracksViewChanges={false} // Critical performance: prevents unnecessary re-renders
         />
       );
     });
-  }, [surveyPoints, shouldRenderContent, highlightSurveyPointId, t]);
+  }, [surveyPoints, shouldRenderContent, highlightSurveyPointId, t, projectMembers, project]);
 
   if (isLoading) {
     return <View style={styles.loadingContainer}><ActivityIndicator size="large" color={theme.colors.primary} /></View>;

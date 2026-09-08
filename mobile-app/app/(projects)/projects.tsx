@@ -5,6 +5,7 @@ import {
   Card,
   Text,
   Button,
+  Chip,
   ActivityIndicator,
   SegmentedButtons,
   IconButton,
@@ -19,10 +20,16 @@ import { useAlertDialog } from "@/hooks/use-dialog";
 import { useI18n } from "@/contexts/i18n-context";
 import { BUTTON_RADIUS, SEGMENTED_BUTTONS_SHAPE_THEME } from "@/constants/shape";
 import { useGoogleAccount } from "@/hooks/use-google-account";
-import { JoinSharedProjectDialog } from "@/components/projects/JoinSharedProjectDialog";
+import {
+  listAllDriveProjects,
+  joinAndCreateLocalProject,
+  type SharedProjectOption,
+} from "@/core/drive-sync/project-drive-service";
+import { syncProjectFromDrive } from "@/core/drive-sync/project-sync-service";
 
 // Internal imports: Database queries and Types
-import { getAllProjects } from "@/db/queries/projects";
+import { getAllProjects, getUsedDriveFolderIds } from "@/db/queries/projects";
+import { getUnsyncedPointCount } from "@/db/queries/points";
 import {
   getAllCustomProtocols,
   getCustomProtocolById,
@@ -42,7 +49,6 @@ export default function ProjectsScreen() {
   const registry = useProtocolRegistry();
   const lang = (currentLanguage as string) ?? "pt";
   const { account: googleAccount } = useGoogleAccount();
-  const [joinDialogVisible, setJoinDialogVisible] = useState(false);
 
   // State Management
   const [activeTab, setActiveTab] = useState<"projects" | "protocols">(
@@ -59,6 +65,9 @@ export default function ProjectsScreen() {
   const [protocolThemes, setProtocolThemes] = useState<Record<string, string>>(
     {},
   );
+  const [unsyncedCounts, setUnsyncedCounts] = useState<Record<number, number>>({});
+  const [driveAvailableProjects, setDriveAvailableProjects] = useState<SharedProjectOption[]>([]);
+  const [downloadingFolderId, setDownloadingFolderId] = useState<string | null>(null);
 
   // 1. Function to fetch data from SQLite
   const loadData = useCallback(async () => {
@@ -96,6 +105,14 @@ export default function ProjectsScreen() {
       }
       setProtocolNames(names);
       setProtocolThemes(themes);
+
+      const collaborativeProjects = projectsData.filter((p) => p.is_collaborative);
+      const countsEntries = await Promise.all(
+        collaborativeProjects.map(
+          async (p) => [p.id, await getUnsyncedPointCount(p.id)] as const,
+        ),
+      );
+      setUnsyncedCounts(Object.fromEntries(countsEntries));
     } catch (error) {
       console.error("Error loading projects/protocols:", error);
       alert(t("common.error"), t("projectsList.loadError"));
@@ -104,13 +121,52 @@ export default function ProjectsScreen() {
     }
   }, [alert, t]);
 
+  // Optional "available on Drive" section: never blocks the main screen or
+  // shows an error - the local project list is the real content, this is
+  // extra. Silently empties out on any failure (no account, offline, etc).
+  const loadDriveAvailableProjects = useCallback(async () => {
+    if (!googleAccount) {
+      setDriveAvailableProjects([]);
+      return;
+    }
+    try {
+      const [allDriveProjects, usedFolderIds] = await Promise.all([
+        listAllDriveProjects(),
+        getUsedDriveFolderIds(),
+      ]);
+      const usedSet = new Set(usedFolderIds);
+      setDriveAvailableProjects(allDriveProjects.filter((p) => !usedSet.has(p.driveFolderId)));
+    } catch (error) {
+      console.error("Error loading available Drive projects:", error);
+      setDriveAvailableProjects([]);
+    }
+  }, [googleAccount]);
+
   // 2. Lifecycle Hook: Refreshes data when screen comes into focus
   // Essential for updating the list after creating a new project and returning here
   useFocusEffect(
     useCallback(() => {
       loadData();
-    }, [loadData]),
+      loadDriveAvailableProjects();
+    }, [loadData, loadDriveAvailableProjects]),
   );
+
+  const handleDownloadDriveProject = async (option: SharedProjectOption) => {
+    if (!googleAccount) return;
+    setDownloadingFolderId(option.driveFolderId);
+    try {
+      const { projectId } = await joinAndCreateLocalProject(option.driveFolderId, googleAccount.email);
+      const syncResult = await syncProjectFromDrive(projectId, { includeMedia: false }, registry);
+      await loadData();
+      await loadDriveAvailableProjects();
+      alert(t("common.success"), t("projectsList.downloadSummary", { imported: syncResult.imported }));
+    } catch (error) {
+      console.error("Error downloading Drive project:", error);
+      alert(t("common.error"), t("projectsList.downloadError"));
+    } finally {
+      setDownloadingFolderId(null);
+    }
+  };
 
   // 2. Protocol actions
   const handleEditProtocol = async (protocolId: number) => {
@@ -285,6 +341,18 @@ export default function ProjectsScreen() {
             >
               {item.name}
             </Text>
+            {item.is_collaborative ? (
+              <View style={styles.collaborativeBadgeRow}>
+                <Chip compact icon="account-group" style={{ alignSelf: "flex-start" }}>
+                  {t("projectsList.collaborative")}
+                </Chip>
+                {(unsyncedCounts[item.id] ?? 0) > 0 && (
+                  <Chip compact style={{ alignSelf: "flex-start" }}>
+                    {unsyncedCounts[item.id]}
+                  </Chip>
+                )}
+              </View>
+            ) : null}
           </View>
 
           {/* Metadata Section */}
@@ -489,6 +557,37 @@ export default function ProjectsScreen() {
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderProjectCard}
             contentContainerStyle={styles.listContent}
+            ListFooterComponent={
+              driveAvailableProjects.length > 0 ? (
+                <View style={styles.driveAvailableSection}>
+                  <Text variant="titleMedium" style={{ color: paperTheme.colors.primary, marginBottom: 8 }}>
+                    {t("projectsList.availableOnDrive")}
+                  </Text>
+                  {driveAvailableProjects.map((option) => (
+                    <Card key={option.driveFolderId} style={[styles.card, { backgroundColor: paperTheme.colors.surface }]}>
+                      <Card.Content style={styles.driveAvailableRow}>
+                        <View style={{ flex: 1 }}>
+                          <Text variant="bodyMedium" style={{ fontWeight: "bold" }} numberOfLines={1}>
+                            {option.manifest.project_name}
+                          </Text>
+                          <Chip compact icon="account-group" style={{ alignSelf: "flex-start", marginTop: 4 }}>
+                            {t("projectsList.collaborative")}
+                          </Chip>
+                        </View>
+                        <Button
+                          mode="contained"
+                          loading={downloadingFolderId === option.driveFolderId}
+                          disabled={downloadingFolderId !== null}
+                          onPress={() => handleDownloadDriveProject(option)}
+                        >
+                          {t("projectsList.download")}
+                        </Button>
+                      </Card.Content>
+                    </Card>
+                  ))}
+                </View>
+              ) : null
+            }
             ListEmptyComponent={
               <View style={styles.emptyState}>
                 <Text
@@ -594,18 +693,6 @@ export default function ProjectsScreen() {
                     ? paperTheme.colors.onSurface
                     : paperTheme.colors.primary,
                 },
-                ...(googleAccount
-                  ? [
-                      {
-                        icon: "folder-network",
-                        label: t("projectsList.joinSharedProject"),
-                        onPress: () => setJoinDialogVisible(true),
-                        color: paperTheme.dark
-                          ? paperTheme.colors.onSurface
-                          : paperTheme.colors.primary,
-                      },
-                    ]
-                  : []),
               ]
             : [
                 {
@@ -643,16 +730,6 @@ export default function ProjectsScreen() {
           height: insets.bottom,
         }}
       />
-
-      <JoinSharedProjectDialog
-        visible={joinDialogVisible}
-        onClose={() => setJoinDialogVisible(false)}
-        userEmail={googleAccount?.email ?? ""}
-        onJoined={(newProjectId) => {
-          setJoinDialogVisible(false);
-          router.push(`/project-details/${newProjectId}` as any);
-        }}
-      />
     </View>
   );
 }
@@ -679,6 +756,22 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     marginBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  collaborativeBadgeRow: {
+    flexDirection: "row",
+    gap: 4,
+  },
+  driveAvailableSection: {
+    marginTop: 8,
+  },
+  driveAvailableRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   projectTitle: {
     fontWeight: "bold",

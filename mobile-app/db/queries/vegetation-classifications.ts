@@ -1,5 +1,6 @@
 import { db } from "../initialize";
 import { VegetationClassification, VegetationClass } from "@/types/database";
+import { generateUuid } from "@/utils/uuid";
 
 /**
  * Creates a new vegetation classification in the database
@@ -8,15 +9,16 @@ export async function createVegetationClassification(
   projectId: number,
   name: string,
   classes: VegetationClass[],
+  uuid?: string,
 ): Promise<number | null> {
   try {
     const timestamp = new Date().toISOString();
     const classesJson = JSON.stringify(classes);
 
     const result = await db.runAsync(
-      `INSERT INTO vegetation_classifications (project_id, name, classes, created_at, last_updated)
-       VALUES (?, ?, ?, ?, ?)`,
-      [projectId, name, classesJson, timestamp, timestamp],
+      `INSERT INTO vegetation_classifications (project_id, name, classes, created_at, last_updated, uuid)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [projectId, name, classesJson, timestamp, timestamp, uuid ?? generateUuid()],
     );
 
     return result.lastInsertRowId as number;
@@ -24,6 +26,20 @@ export async function createVegetationClassification(
     console.error("Error creating vegetation classification:", error);
     return null;
   }
+}
+
+/**
+ * Backfills the uuid of a vegetation classification created before this
+ * column existed, so it stops being silently skipped by reference-data sync.
+ */
+export async function setVegetationClassificationUuid(
+  id: number,
+  uuid: string,
+): Promise<void> {
+  await db.runAsync(
+    "UPDATE vegetation_classifications SET uuid = ? WHERE id = ?",
+    [uuid, id],
+  );
 }
 
 /**
@@ -40,8 +56,9 @@ export async function getVegetationClassificationsByProject(
       classes: string;
       created_at: string;
       last_updated: string;
+      uuid: string | null;
     }>(
-      `SELECT id, project_id, name, classes, created_at, last_updated
+      `SELECT id, project_id, name, classes, created_at, last_updated, uuid
        FROM vegetation_classifications
        WHERE project_id = ?
        ORDER BY created_at DESC`,
@@ -55,6 +72,7 @@ export async function getVegetationClassificationsByProject(
       classes: JSON.parse(row.classes),
       created_at: row.created_at,
       last_updated: row.last_updated,
+      uuid: row.uuid ?? null,
     }));
   } catch (error) {
     console.error("Error fetching vegetation classifications:", error);
@@ -76,8 +94,9 @@ export async function getVegetationClassificationById(
       classes: string;
       created_at: string;
       last_updated: string;
+      uuid: string | null;
     }>(
-      `SELECT id, project_id, name, classes, created_at, last_updated
+      `SELECT id, project_id, name, classes, created_at, last_updated, uuid
        FROM vegetation_classifications
        WHERE id = ?`,
       [classificationId],
@@ -92,6 +111,7 @@ export async function getVegetationClassificationById(
       classes: JSON.parse(result.classes),
       created_at: result.created_at,
       last_updated: result.last_updated,
+      uuid: result.uuid ?? null,
     };
   } catch (error) {
     console.error("Error fetching vegetation classification:", error);

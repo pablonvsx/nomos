@@ -198,6 +198,9 @@ export interface PointEnvelope {
   pointSize?: number;
   createdAt?: string;
   landscapeClassId?: number;
+  // Short per-collector code (e.g. "PS"), resolved by the caller from the
+  // project's members list - only meaningful for collaborative projects.
+  collectorCode?: string;
 }
 
 export interface ProjectRef {

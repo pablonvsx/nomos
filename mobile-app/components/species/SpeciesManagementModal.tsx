@@ -51,7 +51,9 @@ import {
   importSpeciesFromGBIF,
   deleteAllProjectSpeciesByProject,
   importSpeciesFromSpeciesLink,
+  getProjectSpeciesById,
 } from "@/db/queries/project-species";
+import { pushSpeciesEntryIfCollaborative } from "@/core/drive-sync/reference-data-sync-service";
 import { ProjectSpeciesCatalog } from "@/types/database";
 import type { SpeciesLinkSearchResult } from "@/core/species-catalog/specieslink";
 import { LocationPickerModal } from "@/components/survey/InsertLocationModal";
@@ -491,13 +493,24 @@ export default function SpeciesManagementModal({
     setSpeciesLinkSearchPhase("idle");
   };
 
+  // Pushes each newly imported catalog row to Drive right away (best-effort,
+  // same as the manual "add one species" flow) instead of leaving it to wait
+  // for the next full project sync - see pushSpeciesEntryIfCollaborative.
+  const pushImportedSpecies = async (insertedIds: number[]) => {
+    for (const id of insertedIds) {
+      const created = await getProjectSpeciesById(id);
+      if (created) pushSpeciesEntryIfCollaborative(projectId, created);
+    }
+  };
+
   const handleImportSpeciesLink = async (speciesData: SpeciesLinkSearchResult) => {
     try {
-      const { inserted } = await importSpeciesFromSpeciesLink(projectId, [speciesData]);
+      const { inserted, insertedIds } = await importSpeciesFromSpeciesLink(projectId, [speciesData]);
       if (inserted > 0) {
         alert(t("common.success"), t("species.imported"));
         await loadProjectSpecies();
         onSpeciesImported?.(inserted);
+        pushImportedSpecies(insertedIds);
       } else {
         alert(t("common.warning"), t("species.alreadyExists"));
       }
@@ -524,9 +537,10 @@ export default function SpeciesManagementModal({
 
     setIsSpeciesLinkSearching(true);
     try {
-      const { inserted, skipped } = await importSpeciesFromSpeciesLink(projectId, speciesLinkResults);
+      const { inserted, skipped, insertedIds } = await importSpeciesFromSpeciesLink(projectId, speciesLinkResults);
       await loadProjectSpecies();
       onSpeciesImported?.(inserted);
+      pushImportedSpecies(insertedIds);
       const isWarning = inserted === 0;
       if (isWarning) {
         alert(t("common.warning"), buildImportSummaryMessage(inserted, skipped));
@@ -547,11 +561,12 @@ export default function SpeciesManagementModal({
 
   const handleImportSpecies = async (speciesData: any) => {
     try {
-      const { inserted } = await importSpeciesFromGBIF(projectId, [speciesData]);
+      const { inserted, insertedIds } = await importSpeciesFromGBIF(projectId, [speciesData]);
       if (inserted > 0) {
         alert(t("common.success"), t("species.imported"));
         await loadProjectSpecies();
         onSpeciesImported?.(inserted);
+        pushImportedSpecies(insertedIds);
       } else {
         alert(t("common.warning"), t("species.alreadyExists"));
       }
@@ -568,9 +583,10 @@ export default function SpeciesManagementModal({
 
     setIsSearching(true);
     try {
-      const { inserted, skipped } = await importSpeciesFromGBIF(projectId, searchResults);
+      const { inserted, skipped, insertedIds } = await importSpeciesFromGBIF(projectId, searchResults);
       await loadProjectSpecies();
       onSpeciesImported?.(inserted);
+      pushImportedSpecies(insertedIds);
       const isWarning = inserted === 0;
       if (isWarning) {
         alert(t("common.warning"), buildImportSummaryMessage(inserted, skipped));
@@ -596,7 +612,7 @@ export default function SpeciesManagementModal({
     }
 
     try {
-      await createProjectSpecies({
+      const speciesId = await createProjectSpecies({
         project_id: projectId,
         scientific_name: manualSpecies.scientificName,
         family: manualSpecies.family,
@@ -610,6 +626,11 @@ export default function SpeciesManagementModal({
             source: "manual" as const,
           })),
       });
+
+      if (speciesId) {
+        const created = await getProjectSpeciesById(speciesId);
+        if (created) pushSpeciesEntryIfCollaborative(projectId, created);
+      }
 
       alert(t("common.success"), t("species.speciesAdded"));
       setManualSpecies({

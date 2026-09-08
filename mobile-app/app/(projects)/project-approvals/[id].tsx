@@ -94,10 +94,10 @@ export default function ProjectApprovalsScreen() {
   };
 
   const handleApprove = async (submission: PendingSubmission) => {
-    if (!project?.drive_folder_id) return;
+    if (!project?.drive_folder_id || !googleAccount) return;
     setProcessingId(submission.pointUuid);
     try {
-      await approveSubmission(project.drive_folder_id, submission);
+      await approveSubmission(project.drive_folder_id, submission, googleAccount.email);
       setSubmissions((prev) => prev.filter((s) => s.pointUuid !== submission.pointUuid));
     } catch (error) {
       console.error("Error approving submission:", error);
@@ -113,14 +113,14 @@ export default function ProjectApprovalsScreen() {
   };
 
   const handleConfirmReject = async (reason: string) => {
-    if (!rejectTarget) return;
+    if (!rejectTarget || !project?.drive_folder_id || !googleAccount) return;
     if (!reason.trim()) {
       alert(t("common.error"), t("projectApprovals.rejectReasonRequired"));
       return;
     }
     setProcessingId(rejectTarget.pointUuid);
     try {
-      await rejectSubmission(rejectTarget, reason.trim());
+      await rejectSubmission(project.drive_folder_id, rejectTarget, reason.trim(), googleAccount.email);
       setSubmissions((prev) => prev.filter((s) => s.pointUuid !== rejectTarget.pointUuid));
       setRejectDialogVisible(false);
       setRejectTarget(null);

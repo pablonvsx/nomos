@@ -84,7 +84,8 @@ export async function initDatabase() {
         collection_instructions TEXT,
         schema TEXT NOT NULL,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        uuid TEXT                             -- stable id used to reconcile across devices
       );
     `);
 
@@ -100,6 +101,7 @@ export async function initDatabase() {
         source TEXT DEFAULT 'manual',
         created_at TEXT NOT NULL,
         last_updated TEXT NOT NULL,
+        uuid TEXT,                    -- stable id used to reconcile across devices
 
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
         UNIQUE(project_id, gbif_id)
@@ -138,6 +140,7 @@ export async function initDatabase() {
         classes TEXT NOT NULL,        -- JSON array of VegetationClass objects
         created_at TEXT NOT NULL,
         last_updated TEXT NOT NULL,
+        uuid TEXT,                    -- stable id used to reconcile across devices
 
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
       );
@@ -164,6 +167,8 @@ export async function initDatabase() {
         created_by TEXT,                      -- email or device id; not populated yet
         approval_status TEXT NOT NULL DEFAULT 'local'
           CHECK (approval_status IN ('local', 'pending', 'approved', 'rejected')),
+        rejection_reason TEXT,
+        drive_synced_at TEXT,                 -- Drive modifiedTime of the last approved/ write/read for this point
 
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
       );
@@ -220,6 +225,7 @@ export async function initDatabase() {
         member_email TEXT NOT NULL,
         role TEXT NOT NULL DEFAULT 'collaborator',
         auto_approve TEXT NOT NULL DEFAULT 'herda_projeto',
+        collector_code TEXT,
         PRIMARY KEY (project_id, member_email),
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
       );

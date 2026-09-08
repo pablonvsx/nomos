@@ -20,7 +20,9 @@ import { BUTTON_RADIUS } from "@/constants/shape";
 import {
   createVegetationClassification,
   updateVegetationClassification,
+  getVegetationClassificationById,
 } from "@/db/queries/vegetation-classifications";
+import { pushVegetationClassificationIfCollaborative } from "@/core/drive-sync/reference-data-sync-service";
 import { useI18n } from "@/contexts/i18n-context";
 import { useAlertDialog } from "@/hooks/use-dialog";
 
@@ -164,6 +166,11 @@ export default function VegetationClassesModal({
           classesData
         );
         result = classificationId ? { id: classificationId } : null;
+
+        if (classificationId) {
+          const created = await getVegetationClassificationById(classificationId);
+          if (created) pushVegetationClassificationIfCollaborative(projectId, created);
+        }
       }
 
       if (result && onSave) {

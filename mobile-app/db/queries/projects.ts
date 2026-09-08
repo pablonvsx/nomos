@@ -20,6 +20,18 @@ export async function getAllProjects(): Promise<Project[]> {
   }
 }
 
+export async function getUsedDriveFolderIds(): Promise<string[]> {
+  try {
+    const results = await db.getAllAsync<{ drive_folder_id: string }>(
+      "SELECT drive_folder_id FROM projects WHERE drive_folder_id IS NOT NULL",
+    );
+    return results.map((r) => r.drive_folder_id);
+  } catch (error) {
+    console.error("Error fetching used Drive folder ids:", error);
+    return [];
+  }
+}
+
 export async function createProject(
   name: string,
   protocolId: string,

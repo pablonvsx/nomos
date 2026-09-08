@@ -40,6 +40,7 @@ export interface ProjectMember {
   member_email: string;
   role: string; // 'admin' | 'collaborator'
   auto_approve: string; // 'herda_projeto' | 'true' | 'false'
+  collector_code: string | null;
 }
 
 // Ponto de levantamento (schema-driven, Fase 5+)
@@ -60,8 +61,10 @@ export interface Point {
   point_size?: number | null;   // plot size (provisional)
   created_at: string;
   updated_at: string;
-  created_by?: string | null; // Email or device id of the creator; not populated yet
+  created_by?: string | null; // Email of the collaborator who submitted the point, or null if never submitted
   approval_status?: "local" | "pending" | "approved" | "rejected";
+  rejection_reason?: string | null;
+  drive_synced_at?: string | null;
 }
 
 // A point's module data (one point_modules row)
@@ -175,6 +178,7 @@ export interface CustomProtocol {
   schema: CustomProtocolSchema; // The complete schema (stored as JSON)
   created_at: string; // Creation timestamp
   updated_at: string; // Last update timestamp
+  uuid?: string | null; // Stable id used to reconcile this protocol across devices (collaborative projects)
 }
 
 // ============================================
@@ -196,6 +200,7 @@ export interface VegetationClassification {
   classes: VegetationClass[]; // Array of vegetation classes in JSON format
   created_at: string; // Creation timestamp
   last_updated: string; // Last update timestamp
+  uuid?: string | null; // Stable id used to reconcile this classification across devices (collaborative projects)
 }
 
 // Represents a project-level species entry with support for multiple common names (from GBIF or manual entry)
@@ -210,6 +215,7 @@ export interface ProjectSpeciesCatalog {
   created_at: string; // Creation timestamp
   last_updated: string; // Last update timestamp
   common_names?: ProjectSpeciesCommonName[]; // Multiple common names with language support
+  uuid?: string | null; // Stable id used to reconcile this entry across devices (collaborative projects)
 }
 
 // Represents a common name for a species with language support

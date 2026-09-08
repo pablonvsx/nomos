@@ -91,7 +91,7 @@ export async function uploadJsonFile(name: string, parentId: string, content: un
     `--${boundary}--`;
 
   const response = await fetch(
-    `${DRIVE_UPLOAD_BASE}/files?uploadType=multipart&fields=id,name,mimeType,parents`,
+    `${DRIVE_UPLOAD_BASE}/files?uploadType=multipart&fields=id,name,mimeType,parents,modifiedTime`,
     {
       method: 'POST',
       headers: { ...headers, 'Content-Type': `multipart/related; boundary=${boundary}` },
@@ -105,7 +105,7 @@ export async function uploadJsonFile(name: string, parentId: string, content: un
 export async function updateJsonFile(fileId: string, content: unknown): Promise<DriveFile> {
   const headers = await authHeaders();
   const response = await fetch(
-    `${DRIVE_UPLOAD_BASE}/files/${fileId}?uploadType=media&fields=id,name,mimeType,parents`,
+    `${DRIVE_UPLOAD_BASE}/files/${fileId}?uploadType=media&fields=id,name,mimeType,parents,modifiedTime`,
     {
       method: 'PATCH',
       headers: { ...headers, 'Content-Type': 'application/json' },
@@ -200,6 +200,40 @@ export async function revokeAnyoneWithLinkPermission(fileId: string): Promise<vo
   if (!anyonePermission) return;
   const deleteResponse = await fetch(
     `${DRIVE_API_BASE}/files/${fileId}/permissions/${anyonePermission.id}`,
+    { method: 'DELETE', headers }
+  );
+  if (!deleteResponse.ok) await parseDriveError(deleteResponse);
+}
+
+export async function moveFile(
+  fileId: string,
+  newParentId: string,
+  oldParentId: string
+): Promise<void> {
+  const headers = await authHeaders();
+  const response = await fetch(
+    `${DRIVE_API_BASE}/files/${fileId}?addParents=${newParentId}&removeParents=${oldParentId}`,
+    { method: 'PATCH', headers }
+  );
+  if (!response.ok) await parseDriveError(response);
+}
+
+export async function revokePermissionForEmail(fileId: string, email: string): Promise<void> {
+  const headers = await authHeaders();
+  const listResponse = await fetch(
+    `${DRIVE_API_BASE}/files/${fileId}/permissions?fields=permissions(id,type,emailAddress)`,
+    { headers }
+  );
+  if (!listResponse.ok) await parseDriveError(listResponse);
+  const { permissions } = await listResponse.json();
+  const target = permissions?.find(
+    (p: { type: string; emailAddress?: string }) =>
+      p.type === 'user' && p.emailAddress?.toLowerCase() === email.toLowerCase()
+  );
+  if (!target) return; // já não tem permissão, nada a fazer
+
+  const deleteResponse = await fetch(
+    `${DRIVE_API_BASE}/files/${fileId}/permissions/${target.id}`,
     { method: 'DELETE', headers }
   );
   if (!deleteResponse.ok) await parseDriveError(deleteResponse);
