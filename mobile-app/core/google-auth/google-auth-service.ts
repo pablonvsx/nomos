@@ -52,10 +52,23 @@ export async function signOutFromGoogle(): Promise<void> {
   await GoogleSignin.signOut();
 }
 
+let inFlightTokenRequest: Promise<string> | null = null;
+
+// GoogleSignin.getTokens() on Android backs onto a single, module-wide
+// promise slot: a second call issued before the first settles rejects the
+// first with ASYNC_OP_IN_PROGRESS instead of queuing. Drive calls in
+// core/drive-sync/ fire concurrently (Promise.all), so every caller here
+// shares one in-flight native call instead of racing separate ones.
 export async function getDriveAccessToken(): Promise<string> {
   ensureConfigured();
-  const { accessToken } = await GoogleSignin.getTokens();
-  return accessToken;
+  if (!inFlightTokenRequest) {
+    inFlightTokenRequest = GoogleSignin.getTokens()
+      .then(({ accessToken }) => accessToken)
+      .finally(() => {
+        inFlightTokenRequest = null;
+      });
+  }
+  return inFlightTokenRequest;
 }
 
 export function isCancelledSignIn(error: unknown): boolean {

@@ -161,7 +161,6 @@ export const SpeciesLinkSettingsModal: React.FC<SpeciesLinkSettingsModalProps> =
         <Divider />
 
         <ScrollView
-          style={styles.content}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
@@ -379,9 +378,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontWeight: '600',
-  },
-  content: {
-    maxHeight: '80%',
   },
   contentContainer: {
     padding: 16,

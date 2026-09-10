@@ -272,13 +272,6 @@ export default function ProjectsScreen() {
     }
   };
 
-  // TODO: implement actual project import (file picker + validation, mirroring
-  // handleImportProtocol below). For now this just surfaces that the action
-  // exists but isn't wired up yet.
-  const handleImportProject = () => {
-    alert(t("projectsList.importProject"), t("projectsList.importProjectComingSoon"));
-  };
-
   const handleImportProtocol = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -670,14 +663,6 @@ export default function ProjectsScreen() {
                     : paperTheme.colors.primary,
                 },
                 {
-                  icon: "import",
-                  label: t("projectsList.importProject"),
-                  onPress: handleImportProject,
-                  color: paperTheme.dark
-                    ? paperTheme.colors.onSurface
-                    : paperTheme.colors.primary,
-                },
-                {
                   icon: "folder-download-outline",
                   label: t("projectsList.loadFromDrive"),
                   onPress: () => setDriveDialogVisible(true),
@@ -732,7 +717,14 @@ export default function ProjectsScreen() {
                   <Text variant="bodyMedium" style={{ textAlign: "center", marginBottom: 16 }}>
                     {t("projectsList.driveConnectRequired")}
                   </Text>
-                  <Button mode="contained" onPress={connect} loading={isConnecting} disabled={isConnecting} icon="google">
+                  <Button
+                    mode="contained"
+                    style={{ borderRadius: BUTTON_RADIUS }}
+                    onPress={connect}
+                    loading={isConnecting}
+                    disabled={isConnecting}
+                    icon="google"
+                  >
                     {t("settings.googleAccountConnect")}
                   </Button>
                 </View>
@@ -754,6 +746,7 @@ export default function ProjectsScreen() {
                       </View>
                       <Button
                         mode="contained"
+                        style={{ borderRadius: BUTTON_RADIUS }}
                         loading={downloadingFolderId === option.driveFolderId}
                         disabled={downloadingFolderId !== null}
                         onPress={() => handleDownloadDriveProject(option)}

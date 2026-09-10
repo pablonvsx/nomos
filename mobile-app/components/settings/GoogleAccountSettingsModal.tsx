@@ -57,7 +57,6 @@ export const GoogleAccountSettingsModal: React.FC<GoogleAccountSettingsModalProp
         <Divider />
 
         <ScrollView
-          style={styles.content}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
@@ -150,9 +149,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontWeight: '600',
   },
-  content: {
-    maxHeight: '80%',
-  },
   contentContainer: {
     padding: 16,
     paddingTop: 20,
@@ -160,6 +156,7 @@ const styles = StyleSheet.create({
   description: {
     marginBottom: 20,
     lineHeight: 22,
+    textAlign: 'justify',
   },
   sectionLabel: {
     fontWeight: '700',
@@ -171,9 +168,11 @@ const styles = StyleSheet.create({
   },
   accountEmail: {
     marginTop: 8,
+    textAlign: 'justify',
   },
   errorText: {
     marginTop: 8,
+    textAlign: 'justify',
   },
   divider: {
     marginVertical: 20,

@@ -28,7 +28,8 @@ import { useI18n } from "@/contexts/i18n-context";
 import { useGoogleAccount } from "@/hooks/use-google-account";
 import { useProtocolRegistry } from "@/contexts/protocol-registry-context";
 import { useStableTextInput } from "@/hooks/use-stable-text-input";
-import { SEGMENTED_BUTTONS_SHAPE_THEME } from "@/constants/shape";
+import { BUTTON_RADIUS, SEGMENTED_BUTTONS_SHAPE_THEME } from "@/constants/shape";
+import { useBottomContentPadding } from "@/hooks/use-bottom-content-padding";
 import { getProjectById, setProjectCollaborative } from "@/db/queries/projects";
 import { getPointsByProject } from "@/db/queries/points";
 import { upsertProjectMember, removeProjectMember } from "@/db/queries/project-members";
@@ -55,6 +56,7 @@ export default function ProjectCollaborationScreen() {
   const { t } = useI18n();
   const { account: googleAccount } = useGoogleAccount();
   const registry = useProtocolRegistry();
+  const bottomPadding = useBottomContentPadding();
 
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -407,7 +409,7 @@ export default function ProjectCollaborationScreen() {
     return (
       <View style={[styles.container, { backgroundColor: paperTheme.colors.background }]}>
         <Stack.Screen options={{ title: t("projectCollaboration.title"), headerBackTitle: "" }} />
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}>
           <Card style={styles.card}>
             <Card.Content>
               <Text variant="titleMedium">{t("projectCollaboration.notCollaborativeTitle")}</Text>
@@ -421,7 +423,7 @@ export default function ProjectCollaborationScreen() {
               )}
               <Button
                 mode="contained"
-                style={{ marginTop: 16 }}
+                style={{ marginTop: 16, borderRadius: BUTTON_RADIUS }}
                 loading={isMakingCollaborative}
                 disabled={isMakingCollaborative || !googleAccount}
                 onPress={handleMakeCollaborative}
@@ -455,7 +457,7 @@ export default function ProjectCollaborationScreen() {
     <View style={[styles.container, { backgroundColor: paperTheme.colors.background }]}>
       <Stack.Screen options={{ title: t("projectCollaboration.title"), headerBackTitle: "" }} />
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}>
         {isAdmin && manifest && (
           <>
             <Text variant="titleMedium" style={[styles.sectionTitle, { color: paperTheme.colors.primary }]}>
@@ -477,7 +479,7 @@ export default function ProjectCollaborationScreen() {
                 />
                 <Button
                   mode="contained"
-                  style={{ marginTop: 12 }}
+                  style={{ marginTop: 12, borderRadius: BUTTON_RADIUS }}
                   loading={isInviting}
                   disabled={isInviting || !isValidEmail(inviteEmailInput.value)}
                   onPress={handleInviteCollaborator}
@@ -621,6 +623,7 @@ export default function ProjectCollaborationScreen() {
                 <Card.Actions>
                   <Button
                     mode="contained"
+                    style={{ borderRadius: BUTTON_RADIUS }}
                     loading={isSubmitting}
                     disabled={submittingPointId !== null}
                     onPress={() => handleSubmitPoint(point)}
@@ -638,7 +641,11 @@ export default function ProjectCollaborationScreen() {
         </Text>
         <Card style={styles.card}>
           <Card.Content>
-            <Button mode="contained" onPress={() => setSyncDialogVisible(true)}>
+            <Button
+              mode="contained"
+              style={{ borderRadius: BUTTON_RADIUS }}
+              onPress={() => setSyncDialogVisible(true)}
+            >
               {t("projectCollaboration.syncButton")}
             </Button>
           </Card.Content>

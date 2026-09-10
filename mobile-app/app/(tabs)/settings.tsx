@@ -4,7 +4,6 @@ import {
   List,
   Switch,
   Text,
-  Chip,
   Divider,
   useTheme as usePaperTheme,
   Dialog,
@@ -24,29 +23,15 @@ import { APIKeyManager } from "@/core/species-catalog/api-key-manager";
 import { SpeciesLinkSettingsModal } from "@/components/settings/SpeciesLinkSettingsModal";
 import { GoogleAccountSettingsModal } from "@/components/settings/GoogleAccountSettingsModal";
 
-function StatusChip({ active, label, theme }: { active: boolean; label: string; theme: MD3Theme }) {
+function StatusIndicator({ active, label, theme }: { active: boolean; label: string; theme: MD3Theme }) {
   return (
-    <Chip
-      compact
-      style={[
-        styles.statusChip,
-        {
-          backgroundColor: active
-            ? (theme.dark ? "rgba(76, 175, 80, 0.30)" : "rgba(76, 175, 80, 0.15)")
-            : theme.colors.errorContainer,
-        },
-      ]}
-      textStyle={[
-        styles.statusChipText,
-        {
-          color: active
-            ? (theme.dark ? "#a5d6a7" : "#2e7d32")
-            : theme.colors.onErrorContainer,
-        },
-      ]}
-    >
-      {label}
-    </Chip>
+    <View accessibilityLabel={label} accessibilityRole="image">
+      <MaterialCommunityIcons
+        name={active ? "check-circle" : "close-circle-outline"}
+        size={22}
+        color={active ? (theme.dark ? "#a5d6a7" : "#2e7d32") : theme.colors.onSurfaceVariant}
+      />
+    </View>
   );
 }
 
@@ -195,41 +180,19 @@ export default function SettingsScreen() {
 
         <Divider />
 
-        {/* SECTION 3: INTEGRATIONS & APIS */}
+        {/* SECTION 3: GOOGLE ACCOUNT */}
         <List.Section>
           <List.Subheader
             style={[styles.subheader, { color: paperTheme.colors.primary }]}
           >
-            {t("settings.integrationsAPIs")}
+            {t("settings.googleAccountTitle")}
           </List.Subheader>
 
           <List.Item
-            title={t("species.speciesLinkIntegration")}
-            description={t("species.speciesLinkDescription")}
-            left={(props) => <List.Icon {...props} icon="link-variant" />}
-            right={() => (
-              <StatusChip
-                active={speciesLinkConfigured}
-                label={
-                  speciesLinkConfigured
-                    ? t("species.configured")
-                    : t("species.notConfigured")
-                }
-                theme={paperTheme}
-              />
-            )}
-            onPress={() => setSpeciesLinkModalVisible(true)}
-            titleStyle={styles.itemTitle}
-            descriptionStyle={styles.itemDescription}
-            descriptionNumberOfLines={0}
-          />
-
-          <List.Item
-            title={t("settings.googleAccountTitle")}
-            description={t("settings.googleAccountDescription")}
+            title={t("settings.googleAccountDescription")}
             left={(props) => <List.Icon {...props} icon="google" />}
             right={() => (
-              <StatusChip
+              <StatusIndicator
                 active={!!googleAccount}
                 label={
                   googleAccount
@@ -241,8 +204,35 @@ export default function SettingsScreen() {
             )}
             onPress={() => setGoogleAccountModalVisible(true)}
             titleStyle={styles.itemTitle}
-            descriptionStyle={styles.itemDescription}
-            descriptionNumberOfLines={0}
+          />
+        </List.Section>
+
+        <Divider />
+
+        {/* SECTION 4: SPECIES LINK API */}
+        <List.Section>
+          <List.Subheader
+            style={[styles.subheader, { color: paperTheme.colors.primary }]}
+          >
+            {t("species.speciesLinkIntegration")}
+          </List.Subheader>
+
+          <List.Item
+            title={t("species.speciesLinkDescription")}
+            left={(props) => <List.Icon {...props} icon="link-variant" />}
+            right={() => (
+              <StatusIndicator
+                active={speciesLinkConfigured}
+                label={
+                  speciesLinkConfigured
+                    ? t("species.configured")
+                    : t("species.notConfigured")
+                }
+                theme={paperTheme}
+              />
+            )}
+            onPress={() => setSpeciesLinkModalVisible(true)}
+            titleStyle={styles.itemTitle}
           />
         </List.Section>
 
@@ -394,12 +384,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginRight: 8,
     opacity: 0.7,
-  },
-  statusChip: {
-    alignSelf: "center",
-  },
-  statusChipText: {
-    fontSize: 12,
-    lineHeight: 14,
   },
 });

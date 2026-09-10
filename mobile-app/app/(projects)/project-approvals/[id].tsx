@@ -19,6 +19,7 @@ import { useAlertDialog } from "@/hooks/use-dialog";
 import { useI18n } from "@/contexts/i18n-context";
 import { useGoogleAccount } from "@/hooks/use-google-account";
 import { useStableTextInput } from "@/hooks/use-stable-text-input";
+import { BUTTON_RADIUS } from "@/constants/shape";
 import { getProjectById } from "@/db/queries/projects";
 import { isProjectAdmin } from "@/core/drive-sync/project-drive-service";
 import {
@@ -159,6 +160,7 @@ export default function ProjectApprovalsScreen() {
         <Card.Actions>
           <Button
             mode="contained"
+            style={{ borderRadius: BUTTON_RADIUS }}
             loading={isProcessing}
             disabled={processingId !== null}
             onPress={() => handleApprove(item)}
@@ -167,6 +169,7 @@ export default function ProjectApprovalsScreen() {
           </Button>
           <Button
             mode="outlined"
+            style={{ borderRadius: BUTTON_RADIUS }}
             textColor={paperTheme.colors.error}
             disabled={processingId !== null}
             onPress={() => handleOpenReject(item)}
