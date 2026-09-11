@@ -431,6 +431,20 @@ export default function SurveyFormScreen() {
     });
   }, []);
 
+  // VegetationModuleRenderer's onChange: merges its patch into moduleValues["vegetation"]
+  // instead of replacing it outright (handleModuleChange's default). That renderer is
+  // memoized against a comparator that ignores homogeneity_check/conservation_status/
+  // land_use (see its own file), so it can be skipped-and-stale for exactly those fields;
+  // a full replace from it would silently overwrite whatever HomogeneityCard/ConservationCard
+  // just set via handleVegFieldChange. VegetationModuleRenderer only ever sends the fields
+  // it actually changed, so merging here is always correct.
+  const handleVegModuleChange = useCallback((patch: unknown) => {
+    setModuleValues((prev) => ({
+      ...prev,
+      vegetation: { ...(prev["vegetation"] ?? {}), ...(patch as Record<string, unknown>) },
+    }));
+  }, []);
+
   // Stable per-key onChange callback caches. GenericFieldRow/SurveySelect
   // memoize on prop identity (React.memo) - a fresh inline arrow function
   // created on every render (e.g. `onChange={(v) => handleX(key, v)}`) would
@@ -816,7 +830,11 @@ export default function SurveyFormScreen() {
               {renderModuleCard(
                 module.id,
                 module.id === "vegetation"
-                  ? { classificationType: vegClassificationType, customClasses: customVegClasses }
+                  ? {
+                      classificationType: vegClassificationType,
+                      customClasses: customVegClasses,
+                      onChange: handleVegModuleChange,
+                    }
                   : undefined,
               )}
             </View>
@@ -856,6 +874,7 @@ export default function SurveyFormScreen() {
               renderModuleCard("vegetation", {
                 classificationType: vegClassificationType,
                 customClasses: customVegClasses,
+                onChange: handleVegModuleChange,
               })}
 
             {/* Floristic survey: not module data (species live in their own

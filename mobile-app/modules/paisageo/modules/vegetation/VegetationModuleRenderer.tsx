@@ -82,8 +82,13 @@ interface VegetationModuleRendererProps extends ModuleRendererProps {
 // force KuchlerMatrix (the heaviest widget in the form) to fully re-render
 // for a change it doesn't even use. Comparing only the fields actually read
 // below keeps this renderer (and KuchlerMatrix under it) stable across those
-// edits. Safe against staleness: handleVegFieldChange's shallow spread in
-// form.tsx preserves the matrix/leaf_matrix object references untouched.
+// edits. Safe against staleness even though this renderer can go stale for
+// exactly those loose fields (its `dataRef` only updates when it actually
+// renders): every handler below sends `onChange` a patch with only the
+// field(s) it changed, never a spread of `dataRef.current` - form.tsx's
+// handleVegModuleChange merges that patch into the *current* moduleValues,
+// so a stale dataRef can never clobber homogeneity_check/conservation_status/
+// land_use.
 function sameVegetationValue(prevValue: unknown, nextValue: unknown): boolean {
   const a = (prevValue != null && typeof prevValue === "object" ? prevValue : {}) as VegetationModuleData;
   const b = (nextValue != null && typeof nextValue === "object" ? nextValue : {}) as VegetationModuleData;
@@ -136,8 +141,7 @@ export const VegetationModuleRenderer = React.memo(function VegetationModuleRend
   const handleKuchlerChange = useRef((raw: string) => {
     try {
       const result: KuchlerResult = JSON.parse(raw);
-      const next: VegetationModuleData = {
-        ...dataRef.current,
+      const patch: Partial<VegetationModuleData> = {
         raw_formula: result.raw_formula,
         kuchler_formula: result.kuchler_formula,
         total_strata: result.total_strata,
@@ -149,22 +153,22 @@ export const VegetationModuleRenderer = React.memo(function VegetationModuleRend
         leaf_matrix: result.leaf_matrix,
         vegetation_strata: toVegetationStrata(result.strata_descriptions ?? []),
       };
-      onChangeRef.current(next);
+      onChangeRef.current(patch);
     } catch {
       // malformed JSON — ignore
     }
   }).current;
 
   const handleClassIdChange = useRef((classId: string) =>
-    onChangeRef.current({ ...dataRef.current, custom_class_id: classId }),
+    onChangeRef.current({ custom_class_id: classId }),
   ).current;
 
   const handlePhysiognomyComplementChange = useRef((complement: string) =>
-    onChangeRef.current({ ...dataRef.current, physiognomy_complement: complement }),
+    onChangeRef.current({ physiognomy_complement: complement }),
   ).current;
 
   const handleContextFlagsChange = useRef((flags: unknown) =>
-    onChangeRef.current({ ...dataRef.current, context_flags: flags as ContextFlag[] }),
+    onChangeRef.current({ context_flags: flags as ContextFlag[] }),
   ).current;
 
   const kuchlerValue = toKuchlerValue(data);
@@ -199,7 +203,7 @@ export const VegetationModuleRenderer = React.memo(function VegetationModuleRend
     const current = dataRef.current.context_flags ?? [];
     const stillEligible = current.filter((f) => eligibleContextFlags.has(f));
     if (stillEligible.length !== current.length) {
-      onChangeRef.current({ ...dataRef.current, context_flags: stillEligible });
+      onChangeRef.current({ context_flags: stillEligible });
     }
   }, [eligibleContextFlags]);
 
