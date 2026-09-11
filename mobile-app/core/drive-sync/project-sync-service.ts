@@ -1,6 +1,7 @@
 import { File, Paths } from 'expo-file-system';
-import { findChildByName, listChildren, readJsonFile, downloadBinaryFile } from './drive-api-client';
+import { findChildByName, findChildByNameSuffix, listChildren, readJsonFile, downloadBinaryFile } from './drive-api-client';
 import { getManifest, resolveProjectDriveIds } from './project-drive-service';
+import { extractPointUuidFromName } from './point-label';
 import { syncReferenceData } from './reference-data-sync-service';
 import { getProjectById } from '@/db/queries/projects';
 import { upsertProjectMember } from '@/db/queries/project-members';
@@ -74,14 +75,16 @@ export async function syncProjectFromDrive(
       // approveSubmission/rejectSubmission move a decided file out of
       // submissions/<email>/ into submissions/<email>/_reviewed/ right after
       // deciding it (see approval-service.ts), so a rejection is normally
-      // found there, not directly under emailFolder.
+      // found there, not directly under emailFolder. Looked up by UUID
+      // suffix, not exact name, since the file's human-readable label can
+      // have changed since this device last submitted it.
       let submissionFile = emailFolder
-        ? await findChildByName(emailFolder.id, `${point.id}.json`)
+        ? await findChildByNameSuffix(emailFolder.id, `${point.id}.json`)
         : null;
       if (!submissionFile && emailFolder) {
         const reviewedFolder = await findChildByName(emailFolder.id, '_reviewed');
         submissionFile = reviewedFolder
-          ? await findChildByName(reviewedFolder.id, `${point.id}.json`)
+          ? await findChildByNameSuffix(reviewedFolder.id, `${point.id}.json`)
           : null;
       }
       if (submissionFile) {
@@ -108,7 +111,7 @@ export async function syncProjectFromDrive(
 
   for (const file of files) {
     if (!file.name.endsWith('.json')) continue;
-    const pointUuid = file.name.replace('.json', '');
+    const pointUuid = extractPointUuidFromName(file.name);
 
     try {
       const localPoint = await getPointById(pointUuid);
@@ -125,7 +128,7 @@ export async function syncProjectFromDrive(
         const photoNames = (envelope.photos as string[] | undefined) ?? [];
         if (options.includeMedia && photoNames.length > 0) {
           const mediaFolder = await findChildByName(project.drive_folder_id, 'media');
-          const pointMediaFolder = mediaFolder ? await findChildByName(mediaFolder.id, pointUuid) : null;
+          const pointMediaFolder = mediaFolder ? await findChildByNameSuffix(mediaFolder.id, pointUuid) : null;
           if (pointMediaFolder) {
             const downloaded: { uri: string; timestamp: number }[] = [];
             for (const [index, name] of photoNames.entries()) {

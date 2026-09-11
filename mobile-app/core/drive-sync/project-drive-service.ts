@@ -217,6 +217,49 @@ export async function resolveProjectDriveIds(
   return updatedManifest.drive_ids!;
 }
 
+const MAX_MEMBER_WRITE_ATTEMPTS = 3;
+
+function hasDuplicateCollectorCode(members: ProjectMemberEntry[]): boolean {
+  const codes = members.map((m) => m.collector_code);
+  return new Set(codes).size !== codes.length;
+}
+
+// Adds a new member with a freshly-derived collector_code, then re-reads the
+// manifest to check whether a concurrent write (another invite, or someone
+// else joining) raced this one and landed a member with the same code -
+// there's no locking/ETag support in the Drive REST calls this app makes
+// (updateJsonFile is an unconditional overwrite), so this is a detect-and-
+// retry loop rather than a true guarantee: it closes the race window down to
+// "between two manifest reads" instead of "the whole length of this
+// operation", and gives up loudly after a few attempts rather than silently
+// leaving two members sharing a code.
+async function addMemberWithUniqueCode(
+  driveFolderId: string,
+  email: string,
+  buildEntry: (collectorCode: string) => ProjectMemberEntry,
+): Promise<ProjectManifest> {
+  let manifest = await getManifest(driveFolderId);
+  for (let attempt = 0; attempt < MAX_MEMBER_WRITE_ATTEMPTS; attempt++) {
+    const collectorCode = deriveDefaultCollectorCode(email, manifest.members.map((m) => m.collector_code));
+    const withNewMember: ProjectManifest = {
+      ...manifest,
+      members: [...manifest.members, buildEntry(collectorCode)],
+    };
+    await updateManifest(driveFolderId, withNewMember);
+
+    manifest = await getManifest(driveFolderId);
+    if (!hasDuplicateCollectorCode(manifest.members)) {
+      return manifest;
+    }
+    // A concurrent write landed a colliding code between our read and write -
+    // drop our own entry and retry, deriving against the freshest member list.
+    manifest = { ...manifest, members: manifest.members.filter((m) => m.email !== email) };
+  }
+  throw new Error(
+    'Não foi possível adicionar o colaborador devido a uma atualização concorrente no projeto. Tente novamente.',
+  );
+}
+
 export async function inviteCollaboratorByEmail(
   driveFolderId: string,
   callerEmail: string,
@@ -235,16 +278,12 @@ export async function inviteCollaboratorByEmail(
 
   await shareWithEmail(driveFolderId, emailToInvite, 'writer');
 
-  const collectorCode = deriveDefaultCollectorCode(emailToInvite, manifest.members.map((m) => m.collector_code));
-  manifest.members.push({
+  return addMemberWithUniqueCode(driveFolderId, emailToInvite, (collectorCode) => ({
     email: emailToInvite,
     role: 'collaborator',
     auto_approve: 'herda_projeto',
     collector_code: collectorCode,
-  });
-  await updateManifest(driveFolderId, manifest);
-
-  return manifest;
+  }));
 }
 
 export interface SharedProjectOption {
@@ -290,9 +329,12 @@ export async function joinCollaborativeProject(
 ): Promise<ProjectManifest> {
   const manifest = await getManifest(driveFolderId);
   if (!manifest.members.some((m) => m.email === userEmail)) {
-    const collectorCode = deriveDefaultCollectorCode(userEmail, manifest.members.map((m) => m.collector_code));
-    manifest.members.push({ email: userEmail, role: 'collaborator', auto_approve: 'herda_projeto', collector_code: collectorCode });
-    await updateManifest(driveFolderId, manifest);
+    return addMemberWithUniqueCode(driveFolderId, userEmail, (collectorCode) => ({
+      email: userEmail,
+      role: 'collaborator',
+      auto_approve: 'herda_projeto',
+      collector_code: collectorCode,
+    }));
   }
   return manifest;
 }
@@ -318,7 +360,19 @@ export async function updateOwnCollectorCode(
   member.collector_code = normalized;
 
   await updateManifest(driveFolderId, manifest);
-  return manifest;
+
+  // Re-check for a concurrent write that raced this one (e.g. someone else
+  // picking/deriving the same code at nearly the same time) - unlike
+  // addMemberWithUniqueCode, this code was chosen manually by the user, so
+  // it's surfaced as an error asking them to pick another one rather than
+  // silently auto-changed.
+  const settled = await getManifest(driveFolderId);
+  if (hasDuplicateCollectorCode(settled.members)) {
+    throw new Error(
+      'Esse código acabou de ser usado por outro membro ao mesmo tempo. Escolha outro código.',
+    );
+  }
+  return settled;
 }
 
 export async function removeCollaborator(

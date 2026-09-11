@@ -3,7 +3,16 @@ import { getProjectById } from '@/db/queries/projects';
 import { buildPointWithModules, buildPointEnvelope } from '@/db/mappers/point.mapper';
 import { getCurrentGoogleAccount } from '@/core/google-auth/google-auth-service';
 import { getManifest, ensureFolder, resolveProjectDriveIds } from './project-drive-service';
-import { uploadJsonFile, updateJsonFile, findChildByName, uploadBinaryFile } from './drive-api-client';
+import {
+  uploadJsonFile,
+  updateJsonFile,
+  findChildByName,
+  findChildByNameSuffix,
+  renameFile,
+  uploadBinaryFile,
+  createFolder,
+} from './drive-api-client';
+import { buildPointDriveLabel, buildPointFolderName, buildPointFileName } from './point-label';
 import type { ProtocolRegistry } from '@/protocol-kernel/types';
 
 function basename(uri: string): string {
@@ -15,6 +24,24 @@ function guessMimeType(filename: string): string {
   if (ext === 'png') return 'image/png';
   if (ext === 'heic') return 'image/heic';
   return 'image/jpeg';
+}
+
+// Finds a point's JSON file in `targetFolderId` by its (immutable) UUID
+// suffix rather than an exact name match, since the human-readable part of
+// the name can drift (point renamed, collector code changed) between
+// submissions - and renames it in place when it has, instead of ever
+// creating a second file for the same point.
+async function resolvePointDriveFile(
+  targetFolderId: string,
+  pointUuid: string,
+  desiredFileName: string,
+): Promise<string | null> {
+  const existing = await findChildByNameSuffix(targetFolderId, `${pointUuid}.json`);
+  if (!existing) return null;
+  if (existing.name !== desiredFileName) {
+    await renameFile(existing.id, desiredFileName);
+  }
+  return existing.id;
 }
 
 export async function submitPointToProject(
@@ -56,9 +83,26 @@ export async function submitPointToProject(
   const envelope = buildPointEnvelope(pointWithModules);
   const localPhotoUris = envelope.photos ?? [];
 
+  // Same email whose ownership this submission will end up recorded under
+  // (see the updatePoint calls below) - used to look up the collector code
+  // for the human-readable Drive label.
+  const ownerEmail = point.created_by ?? account.email;
+  const collectorCode = manifest.members.find((m) => m.email === ownerEmail)?.collector_code;
+  const label = buildPointDriveLabel(point.point_number, point.generated_name, collectorCode);
+
   if (localPhotoUris.length > 0) {
     const mediaFolderId = await ensureFolder('media', project.drive_folder_id);
-    const pointMediaFolderId = await ensureFolder(point.id, mediaFolderId);
+    const desiredFolderName = buildPointFolderName(label, point.id);
+    const existingMediaFolder = await findChildByNameSuffix(mediaFolderId, point.id);
+    let pointMediaFolderId: string;
+    if (existingMediaFolder) {
+      pointMediaFolderId = existingMediaFolder.id;
+      if (existingMediaFolder.name !== desiredFolderName) {
+        await renameFile(existingMediaFolder.id, desiredFolderName);
+      }
+    } else {
+      pointMediaFolderId = (await createFolder(desiredFolderName, mediaFolderId)).id;
+    }
     for (const uri of localPhotoUris) {
       const name = basename(uri);
       const existingPhoto = await findChildByName(pointMediaFolderId, name);
@@ -68,7 +112,7 @@ export async function submitPointToProject(
   }
   envelope.photos = localPhotoUris.map(basename);
 
-  const fileName = `${point.id}.json`;
+  const fileName = buildPointFileName(label, point.id);
 
   // A point that's already approved skips the auto-approval decision
   // entirely - it's a correction to content already live in approved/, not a
@@ -80,9 +124,9 @@ export async function submitPointToProject(
       submitted_by: account.email,
       submitted_at: new Date().toISOString(),
     };
-    const existingFile = await findChildByName(approvedFolderId, fileName);
-    const writtenFile = existingFile
-      ? await updateJsonFile(existingFile.id, payload)
+    const existingFileId = await resolvePointDriveFile(approvedFolderId, point.id, fileName);
+    const writtenFile = existingFileId
+      ? await updateJsonFile(existingFileId, payload)
       : await uploadJsonFile(fileName, approvedFolderId, payload);
 
     await updatePoint(pointId, {
@@ -110,9 +154,9 @@ export async function submitPointToProject(
     submitted_by: account.email,
     submitted_at: new Date().toISOString(),
   };
-  const existingFile = await findChildByName(targetFolderId, fileName);
-  const writtenFile = existingFile
-    ? await updateJsonFile(existingFile.id, payload)
+  const existingFileId = await resolvePointDriveFile(targetFolderId, point.id, fileName);
+  const writtenFile = existingFileId
+    ? await updateJsonFile(existingFileId, payload)
     : await uploadJsonFile(fileName, targetFolderId, payload);
 
   await updatePoint(pointId, {

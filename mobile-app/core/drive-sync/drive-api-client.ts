@@ -191,6 +191,36 @@ export async function moveFile(
   if (!response.ok) await parseDriveError(response);
 }
 
+export async function renameFile(fileId: string, newName: string): Promise<void> {
+  const headers = await authHeaders();
+  const response = await fetch(`${DRIVE_API_BASE}/files/${fileId}`, {
+    method: 'PATCH',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: newName }),
+  });
+  if (!response.ok) await parseDriveError(response);
+}
+
+// Drive's `q` syntax has no "ends with" operator, only `contains` (substring)
+// - used to find a point's folder/file by its (immutable) UUID even though
+// the rest of the name is a human-readable label that can change over time.
+// Filtering client-side by `endsWith` also transparently matches pre-existing
+// items named with just the bare UUID (no label prefix), so this works
+// without migrating anything created before human-readable names existed.
+export async function findChildByNameSuffix(parentId: string, suffix: string): Promise<DriveFile | null> {
+  const headers = await authHeaders();
+  const escaped = suffix.replace(/'/g, "\\'");
+  const query = encodeURIComponent(`'${parentId}' in parents and name contains '${escaped}' and trashed = false`);
+  const response = await fetch(
+    `${DRIVE_API_BASE}/files?q=${query}&fields=files(id,name,mimeType,parents,modifiedTime)`,
+    { headers }
+  );
+  if (!response.ok) await parseDriveError(response);
+  const data = await response.json();
+  const files: DriveFile[] = data.files ?? [];
+  return files.find((f) => f.name.endsWith(suffix)) ?? null;
+}
+
 export async function revokePermissionForEmail(fileId: string, email: string): Promise<void> {
   const headers = await authHeaders();
   const listResponse = await fetch(

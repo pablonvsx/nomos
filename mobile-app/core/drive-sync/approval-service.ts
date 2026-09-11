@@ -1,15 +1,18 @@
 import {
-  findChildByName,
   listChildren,
   readJsonFile,
   updateJsonFile,
   uploadJsonFile,
   moveFile,
+  findChildByNameSuffix,
+  renameFile,
 } from './drive-api-client';
 import { getManifest, resolveProjectDriveIds, ensureFolder } from './project-drive-service';
+import { extractPointUuidFromName } from './point-label';
 
 export interface PendingSubmission {
   driveFileId: string;
+  driveFileName: string;
   emailFolderId: string;
   submitterEmail: string;
   pointUuid: string;
@@ -34,9 +37,10 @@ export async function listPendingSubmissions(
       if (content.approval_status === 'pending') {
         result.push({
           driveFileId: file.id,
+          driveFileName: file.name,
           emailFolderId: emailFolder.id,
           submitterEmail: emailFolder.name,
-          pointUuid: file.name.replace('.json', ''),
+          pointUuid: extractPointUuidFromName(file.name),
           content,
         });
       }
@@ -71,11 +75,19 @@ export async function approveSubmission(
   const { approved_folder_id: approvedFolderId } = await resolveProjectDriveIds(projectDriveFolderId, manifest);
   const updatedContent = { ...submission.content, approval_status: 'approved' };
 
-  const existingApproved = await findChildByName(approvedFolderId, `${submission.pointUuid}.json`);
+  // Reuses the submission's own (already human-readable) name for the
+  // approved/ copy instead of rebuilding it - approval-service has no
+  // point_number/collector_code of its own to construct a label with, and
+  // doesn't need to: the name submitPointToProject gave it is already
+  // current as of the moment it was submitted.
+  const existingApproved = await findChildByNameSuffix(approvedFolderId, `${submission.pointUuid}.json`);
   if (existingApproved) {
+    if (existingApproved.name !== submission.driveFileName) {
+      await renameFile(existingApproved.id, submission.driveFileName);
+    }
     await updateJsonFile(existingApproved.id, updatedContent);
   } else {
-    await uploadJsonFile(`${submission.pointUuid}.json`, approvedFolderId, updatedContent);
+    await uploadJsonFile(submission.driveFileName, approvedFolderId, updatedContent);
   }
 
   await updateJsonFile(submission.driveFileId, updatedContent);
