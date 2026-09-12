@@ -199,12 +199,11 @@ export async function updateProject(
 export async function setProjectCollaborative(
   projectId: number,
   driveFolderId: string,
-  autoApproveDefault: boolean,
 ): Promise<boolean> {
   try {
     await db.runAsync(
-      `UPDATE projects SET is_collaborative = 1, drive_folder_id = ?, auto_approve_default = ?, last_updated = ? WHERE id = ?`,
-      [driveFolderId, autoApproveDefault ? 1 : 0, new Date().toISOString(), projectId],
+      `UPDATE projects SET is_collaborative = 1, drive_folder_id = ?, last_updated = ? WHERE id = ?`,
+      [driveFolderId, new Date().toISOString(), projectId],
     );
     return true;
   } catch (error) {

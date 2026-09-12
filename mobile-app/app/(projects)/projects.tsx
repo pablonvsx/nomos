@@ -171,7 +171,7 @@ export default function ProjectsScreen() {
     if (!googleAccount) return;
     setDownloadingFolderId(option.driveFolderId);
     try {
-      const { projectId } = await joinAndCreateLocalProject(option.driveFolderId, googleAccount.email);
+      const { projectId } = await joinAndCreateLocalProject(option.driveFolderId);
       const syncResult = await syncProjectFromDrive(projectId, { includeMedia: false }, registry);
       await loadData();
       await refreshDriveAvailableProjects();

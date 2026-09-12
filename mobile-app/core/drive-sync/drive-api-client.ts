@@ -63,20 +63,6 @@ export async function listChildren(parentId: string): Promise<DriveFile[]> {
   return data.files ?? [];
 }
 
-export async function listSharedFolders(): Promise<DriveFile[]> {
-  const headers = await authHeaders();
-  const query = encodeURIComponent(
-    "sharedWithMe = true and mimeType = 'application/vnd.google-apps.folder' and trashed = false and name contains 'Nomos_'"
-  );
-  const response = await fetch(
-    `${DRIVE_API_BASE}/files?q=${query}&fields=files(id,name,mimeType,parents,modifiedTime)&pageSize=100`,
-    { headers }
-  );
-  if (!response.ok) await parseDriveError(response);
-  const data = await response.json();
-  return data.files ?? [];
-}
-
 export async function uploadJsonFile(name: string, parentId: string, content: unknown): Promise<DriveFile> {
   const headers = await authHeaders();
   const metadata = { name, parents: [parentId], mimeType: 'application/json' };
@@ -164,50 +150,3 @@ export async function readJsonFile<T = unknown>(fileId: string): Promise<T> {
   return response.json();
 }
 
-export async function shareWithEmail(
-  fileId: string,
-  email: string,
-  role: 'writer' | 'reader' = 'writer'
-): Promise<void> {
-  const headers = await authHeaders();
-  const response = await fetch(`${DRIVE_API_BASE}/files/${fileId}/permissions`, {
-    method: 'POST',
-    headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type: 'user', role, emailAddress: email }),
-  });
-  if (!response.ok) await parseDriveError(response);
-}
-
-export async function moveFile(
-  fileId: string,
-  newParentId: string,
-  oldParentId: string
-): Promise<void> {
-  const headers = await authHeaders();
-  const response = await fetch(
-    `${DRIVE_API_BASE}/files/${fileId}?addParents=${newParentId}&removeParents=${oldParentId}`,
-    { method: 'PATCH', headers }
-  );
-  if (!response.ok) await parseDriveError(response);
-}
-
-export async function revokePermissionForEmail(fileId: string, email: string): Promise<void> {
-  const headers = await authHeaders();
-  const listResponse = await fetch(
-    `${DRIVE_API_BASE}/files/${fileId}/permissions?fields=permissions(id,type,emailAddress)`,
-    { headers }
-  );
-  if (!listResponse.ok) await parseDriveError(listResponse);
-  const { permissions } = await listResponse.json();
-  const target = permissions?.find(
-    (p: { type: string; emailAddress?: string }) =>
-      p.type === 'user' && p.emailAddress?.toLowerCase() === email.toLowerCase()
-  );
-  if (!target) return; // já não tem permissão, nada a fazer
-
-  const deleteResponse = await fetch(
-    `${DRIVE_API_BASE}/files/${fileId}/permissions/${target.id}`,
-    { method: 'DELETE', headers }
-  );
-  if (!deleteResponse.ok) await parseDriveError(deleteResponse);
-}

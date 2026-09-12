@@ -5,14 +5,10 @@ import {
   uploadJsonFile,
   updateJsonFile,
   readJsonFile,
-  listSharedFolders,
-  shareWithEmail,
-  revokePermissionForEmail,
   type DriveFile,
 } from './drive-api-client';
 import { generateUuid } from '@/utils/uuid';
 import { createProject, setProjectCollaborative } from '@/db/queries/projects';
-import { upsertProjectMember } from '@/db/queries/project-members';
 import {
   getCustomProtocolById,
   getCustomProtocolByUuid,
@@ -21,35 +17,11 @@ import {
 } from '@/db/queries/custom-protocols';
 import type { CustomProtocolSchema } from '@/types/database';
 
-export interface ProjectMemberEntry {
-  email: string;
-  role: 'admin' | 'collaborator';
-  auto_approve: 'herda_projeto' | 'true' | 'false';
-  collector_code: string;
-}
-
-export function deriveDefaultCollectorCode(email: string, existingCodes: string[]): string {
-  const localPart = email.split('@')[0];
-  const segments = localPart.split(/[._-]/).filter(Boolean);
-  let base =
-    segments.length >= 2
-      ? (segments[0][0] + segments[1][0]).toUpperCase()
-      : localPart.slice(0, 2).toUpperCase();
-
-  if (!existingCodes.includes(base)) return base;
-
-  let suffix = 2;
-  while (existingCodes.includes(`${base}${suffix}`)) suffix++;
-  return `${base}${suffix}`;
-}
-
 export interface ProjectManifest {
   project_uuid: string;
   project_name: string;
   protocol_id: string;
   protocol_source: 'official' | 'custom';
-  auto_approve_default: boolean;
-  members: ProjectMemberEntry[];
   drive_ids?: {
     submissions_folder_id: string;
     approved_folder_id: string;
@@ -88,8 +60,6 @@ export interface CreateCollaborativeProjectParams {
   projectName: string;
   protocolId: string;
   protocolSource: 'official' | 'custom';
-  creatorEmail: string;
-  autoApproveDefault: boolean;
 }
 
 export interface CreateCollaborativeProjectResult {
@@ -142,13 +112,6 @@ export async function createCollaborativeProjectStructure(
     project_name: params.projectName,
     protocol_id: params.protocolId,
     protocol_source: params.protocolSource,
-    auto_approve_default: params.autoApproveDefault,
-    members: [{
-      email: params.creatorEmail,
-      role: 'admin',
-      auto_approve: 'herda_projeto',
-      collector_code: deriveDefaultCollectorCode(params.creatorEmail, []),
-    }],
     drive_ids: {
       submissions_folder_id: submissionsFolder.id,
       approved_folder_id: approvedFolder.id,
@@ -184,11 +147,6 @@ export async function getManifest(driveFolderId: string): Promise<ProjectManifes
   return { ...raw, drive_ids: normalizeDriveIds(raw.drive_ids) };
 }
 
-export async function isProjectAdmin(driveFolderId: string, email: string): Promise<boolean> {
-  const manifest = await getManifest(driveFolderId);
-  return manifest.members.some((m) => m.email === email && m.role === 'admin');
-}
-
 export async function updateManifest(driveFolderId: string, manifest: ProjectManifest): Promise<void> {
   const manifestFile = await findChildByName(driveFolderId, 'manifest.json');
   if (!manifestFile) throw new Error('manifest.json não encontrado na pasta do projeto.');
@@ -217,36 +175,6 @@ export async function resolveProjectDriveIds(
   return updatedManifest.drive_ids!;
 }
 
-export async function inviteCollaboratorByEmail(
-  driveFolderId: string,
-  callerEmail: string,
-  emailToInvite: string
-): Promise<ProjectManifest> {
-  const manifest = await getManifest(driveFolderId);
-
-  const caller = manifest.members.find((m) => m.email === callerEmail);
-  if (!caller || caller.role !== 'admin') {
-    throw new Error('Apenas administradores podem convidar novos colaboradores.');
-  }
-
-  if (manifest.members.some((m) => m.email === emailToInvite)) {
-    throw new Error('Essa pessoa já é membro do projeto.');
-  }
-
-  await shareWithEmail(driveFolderId, emailToInvite, 'writer');
-
-  const collectorCode = deriveDefaultCollectorCode(emailToInvite, manifest.members.map((m) => m.collector_code));
-  manifest.members.push({
-    email: emailToInvite,
-    role: 'collaborator',
-    auto_approve: 'herda_projeto',
-    collector_code: collectorCode,
-  });
-  await updateManifest(driveFolderId, manifest);
-
-  return manifest;
-}
-
 export interface SharedProjectOption {
   driveFolderId: string;
   manifest: ProjectManifest;
@@ -260,20 +188,15 @@ export async function listOwnNomosProjectFolders(): Promise<DriveFile[]> {
   );
 }
 
+// Single-owner model: the only projects the app ever needs to discover on
+// Drive are the ones this account itself created (to restore/sync them on
+// another of its own devices) - there is no more "shared by someone else"
+// case to merge in.
 export async function listAllDriveProjects(): Promise<SharedProjectOption[]> {
-  const [ownFolders, sharedFolders] = await Promise.all([
-    listOwnNomosProjectFolders(),
-    listSharedFolders(),
-  ]);
-  const seen = new Set<string>();
-  const uniqueFolders = [...ownFolders, ...sharedFolders].filter((f) => {
-    if (seen.has(f.id)) return false;
-    seen.add(f.id);
-    return true;
-  });
+  const ownFolders = await listOwnNomosProjectFolders();
 
   const results: SharedProjectOption[] = [];
-  for (const folder of uniqueFolders) {
+  for (const folder of ownFolders) {
     try {
       const manifest = await getManifest(folder.id);
       results.push({ driveFolderId: folder.id, manifest });
@@ -284,101 +207,12 @@ export async function listAllDriveProjects(): Promise<SharedProjectOption[]> {
   return results;
 }
 
-export async function joinCollaborativeProject(
-  driveFolderId: string,
-  userEmail: string
-): Promise<ProjectManifest> {
-  const manifest = await getManifest(driveFolderId);
-  if (!manifest.members.some((m) => m.email === userEmail)) {
-    const collectorCode = deriveDefaultCollectorCode(userEmail, manifest.members.map((m) => m.collector_code));
-    manifest.members.push({ email: userEmail, role: 'collaborator', auto_approve: 'herda_projeto', collector_code: collectorCode });
-    await updateManifest(driveFolderId, manifest);
-  }
-  return manifest;
-}
-
-export async function updateOwnCollectorCode(
-  driveFolderId: string,
-  callerEmail: string,
-  email: string,
-  newCode: string
-): Promise<ProjectManifest> {
-  if (callerEmail !== email) {
-    throw new Error('Você só pode alterar o próprio código de coletor.');
-  }
-  const manifest = await getManifest(driveFolderId);
-  const normalized = newCode.trim().toUpperCase();
-  const taken = manifest.members.some(
-    (m) => m.email !== email && m.collector_code === normalized
-  );
-  if (taken) throw new Error('Esse código já está em uso por outro membro.');
-
-  const member = manifest.members.find((m) => m.email === email);
-  if (!member) throw new Error('Membro não encontrado no projeto.');
-  member.collector_code = normalized;
-
-  await updateManifest(driveFolderId, manifest);
-  return manifest;
-}
-
-export async function removeCollaborator(
-  driveFolderId: string,
-  emailToRemove: string,
-  callerEmail: string
-): Promise<ProjectManifest> {
-  if (emailToRemove === callerEmail) {
-    throw new Error('Você não pode remover a si mesmo do projeto.');
-  }
-
-  const manifest = await getManifest(driveFolderId);
-
-  const caller = manifest.members.find((m) => m.email === callerEmail);
-  if (!caller || caller.role !== 'admin') {
-    throw new Error('Apenas administradores podem remover colaboradores.');
-  }
-
-  const target = manifest.members.find((m) => m.email === emailToRemove);
-  if (!target) throw new Error('Membro não encontrado no projeto.');
-
-  const remainingAdmins = manifest.members.filter(
-    (m) => m.role === 'admin' && m.email !== emailToRemove
-  );
-  if (target.role === 'admin' && remainingAdmins.length === 0) {
-    throw new Error('Não é possível remover o único administrador do projeto.');
-  }
-
-  manifest.members = manifest.members.filter((m) => m.email !== emailToRemove);
-  await updateManifest(driveFolderId, manifest);
-  await revokePermissionForEmail(driveFolderId, emailToRemove);
-
-  return manifest;
-}
-
-export async function promoteToAdmin(
-  driveFolderId: string,
-  callerEmail: string,
-  targetEmail: string
-): Promise<ProjectManifest> {
-  const manifest = await getManifest(driveFolderId);
-
-  const caller = manifest.members.find((m) => m.email === callerEmail);
-  if (!caller || caller.role !== 'admin') {
-    throw new Error('Apenas administradores podem promover outros membros.');
-  }
-
-  const target = manifest.members.find((m) => m.email === targetEmail);
-  if (!target) throw new Error('Membro não encontrado no projeto.');
-  target.role = 'admin';
-
-  await updateManifest(driveFolderId, manifest);
-  return manifest;
-}
-
+// Restores a project this account already made collaborative, onto another
+// of its own devices.
 export async function joinAndCreateLocalProject(
   driveFolderId: string,
-  userEmail: string,
 ): Promise<{ projectId: number; manifest: ProjectManifest }> {
-  const manifest = await joinCollaborativeProject(driveFolderId, userEmail);
+  const manifest = await getManifest(driveFolderId);
 
   let localProtocolId = manifest.protocol_id;
   if (manifest.protocol_source === 'custom') {
@@ -394,9 +228,6 @@ export async function joinAndCreateLocalProject(
 
   const newId = await createProject(manifest.project_name, localProtocolId, "", manifest.protocol_source);
   if (!newId) throw new Error("Local project creation failed");
-  await setProjectCollaborative(newId, driveFolderId, manifest.auto_approve_default);
-  for (const member of manifest.members) {
-    await upsertProjectMember(newId, member.email, member.role, member.auto_approve, member.collector_code);
-  }
+  await setProjectCollaborative(newId, driveFolderId);
   return { projectId: newId, manifest };
 }

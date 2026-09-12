@@ -11,7 +11,6 @@ async function resetDatabase() {
   console.warn("⚠️ RESET_DATABASE_ON_INIT is enabled. Dropping all tables...");
 
   // Drop child tables first to avoid FK dependency issues.
-  await db.execAsync("DROP TABLE IF EXISTS project_members");
   await db.execAsync("DROP TABLE IF EXISTS project_species_common_names");
   await db.execAsync("DROP TABLE IF EXISTS project_species_catalog");
   await db.execAsync("DROP TABLE IF EXISTS species");
@@ -70,7 +69,6 @@ export async function initDatabase() {
         active_custom_vegetation_classification_id INTEGER,
         is_collaborative INTEGER NOT NULL DEFAULT 0,
         drive_folder_id TEXT,
-        auto_approve_default INTEGER NOT NULL DEFAULT 0,
         project_uuid TEXT
       );
     `);
@@ -165,7 +163,7 @@ export async function initDatabase() {
         point_size REAL,                      -- plot size (provisional)
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
-        created_by TEXT,                      -- email or device id; not populated yet
+        created_by TEXT,                      -- free-text collector code, set locally (no account attached)
         approval_status TEXT NOT NULL DEFAULT 'local'
           CHECK (approval_status IN ('local', 'pending', 'approved', 'rejected')),
         rejection_reason TEXT,
@@ -218,19 +216,6 @@ export async function initDatabase() {
     await db.execAsync(
       "CREATE INDEX IF NOT EXISTS idx_species_point_id ON species(point_id)",
     );
-
-    // Project Members Table (Drive-based collaboration, future use)
-    await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS project_members (
-        project_id INTEGER NOT NULL,
-        member_email TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'collaborator',
-        auto_approve TEXT NOT NULL DEFAULT 'herda_projeto',
-        collector_code TEXT,
-        PRIMARY KEY (project_id, member_email),
-        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
-      );
-    `);
 
     // 2. Paisageo Official Protocol
     const protocolId = "nomos-paisageo-v1";

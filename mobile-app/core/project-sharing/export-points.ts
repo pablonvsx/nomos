@@ -79,13 +79,28 @@ export async function exportPointsPackage(
   try {
     for (const envelope of envelopes) {
       const localPhotoUris = envelope.photos ?? [];
-      if (localPhotoUris.length > 0) {
+      const localAudioNotes = envelope.audioNotes ?? [];
+      if (localPhotoUris.length > 0 || localAudioNotes.length > 0) {
         const mediaDir = new Directory(stagingDir, "media", envelope.id);
         await mediaDir.create({ intermediates: true });
+
+        const copiedPhotoNames: string[] = [];
         for (const uri of localPhotoUris) {
-          await new File(uri).copy(new File(mediaDir, basename(uri)));
+          const sourceFile = new File(uri);
+          if (!sourceFile.exists) continue;
+          sourceFile.copy(new File(mediaDir, basename(uri)));
+          copiedPhotoNames.push(basename(uri));
         }
-        envelope.photos = localPhotoUris.map(basename);
+        envelope.photos = copiedPhotoNames;
+
+        const copiedAudioNotes: typeof localAudioNotes = [];
+        for (const note of localAudioNotes) {
+          const sourceFile = new File(note.uri);
+          if (!sourceFile.exists) continue;
+          sourceFile.copy(new File(mediaDir, basename(note.uri)));
+          copiedAudioNotes.push({ ...note, uri: basename(note.uri) });
+        }
+        envelope.audioNotes = copiedAudioNotes;
       }
     }
 

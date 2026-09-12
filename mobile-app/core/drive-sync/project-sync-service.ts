@@ -3,9 +3,12 @@ import { findChildByName, listChildren, readJsonFile, downloadBinaryFile } from 
 import { getManifest, resolveProjectDriveIds } from './project-drive-service';
 import { syncReferenceData } from './reference-data-sync-service';
 import { getProjectById } from '@/db/queries/projects';
-import { upsertProjectMember } from '@/db/queries/project-members';
-import { createPoint, updatePoint, getPointById, getPendingPointsByProject, updatePointApprovalStatus } from '@/db/queries/points';
+import { createPoint, updatePoint, getPointById } from '@/db/queries/points';
 import type { ProtocolRegistry } from '@/protocol-kernel/types';
+
+function basename(uri: string): string {
+  return uri.split('/').pop() ?? uri;
+}
 
 export interface SyncProjectOptions {
   includeMedia: boolean;
@@ -14,7 +17,6 @@ export interface SyncProjectOptions {
 export interface SyncProjectResult {
   imported: number;
   updated: number;
-  rejected: number;
   skipped: number;
   mediaDownloaded: number;
   speciesPushed: number;
@@ -45,60 +47,20 @@ export async function syncProjectFromDrive(
   const project = await getProjectById(projectId);
   if (!project || !project.drive_folder_id) {
     return {
-      imported: 0, updated: 0, rejected: 0, skipped: 0, mediaDownloaded: 0,
+      imported: 0, updated: 0, skipped: 0, mediaDownloaded: 0,
       speciesPushed: 0, speciesPulled: 0, vegetationClassesPushed: 0, vegetationClassesPulled: 0,
     };
   }
 
   const manifest = await getManifest(project.drive_folder_id);
-
-  // Keep the local project_members cache (used for the collector-code label
-  // and for collaborator-list screens) fresh on every sync, not just when
-  // this device itself performs a membership/role change.
-  for (const member of manifest.members) {
-    await upsertProjectMember(projectId, member.email, member.role, member.auto_approve, member.collector_code);
-  }
-
-  const { submissions_folder_id: submissionsFolderId, approved_folder_id: approvedFolderId } = await resolveProjectDriveIds(project.drive_folder_id, manifest);
+  const { approved_folder_id: approvedFolderId } = await resolveProjectDriveIds(project.drive_folder_id, manifest);
 
   const referenceDataResult = await syncReferenceData(projectId, project.drive_folder_id);
 
-  // Rejections only ever live in submissions/<email>/ - the approved/
-  // iteration below would never see them, so this stays a separate pass.
-  let rejected = 0;
-  const pendingLocalPoints = await getPendingPointsByProject(projectId);
-  for (const point of pendingLocalPoints) {
-    if (!point.created_by) continue;
-    try {
-      const emailFolder = await findChildByName(submissionsFolderId, point.created_by);
-      // approveSubmission/rejectSubmission move a decided file out of
-      // submissions/<email>/ into submissions/<email>/_reviewed/ right after
-      // deciding it (see approval-service.ts), so a rejection is normally
-      // found there, not directly under emailFolder.
-      let submissionFile = emailFolder
-        ? await findChildByName(emailFolder.id, `${point.id}.json`)
-        : null;
-      if (!submissionFile && emailFolder) {
-        const reviewedFolder = await findChildByName(emailFolder.id, '_reviewed');
-        submissionFile = reviewedFolder
-          ? await findChildByName(reviewedFolder.id, `${point.id}.json`)
-          : null;
-      }
-      if (submissionFile) {
-        const content = await readJsonFile<Record<string, unknown>>(submissionFile.id);
-        if (content.approval_status === 'rejected') {
-          await updatePointApprovalStatus(
-            point.id,
-            'rejected',
-            (content.rejection_reason as string | undefined) ?? null,
-          );
-          rejected++;
-        }
-      }
-    } catch (error) {
-      console.error(`Error checking rejection for point ${point.id}:`, error);
-    }
-  }
+  // Custom protocols are registered in the ProtocolRegistry under the
+  // generic "custom" id, not the numeric custom_protocols.id stored on the
+  // project row - see modules/custom/manifest.ts.
+  const registryProtocolId = project.protocol_source === "custom" ? "custom" : project.protocol_id;
 
   const files = await listChildren(approvedFolderId);
   let imported = 0;
@@ -117,45 +79,62 @@ export async function syncProjectFromDrive(
         const envelope = await readJsonFile<Record<string, unknown>>(file.id);
         const moduleData = serializeModules(
           (envelope.modules as Record<string, unknown>) ?? {},
-          project.protocol_id,
+          registryProtocolId,
           registry,
         );
 
         let photosJson = '[]';
         const photoNames = (envelope.photos as string[] | undefined) ?? [];
-        if (options.includeMedia && photoNames.length > 0) {
+        let pointMediaFolder: Awaited<ReturnType<typeof findChildByName>> = null;
+        if (options.includeMedia && (photoNames.length > 0 || (envelope.audioNotes as unknown[] | undefined)?.length)) {
           const mediaFolder = await findChildByName(project.drive_folder_id, 'media');
-          const pointMediaFolder = mediaFolder ? await findChildByName(mediaFolder.id, pointUuid) : null;
-          if (pointMediaFolder) {
-            const downloaded: { uri: string; timestamp: number }[] = [];
-            for (const [index, name] of photoNames.entries()) {
-              const driveFile = await findChildByName(pointMediaFolder.id, name);
-              if (!driveFile) continue;
-              const localFile = new File(Paths.document, `sync_${pointUuid}_${index}_${name}`);
-              await downloadBinaryFile(driveFile.id, localFile.uri);
-              downloaded.push({ uri: localFile.uri, timestamp: Date.now() });
-              mediaDownloaded++;
-            }
-            photosJson = JSON.stringify(downloaded);
+          pointMediaFolder = mediaFolder ? await findChildByName(mediaFolder.id, pointUuid) : null;
+        }
+        if (options.includeMedia && photoNames.length > 0 && pointMediaFolder) {
+          const downloaded: { uri: string; timestamp: number }[] = [];
+          for (const [index, name] of photoNames.entries()) {
+            const driveFile = await findChildByName(pointMediaFolder.id, name);
+            if (!driveFile) continue;
+            const localFile = new File(Paths.document, `sync_${pointUuid}_${index}_${name}`);
+            await downloadBinaryFile(driveFile.id, localFile.uri);
+            downloaded.push({ uri: localFile.uri, timestamp: Date.now() });
+            mediaDownloaded++;
           }
+          photosJson = JSON.stringify(downloaded);
+        }
+
+        let audioNotesJson: string | null = null;
+        const audioNotes = (envelope.audioNotes as { uri: string; duration: number; timestamp: number }[] | undefined) ?? [];
+        if (options.includeMedia && audioNotes.length > 0 && pointMediaFolder) {
+          const downloaded: { uri: string; duration: number; timestamp: number }[] = [];
+          for (const [index, note] of audioNotes.entries()) {
+            const name = basename(note.uri);
+            const driveFile = await findChildByName(pointMediaFolder.id, name);
+            if (!driveFile) continue;
+            const localFile = new File(Paths.document, `sync_audio_${pointUuid}_${index}_${name}`);
+            await downloadBinaryFile(driveFile.id, localFile.uri);
+            downloaded.push({ uri: localFile.uri, duration: note.duration, timestamp: note.timestamp });
+            mediaDownloaded++;
+          }
+          audioNotesJson = JSON.stringify(downloaded);
         }
 
         const newId = await createPoint({
           id: pointUuid,
           project_id: projectId,
-          protocol_id: project.protocol_id,
+          protocol_id: registryProtocolId,
           lat: envelope.lat as number,
           lon: envelope.lon as number,
           altitude: (envelope.altitude as number | undefined) ?? null,
           generated_name: (envelope.generatedName as string | undefined) ?? null,
           photos: photosJson,
-          audio_notes: null,
+          audio_notes: audioNotesJson,
           additional_notes: JSON.stringify((envelope.additionalNotes as string[] | undefined) ?? []),
           point_size: (envelope.pointSize as number | undefined) ?? null,
           schema_version: "1.0.0",
           modules: moduleData,
           approval_status: 'approved',
-          created_by: (envelope.submitted_by as string | undefined) ?? null,
+          created_by: (envelope.collector_code as string | undefined) ?? null,
           drive_synced_at: file.modifiedTime ?? null,
         });
 
@@ -178,7 +157,7 @@ export async function syncProjectFromDrive(
       const envelope = await readJsonFile<Record<string, unknown>>(file.id);
       const moduleData = serializeModules(
         (envelope.modules as Record<string, unknown>) ?? {},
-        project.protocol_id,
+        registryProtocolId,
         registry,
       );
 
@@ -202,7 +181,7 @@ export async function syncProjectFromDrive(
   }
 
   return {
-    imported, updated, rejected, skipped, mediaDownloaded,
+    imported, updated, skipped, mediaDownloaded,
     speciesPushed: referenceDataResult.speciesPushed,
     speciesPulled: referenceDataResult.speciesPulled,
     vegetationClassesPushed: referenceDataResult.vegetationClassesPushed,

@@ -40,6 +40,10 @@ function isValidPointsPackage(value: unknown): value is PointsPackage {
   );
 }
 
+function basename(uri: string): string {
+  return uri.split("/").pop() ?? uri;
+}
+
 function pointLabel(envelope: PointEnvelope): string {
   return envelope.generatedName || `Ponto ${envelope.pointNumber ?? "?"}`;
 }
@@ -63,7 +67,11 @@ export async function importPointsPackage(
 
   try {
     const zipUri = picked.assets[0].uri;
-    await unzip(zipUri.replace("file://", ""), extractDir.uri.replace("file://", ""));
+    try {
+      await unzip(zipUri.replace("file://", ""), extractDir.uri.replace("file://", ""));
+    } catch {
+      throw new Error("Este arquivo não é um pacote de pontos válido do Nomos.");
+    }
 
     const pointsJsonFile = new File(extractDir, "points.json");
     if (!pointsJsonFile.exists) {
@@ -129,7 +137,10 @@ export async function importPointsPackage(
       }
 
       try {
-        const moduleData = serializeModules(envelope.modules ?? {}, project.protocol_id, registry);
+        const pointProtocolId =
+          envelope.protocolId ??
+          (project.protocol_source === "custom" ? "custom" : project.protocol_id);
+        const moduleData = serializeModules(envelope.modules ?? {}, pointProtocolId, registry);
 
         let photosJson: string | null = null;
         const photoNames = envelope.photos ?? [];
@@ -146,15 +157,32 @@ export async function importPointsPackage(
           photosJson = JSON.stringify(materialized);
         }
 
+        let audioNotesJson: string | null = null;
+        const audioNotes = envelope.audioNotes ?? [];
+        if (audioNotes.length > 0) {
+          const pointMediaDir = new Directory(mediaRootDir, envelope.id);
+          const materialized: { uri: string; duration: number; timestamp: number }[] = [];
+          audioNotes.forEach((note, index) => {
+            const name = basename(note.uri);
+            const sourceFile = new File(pointMediaDir, name);
+            if (!sourceFile.exists) return;
+            const destFile = new File(Paths.document, `import_audio_${envelope.id}_${index}_${name}`);
+            sourceFile.copy(destFile);
+            materialized.push({ uri: destFile.uri, duration: note.duration, timestamp: note.timestamp });
+          });
+          audioNotesJson = JSON.stringify(materialized);
+        }
+
         const newId = await createPoint({
           id: envelope.id,
           project_id: targetProjectId,
-          protocol_id: project.protocol_id,
+          protocol_id: pointProtocolId,
           lat: envelope.lat,
           lon: envelope.lon,
           altitude: envelope.altitude ?? null,
           generated_name: envelope.generatedName ?? null,
           photos: photosJson,
+          audio_notes: audioNotesJson,
           additional_notes: JSON.stringify(envelope.additionalNotes ?? []),
           point_size: envelope.pointSize ?? null,
           schema_version: "1.0.0",

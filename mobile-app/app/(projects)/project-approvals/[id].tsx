@@ -140,7 +140,7 @@ export default function ProjectApprovalsScreen() {
           </Text>
           {item.created_by && (
             <Text variant="bodySmall" style={{ color: paperTheme.colors.secondary }}>
-              {t("projectApprovals.submittedBy", { email: item.created_by })}
+              {t("projectApprovals.submittedBy", { collectorCode: item.created_by })}
             </Text>
           )}
         </Card.Content>

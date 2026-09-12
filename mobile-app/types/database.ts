@@ -31,17 +31,7 @@ export interface Project {
   active_custom_vegetation_classification_id?: number; // ID of the active custom vegetation classification, if type is 'custom'
   is_collaborative: 0 | 1; // Flag indicating whether the project is shared via Google Drive (0 = no, 1 = yes)
   drive_folder_id?: string | null; // Google Drive folder id backing the project, when collaborative
-  auto_approve_default: 0 | 1; // Default auto-approve behavior for new members (0 = no, 1 = yes)
   project_uuid?: string | null; // Stable cross-device id, generated on first export/share
-}
-
-// A member of a collaborative project (Drive-based collaboration, future use)
-export interface ProjectMember {
-  project_id: number;
-  member_email: string;
-  role: string; // 'admin' | 'collaborator'
-  auto_approve: string; // 'herda_projeto' | 'true' | 'false'
-  collector_code: string | null;
 }
 
 // Ponto de levantamento (schema-driven, Fase 5+)
@@ -62,7 +52,7 @@ export interface Point {
   point_size?: number | null;   // plot size (provisional)
   created_at: string;
   updated_at: string;
-  created_by?: string | null; // Email of the collaborator who submitted the point, or null if never submitted
+  created_by?: string | null; // Free-text collector code (set locally, no account attached), or null if never set
   approval_status?: "local" | "pending" | "approved" | "rejected";
   rejection_reason?: string | null;
   drive_synced_at?: string | null;

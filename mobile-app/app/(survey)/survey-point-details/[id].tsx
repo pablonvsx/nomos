@@ -35,7 +35,6 @@ import { useAlertDialog } from "@/hooks/use-dialog";
 import { useBottomContentPadding } from "@/hooks/use-bottom-content-padding";
 import { useI18n } from "@/contexts/i18n-context";
 import { useMapData } from "@/contexts/map-data-context";
-import { useGoogleAccount } from "@/hooks/use-google-account";
 import {
   resolveManifestId,
   useProtocolRegistry,
@@ -47,7 +46,6 @@ import { getPoint, deletePoint } from "@/db/queries/points";
 import { getProjectById } from "@/db/queries/projects";
 import { submitPointToProject } from "@/core/drive-sync/point-submission-service";
 import { exportPointsPackage } from "@/core/project-sharing/export-points";
-import { isProjectAdmin } from "@/core/drive-sync/project-drive-service";
 import { getCustomProtocolById } from "@/db/queries/custom-protocols";
 import { getSpeciesByPoint } from "@/db/queries/species";
 import { getPointDisplayLabel } from "@/core/drive-sync/point-label";
@@ -231,13 +229,10 @@ export default function UnifiedSurveyPointViewScreen() {
   const registry = useProtocolRegistry();
   const readOnlyRendererRegistry = useReadOnlyRendererRegistry();
   const bottomPadding = useBottomContentPadding(36); // extra clearance for the floating FAB.Group below the scroll
-  const { account: googleAccount } = useGoogleAccount();
-
   const [point, setPoint] = useState<Point | null>(null);
   const [pointModules, setPointModules] = useState<PointModule[]>([]);
   const [project, setProject] = useState<Project | null>(null);
   const [customProtocol, setCustomProtocol] = useState<CustomProtocol | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fabOpen, setFabOpen] = useState(false);
@@ -366,22 +361,6 @@ export default function UnifiedSurveyPointViewScreen() {
       }
       setProject(proj);
 
-      if (proj.is_collaborative) {
-        if (proj.drive_folder_id && googleAccount) {
-          try {
-            const admin = await isProjectAdmin(proj.drive_folder_id, googleAccount.email);
-            setIsAdmin(admin);
-          } catch (adminError) {
-            console.error("Error checking admin role:", adminError);
-            setIsAdmin(false);
-          }
-        } else {
-          setIsAdmin(false);
-        }
-      } else {
-        setIsAdmin(false);
-      }
-
       if (resolveManifestId(proj) === "custom") {
         try {
           const prot = await getCustomProtocolById(Number(proj.protocol_id));
@@ -396,7 +375,7 @@ export default function UnifiedSurveyPointViewScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [id, projectId, alert, router, t, googleAccount]);
+  }, [id, projectId, alert, router, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -441,11 +420,9 @@ export default function UnifiedSurveyPointViewScreen() {
       await loadData();
       alert(
         t("common.success"),
-        result.status === "approved"
-          ? t("surveyView.submitApprovedMessage")
-          : result.status === "updated"
-            ? t("surveyView.submitUpdatedMessage")
-            : t("surveyView.submitPendingMessage"),
+        result.status === "updated"
+          ? t("surveyView.submitUpdatedMessage")
+          : t("surveyView.submitApprovedMessage"),
       );
     } catch (error) {
       console.error("Error submitting point:", error);
@@ -662,14 +639,9 @@ export default function UnifiedSurveyPointViewScreen() {
     );
   }
 
-  // Editar/reenviar/excluir um ponto de projeto colaborativo é restrito a quem
-  // o criou (ou pontos ainda sem autor gravado) ou a um admin do projeto -
-  // ver seção 4 de COLABORACAO_REFERENCIA.md.
-  const canModify =
-    !project.is_collaborative ||
-    point.created_by === null ||
-    point.created_by === googleAccount?.email ||
-    isAdmin;
+  // Single-owner model: whoever has this project locally is its owner, so
+  // there is no other party who could hold a conflicting edit permission.
+  const canModify = true;
 
   const pointLabel = isOfficial ? t("surveyView.point") : t("surveyView.parcela");
   const pointDisplayLabel = getPointDisplayLabel({
