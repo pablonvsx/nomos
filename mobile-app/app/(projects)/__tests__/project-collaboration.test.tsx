@@ -60,11 +60,11 @@ jest.mock("@/db/queries/points", () => ({
 jest.mock("@/core/drive-sync/project-drive-service", () => ({
   createCollaborativeProjectStructure: jest.fn(),
 }));
-jest.mock("@/core/drive-sync/project-sync-service", () => ({
-  syncProjectFromDrive: jest.fn(),
-}));
 jest.mock("@/core/drive-sync/point-submission-service", () => ({
   submitPointToProject: jest.fn(),
+}));
+jest.mock("@/core/drive-sync/backup-service", () => ({
+  backupAllPendingPoints: jest.fn(),
 }));
 jest.mock("@/core/drive-sync/point-label", () => ({
   getPointDisplayLabel: jest.fn(() => ""),

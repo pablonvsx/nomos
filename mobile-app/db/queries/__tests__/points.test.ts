@@ -18,7 +18,11 @@ jest.mock("@/utils/uuid", () => ({
   generateUuid: jest.fn(() => "uuid-mock"),
 }));
 
-import { getAllPointIdsForProject, getRejectedPointsByProject } from "../points";
+import {
+  getAllPointIdsForProject,
+  getRejectedPointsByProject,
+  getApprovedUnsyncedPointsByProject,
+} from "../points";
 import type { Point } from "@/types/database";
 
 describe("getAllPointIdsForProject", () => {
@@ -71,6 +75,36 @@ describe("getRejectedPointsByProject", () => {
     mockGetAllAsync.mockRejectedValue(new Error("db error"));
 
     const points = await getRejectedPointsByProject(1);
+
+    expect(points).toEqual([]);
+  });
+});
+
+// Backs "Fazer backup" (COLLAB_MODEL_V2_REFERENCE.md section 8) - only
+// approved points that haven't been backed up yet (drive_synced_at is only
+// ever set by the explicit backup action, never automatically).
+describe("getApprovedUnsyncedPointsByProject", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("filters by project_id, approval_status = 'approved' and drive_synced_at IS NULL", async () => {
+    const point = { id: "point-1", project_id: 1, approval_status: "approved", drive_synced_at: null } as Point;
+    mockGetAllAsync.mockResolvedValue([point]);
+
+    const points = await getApprovedUnsyncedPointsByProject(1);
+
+    expect(points).toEqual([point]);
+    const [sql, params] = mockGetAllAsync.mock.calls[0];
+    expect(sql).toContain("approval_status = 'approved'");
+    expect(sql).toContain("drive_synced_at IS NULL");
+    expect(params).toEqual([1]);
+  });
+
+  it("returns an empty array if the query fails", async () => {
+    mockGetAllAsync.mockRejectedValue(new Error("db error"));
+
+    const points = await getApprovedUnsyncedPointsByProject(1);
 
     expect(points).toEqual([]);
   });

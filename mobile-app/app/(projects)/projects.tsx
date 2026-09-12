@@ -24,10 +24,9 @@ import { BUTTON_RADIUS, SEGMENTED_BUTTONS_SHAPE_THEME } from "@/constants/shape"
 import { useGoogleAccount } from "@/hooks/use-google-account";
 import {
   listAllDriveProjects,
-  joinAndCreateLocalProject,
+  restoreOwnProjectFromDrive,
   type SharedProjectOption,
 } from "@/core/drive-sync/project-drive-service";
-import { syncProjectFromDrive } from "@/core/drive-sync/project-sync-service";
 import { importProjectConfigPackage } from "@/core/project-sharing/project-config-package";
 
 // Internal imports: Database queries and Types
@@ -171,13 +170,12 @@ export default function ProjectsScreen() {
     if (!googleAccount) return;
     setDownloadingFolderId(option.driveFolderId);
     try {
-      const { projectId } = await joinAndCreateLocalProject(option.driveFolderId);
-      const syncResult = await syncProjectFromDrive(projectId, { includeMedia: false }, registry);
+      const { imported } = await restoreOwnProjectFromDrive(option.driveFolderId, registry);
       await loadData();
       await refreshDriveAvailableProjects();
-      alert(t("common.success"), t("projectsList.downloadSummary", { imported: syncResult.imported }));
+      alert(t("common.success"), t("projectsList.downloadSummary", { imported }));
     } catch (error) {
-      console.error("Error downloading Drive project:", error);
+      console.error("Error restoring project from Drive:", error);
       alert(t("common.error"), t("projectsList.downloadError"));
     } finally {
       setDownloadingFolderId(null);
@@ -765,9 +763,6 @@ export default function ProjectsScreen() {
                         <Text variant="bodyMedium" style={{ fontWeight: "bold" }} numberOfLines={1}>
                           {option.manifest.project_name}
                         </Text>
-                        <Chip compact icon="account-group" style={{ alignSelf: "flex-start", marginTop: 4 }}>
-                          {t("projectsList.collaborative")}
-                        </Chip>
                       </View>
                       <Button
                         mode="contained"

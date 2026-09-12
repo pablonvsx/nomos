@@ -304,6 +304,23 @@ export async function getRejectedPointsByProject(projectId: number): Promise<Poi
   }
 }
 
+/**
+ * Approved points not yet backed up to Drive - what "Fazer backup"
+ * (COLLAB_MODEL_V2_REFERENCE.md section 8) uploads. drive_synced_at is only
+ * ever set by the explicit backup action, never automatically.
+ */
+export async function getApprovedUnsyncedPointsByProject(projectId: number): Promise<Point[]> {
+  try {
+    return await db.getAllAsync<Point>(
+      "SELECT * FROM points WHERE project_id = ? AND approval_status = 'approved' AND drive_synced_at IS NULL ORDER BY point_number ASC",
+      [projectId],
+    );
+  } catch (error) {
+    console.error("Error listing approved unsynced points:", error);
+    return [];
+  }
+}
+
 export async function updatePointApprovalStatus(
   pointId: string,
   status: "local" | "pending" | "approved" | "rejected",

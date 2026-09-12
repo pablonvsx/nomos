@@ -604,6 +604,13 @@ export default function UnifiedProjectDetailsScreen() {
                 {item.lat.toFixed(6)}, {item.lon.toFixed(6)}
               </Text>
             </View>
+            {project?.collaboration_role === "owner" && item.approval_status === "approved" && (
+              <Icon
+                source={item.drive_synced_at ? "cloud-check" : "cloud-outline"}
+                size={20}
+                color={item.drive_synced_at ? paperTheme.colors.primary : paperTheme.colors.secondary}
+              />
+            )}
             <IconButton icon="chevron-right" size={24} style={{ marginRight: -8 }} />
           </View>
         </Card.Content>

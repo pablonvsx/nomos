@@ -33,6 +33,7 @@ import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
 import type { AudioPlayer } from "expo-audio";
 import { useAlertDialog } from "@/hooks/use-dialog";
 import { useBottomContentPadding } from "@/hooks/use-bottom-content-padding";
+import { useGoogleAccount } from "@/hooks/use-google-account";
 import { useI18n } from "@/contexts/i18n-context";
 import { useMapData } from "@/contexts/map-data-context";
 import {
@@ -44,7 +45,7 @@ import {
 // DB imports
 import { getPoint, deletePoint } from "@/db/queries/points";
 import { getProjectById } from "@/db/queries/projects";
-import { submitPointToProject } from "@/core/drive-sync/point-submission-service";
+import { backupPoint } from "@/core/drive-sync/backup-service";
 import { exportPointsPackage } from "@/core/project-sharing/export-points";
 import { getCustomProtocolById } from "@/db/queries/custom-protocols";
 import { getSpeciesByPoint } from "@/db/queries/species";
@@ -226,6 +227,7 @@ export default function UnifiedSurveyPointViewScreen() {
   const { confirm, alert } = useAlertDialog();
   const { t, currentLanguage } = useI18n();
   const { clearMapData } = useMapData();
+  const { account: googleAccount, connect: connectGoogleAccount } = useGoogleAccount();
   const registry = useProtocolRegistry();
   const readOnlyRendererRegistry = useReadOnlyRendererRegistry();
   const bottomPadding = useBottomContentPadding(36); // extra clearance for the floating FAB.Group below the scroll
@@ -412,20 +414,35 @@ export default function UnifiedSurveyPointViewScreen() {
     );
   };
 
-  const handleSubmitPoint = async () => {
+  const handleBackupPoint = () => {
     if (!point || !project) return;
+
+    // Same tap-to-prompt pattern used elsewhere for owner-only actions
+    // (COLLAB_MODEL_V2_REFERENCE.md section 10): stays tappable without a
+    // Google account, prompts to connect instead of being hidden/disabled.
+    if (!googleAccount) {
+      confirm(
+        t("surveyView.backupThisPoint"),
+        t("projectCollaboration.connectAccountHint"),
+        () => connectGoogleAccount(),
+        () => {},
+        t("settings.googleAccountConnect"),
+      );
+      return;
+    }
+
+    runBackupPoint();
+  };
+
+  const runBackupPoint = async () => {
+    if (!point) return;
     setIsSubmitting(true);
     try {
-      const result = await submitPointToProject(point.id, project.id, registry);
+      await backupPoint(point.id, registry);
       await loadData();
-      alert(
-        t("common.success"),
-        result.status === "updated"
-          ? t("surveyView.submitUpdatedMessage")
-          : t("surveyView.submitApprovedMessage"),
-      );
+      alert(t("common.success"), t("surveyView.backupThisPointSuccess"));
     } catch (error) {
-      console.error("Error submitting point:", error);
+      console.error("Error backing up point:", error);
       alert(t("common.error"), t("surveyView.submitError"));
     } finally {
       setIsSubmitting(false);
@@ -983,14 +1000,12 @@ export default function UnifiedSurveyPointViewScreen() {
                 },
               ]
             : []),
-          ...(project.collaboration_role === "owner" && canModify
+          ...(project.collaboration_role === "owner" && canModify && point.approval_status === "approved"
             ? [
                 {
                   icon: "cloud-upload",
-                  label: point.approval_status === "approved"
-                    ? t("surveyView.resendCorrection")
-                    : t("surveyView.submitToProject"),
-                  onPress: isSubmitting ? () => {} : handleSubmitPoint,
+                  label: t("surveyView.backupThisPoint"),
+                  onPress: isSubmitting ? () => {} : handleBackupPoint,
                   color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
                 },
               ]

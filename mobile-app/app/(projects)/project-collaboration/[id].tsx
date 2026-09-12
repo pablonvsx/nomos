@@ -1,10 +1,12 @@
 // src/app/project-collaboration/[id].tsx
-// Hub for a project's Drive-backed backup/sync (single-owner model): making
-// it collaborative (creating the Drive structure), submitting/resubmitting
-// local points to the owner's own Drive, syncing approved points back down,
-// exporting the project config package (Fase 0) and importing points
-// received from a collector (Fase 2), plus a link to the pending-approvals
-// queue. See docs/12_COLLABORATION.md.
+// Hub for a project's Drive-backed backup (single-owner model): making it
+// collaborative (creating the Drive structure), submitting/resubmitting
+// local points to the owner's own Drive, backing up every approved point
+// that hasn't been synced yet (COLLAB_MODEL_V2_REFERENCE.md section 8 -
+// replaces the old pull-based "Sincronizar Projeto"), exporting the project
+// config package (Fase 0) and importing points received from a collector
+// (Fase 2), plus links to the pending-approvals and rejected-points queues.
+// See docs/12_COLLABORATION.md.
 import React, { useState, useCallback, useEffect } from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
 import {
@@ -26,8 +28,8 @@ import { useProtocolRegistry } from "@/contexts/protocol-registry-context";
 import { getProjectById, setProjectCollaborative } from "@/db/queries/projects";
 import { getPointsByProject } from "@/db/queries/points";
 import { createCollaborativeProjectStructure } from "@/core/drive-sync/project-drive-service";
-import { syncProjectFromDrive } from "@/core/drive-sync/project-sync-service";
 import { submitPointToProject } from "@/core/drive-sync/point-submission-service";
+import { backupAllPendingPoints } from "@/core/drive-sync/backup-service";
 import { getPointDisplayLabel } from "@/core/drive-sync/point-label";
 import { exportProjectConfigPackage } from "@/core/project-sharing/project-config-package";
 import { importPointsPackage, type PendingDuplicate } from "@/core/project-sharing/import-points";
@@ -60,8 +62,7 @@ export default function ProjectCollaborationScreen() {
   const [points, setPoints] = useState<Point[]>([]);
   const [isMakingCollaborative, setIsMakingCollaborative] = useState(false);
   const [submittingPointId, setSubmittingPointId] = useState<string | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncDialogVisible, setSyncDialogVisible] = useState(false);
+  const [isBackingUp, setIsBackingUp] = useState(false);
   const [duplicateResolution, setDuplicateResolution] = useState<DuplicateResolutionState | null>(null);
   const [resolvingDuplicateId, setResolvingDuplicateId] = useState<string | null>(null);
 
@@ -158,42 +159,45 @@ export default function ProjectCollaborationScreen() {
     }
   };
 
-  const handleConfirmSync = async (includeMedia: boolean) => {
-    setSyncDialogVisible(false);
+  const handleBackup = () => {
     if (!project) return;
-    setIsSyncing(true);
+
+    // Same tap-to-prompt pattern as "Tornar Projeto Colaborativo" (section
+    // 10): the button stays visible and tappable without a Google account,
+    // prompting to connect instead of being hidden/disabled.
+    if (!googleAccount) {
+      confirm(
+        t("projectCollaboration.backupButton"),
+        t("projectCollaboration.connectAccountHint"),
+        () => connectGoogleAccount(),
+        () => {},
+        t("settings.googleAccountConnect"),
+      );
+      return;
+    }
+
+    runBackup();
+  };
+
+  const runBackup = async () => {
+    if (!project) return;
+    setIsBackingUp(true);
     try {
-      const result = await syncProjectFromDrive(project.id, { includeMedia }, registry);
+      const result = await backupAllPendingPoints(project.id, registry);
       const refreshedPoints = await getPointsByProject(project.id);
       setPoints(refreshedPoints);
-      alert(
-        t("common.success"),
-        includeMedia
-          ? t("projectCollaboration.syncSummaryWithMedia", {
-              imported: result.imported,
-              updated: result.updated,
-              skipped: result.skipped,
-              media: result.mediaDownloaded,
-              speciesPushed: result.speciesPushed,
-              speciesPulled: result.speciesPulled,
-              vegetationClassesPushed: result.vegetationClassesPushed,
-              vegetationClassesPulled: result.vegetationClassesPulled,
-            })
-          : t("projectCollaboration.syncSummary", {
-              imported: result.imported,
-              updated: result.updated,
-              skipped: result.skipped,
-              speciesPushed: result.speciesPushed,
-              speciesPulled: result.speciesPulled,
-              vegetationClassesPushed: result.vegetationClassesPushed,
-              vegetationClassesPulled: result.vegetationClassesPulled,
-            }),
-      );
+      const summary = result.failed.length > 0
+        ? t("projectCollaboration.backupSummaryWithFailed", {
+            backedUp: result.backedUp,
+            failed: result.failed.map((f) => `${f.pointLabel}: ${f.reason}`).join("\n"),
+          })
+        : t("projectCollaboration.backupSummary", { backedUp: result.backedUp });
+      alert(t("projectCollaboration.backupButton"), summary);
     } catch (error) {
-      console.error("Error syncing project:", error);
-      alert(t("common.error"), t("projectCollaboration.syncError"));
+      console.error("Error backing up project points:", error);
+      alert(t("common.error"), t("projectCollaboration.backupError"));
     } finally {
-      setIsSyncing(false);
+      setIsBackingUp(false);
     }
   };
 
@@ -431,12 +435,12 @@ export default function ProjectCollaborationScreen() {
         </Card>
 
         <Text variant="titleMedium" style={[styles.sectionTitle, { color: paperTheme.colors.primary }]}>
-          {t("projectCollaboration.syncSectionTitle")}
+          {t("projectCollaboration.backupSectionTitle")}
         </Text>
         <Card style={styles.card}>
           <Card.Content>
-            <Button mode="contained" onPress={() => setSyncDialogVisible(true)}>
-              {t("projectCollaboration.syncButton")}
+            <Button mode="contained" loading={isBackingUp} disabled={isBackingUp} onPress={handleBackup}>
+              {t("projectCollaboration.backupButton")}
             </Button>
           </Card.Content>
         </Card>
@@ -454,23 +458,10 @@ export default function ProjectCollaborationScreen() {
       </ScrollView>
 
       <Portal>
-        <Dialog visible={syncDialogVisible} onDismiss={() => setSyncDialogVisible(false)}>
-          <Dialog.Title>{t("projectCollaboration.syncSectionTitle")}</Dialog.Title>
-          <Dialog.Content>
-            <Text>{t("projectCollaboration.syncChooseOption")}</Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => handleConfirmSync(false)}>{t("projectCollaboration.syncDataOnly")}</Button>
-            <Button onPress={() => handleConfirmSync(true)}>{t("projectCollaboration.syncDataAndMedia")}</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
-
-      <Portal>
-        <Dialog visible={isSyncing} dismissable={false}>
+        <Dialog visible={isBackingUp} dismissable={false}>
           <Dialog.Content style={{ alignItems: "center", paddingVertical: 24 }}>
             <ActivityIndicator size="large" />
-            <Text style={{ marginTop: 16 }}>{t("projectCollaboration.syncing")}</Text>
+            <Text style={{ marginTop: 16 }}>{t("projectCollaboration.backingUp")}</Text>
           </Dialog.Content>
         </Dialog>
       </Portal>
