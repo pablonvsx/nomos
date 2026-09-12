@@ -68,6 +68,31 @@ jest.mock("@/core/drive-sync/project-sync-service", () => ({
   serializeModules: jest.fn(() => ({})),
 }));
 
+// export-points.ts/import-points.ts now also import
+// core/project-sharing/module-media.ts (to rewrite media embedded in custom
+// protocol module fields, see export-import-module-media.test.ts), which
+// transitively pulls in modules/custom/manifest.ts -> modules/registry.ts ->
+// the Paisageo renderer bindings (pure UI, not relevant to this test) - stub
+// them out the same way modules/custom/__tests__/export.test.ts does.
+jest.mock("@/modules/paisageo/modules/geoecological-constraints/GeoecologicalConstraintsModuleRenderer", () => ({
+  GeoecologicalConstraintsModuleRenderer: () => null,
+}));
+jest.mock("@/modules/paisageo/modules/vegetation/VegetationModuleRenderer", () => ({
+  VegetationModuleRenderer: () => null,
+}));
+jest.mock("@/modules/paisageo/modules/impacts/ImpactsModuleRenderer", () => ({
+  ImpactsModuleRenderer: () => null,
+}));
+jest.mock("@/modules/paisageo/modules/geoecological-constraints/GeoecologicalConstraintsModuleReadOnlyRenderer", () => ({
+  GeoecologicalConstraintsModuleReadOnlyRenderer: () => null,
+}));
+jest.mock("@/modules/paisageo/modules/vegetation/VegetationModuleReadOnlyRenderer", () => ({
+  VegetationModuleReadOnlyRenderer: () => null,
+}));
+jest.mock("@/modules/paisageo/modules/impacts/ImpactsModuleReadOnlyRenderer", () => ({
+  ImpactsModuleReadOnlyRenderer: () => null,
+}));
+
 import { exportPointsPackage } from "../export-points";
 import { importPointsPackage } from "../import-points";
 import type { Point, Project } from "@/types/database";

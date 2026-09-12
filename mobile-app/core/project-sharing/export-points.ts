@@ -11,8 +11,10 @@ import { getPoint } from "@/db/queries/points";
 import { getProjectById } from "@/db/queries/projects";
 import { getCustomProtocolById, setCustomProtocolUuid } from "@/db/queries/custom-protocols";
 import { buildPointWithModules, buildPointEnvelope } from "@/db/mappers/point.mapper";
+import { parseJsonText } from "@/db/mappers/json-utils";
 import { getLocalCollectorCode } from "@/core/local-identity/collector-code";
 import { generateUuid } from "@/utils/uuid";
+import { resolveCustomModuleDescriptors, forEachModuleMediaField } from "@/core/project-sharing/module-media";
 import type { ProtocolRegistry, PointEnvelope } from "@/protocol-kernel/types";
 
 function basename(uri: string): string {
@@ -76,32 +78,51 @@ export async function exportPointsPackage(
   if (stagingDir.exists) await stagingDir.delete();
   await stagingDir.create();
 
+  const moduleDescriptors = await resolveCustomModuleDescriptors(project);
+
   try {
     for (const envelope of envelopes) {
       const localPhotoUris = envelope.photos ?? [];
       const localAudioNotes = envelope.audioNotes ?? [];
-      if (localPhotoUris.length > 0 || localAudioNotes.length > 0) {
-        const mediaDir = new Directory(stagingDir, "media", envelope.id);
-        await mediaDir.create({ intermediates: true });
+      const mediaDir = new Directory(stagingDir, "media", envelope.id);
+      await mediaDir.create({ intermediates: true });
 
-        const copiedPhotoNames: string[] = [];
-        for (const uri of localPhotoUris) {
+      const copiedPhotoNames: string[] = [];
+      for (const uri of localPhotoUris) {
+        const sourceFile = new File(uri);
+        if (!sourceFile.exists) continue;
+        sourceFile.copy(new File(mediaDir, basename(uri)));
+        copiedPhotoNames.push(basename(uri));
+      }
+      envelope.photos = copiedPhotoNames;
+
+      const copiedAudioNotes: typeof localAudioNotes = [];
+      for (const note of localAudioNotes) {
+        const sourceFile = new File(note.uri);
+        if (!sourceFile.exists) continue;
+        sourceFile.copy(new File(mediaDir, basename(note.uri)));
+        copiedAudioNotes.push({ ...note, uri: basename(note.uri) });
+      }
+      envelope.audioNotes = copiedAudioNotes;
+
+      forEachModuleMediaField(envelope.modules ?? {}, moduleDescriptors, (loc) => {
+        const items = parseJsonText<Array<Record<string, unknown>>>(loc.read() ?? "", [], Array.isArray);
+        if (items.length === 0) return;
+
+        const fieldMediaDir = new Directory(mediaDir, "module", loc.locatorKey);
+        fieldMediaDir.create({ intermediates: true });
+
+        const copiedItems: Record<string, unknown>[] = [];
+        for (const item of items) {
+          const uri = typeof item.uri === "string" ? item.uri : null;
+          if (!uri) continue;
           const sourceFile = new File(uri);
           if (!sourceFile.exists) continue;
-          sourceFile.copy(new File(mediaDir, basename(uri)));
-          copiedPhotoNames.push(basename(uri));
+          sourceFile.copy(new File(fieldMediaDir, basename(uri)));
+          copiedItems.push({ ...item, uri: basename(uri) });
         }
-        envelope.photos = copiedPhotoNames;
-
-        const copiedAudioNotes: typeof localAudioNotes = [];
-        for (const note of localAudioNotes) {
-          const sourceFile = new File(note.uri);
-          if (!sourceFile.exists) continue;
-          sourceFile.copy(new File(mediaDir, basename(note.uri)));
-          copiedAudioNotes.push({ ...note, uri: basename(note.uri) });
-        }
-        envelope.audioNotes = copiedAudioNotes;
-      }
+        loc.write(JSON.stringify(copiedItems));
+      });
     }
 
     const pkg = {

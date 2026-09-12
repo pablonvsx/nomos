@@ -9,7 +9,9 @@ import { unzip } from "react-native-zip-archive";
 import { getProjectById } from "@/db/queries/projects";
 import { getCustomProtocolById } from "@/db/queries/custom-protocols";
 import { createPoint, pointExists } from "@/db/queries/points";
+import { parseJsonText } from "@/db/mappers/json-utils";
 import { serializeModules } from "@/core/drive-sync/project-sync-service";
+import { resolveCustomModuleDescriptors, forEachModuleMediaField } from "@/core/project-sharing/module-media";
 import type { ProtocolRegistry, PointEnvelope } from "@/protocol-kernel/types";
 
 export interface ImportPointsResult {
@@ -130,6 +132,7 @@ export async function importPointsPackage(
     let imported = 0;
     const rejected: Array<{ pointLabel: string; reason: string }> = [];
     const mediaRootDir = new Directory(extractDir, "media");
+    const moduleDescriptors = await resolveCustomModuleDescriptors(project);
 
     for (const envelope of pkg.points) {
       if (await pointExists(envelope.id)) {
@@ -140,12 +143,11 @@ export async function importPointsPackage(
         const pointProtocolId =
           envelope.protocolId ??
           (project.protocol_source === "custom" ? "custom" : project.protocol_id);
-        const moduleData = serializeModules(envelope.modules ?? {}, pointProtocolId, registry);
+        const pointMediaDir = new Directory(mediaRootDir, envelope.id);
 
         let photosJson: string | null = null;
         const photoNames = envelope.photos ?? [];
         if (photoNames.length > 0) {
-          const pointMediaDir = new Directory(mediaRootDir, envelope.id);
           const materialized: { uri: string; timestamp: number }[] = [];
           photoNames.forEach((name, index) => {
             const sourceFile = new File(pointMediaDir, name);
@@ -160,7 +162,6 @@ export async function importPointsPackage(
         let audioNotesJson: string | null = null;
         const audioNotes = envelope.audioNotes ?? [];
         if (audioNotes.length > 0) {
-          const pointMediaDir = new Directory(mediaRootDir, envelope.id);
           const materialized: { uri: string; duration: number; timestamp: number }[] = [];
           audioNotes.forEach((note, index) => {
             const name = basename(note.uri);
@@ -172,6 +173,30 @@ export async function importPointsPackage(
           });
           audioNotesJson = JSON.stringify(materialized);
         }
+
+        forEachModuleMediaField(envelope.modules ?? {}, moduleDescriptors, (loc) => {
+          const items = parseJsonText<Array<Record<string, unknown>>>(loc.read() ?? "", [], Array.isArray);
+          if (items.length === 0) return;
+
+          const fieldMediaDir = new Directory(pointMediaDir, "module", loc.locatorKey);
+          const materialized: Record<string, unknown>[] = [];
+          items.forEach((item, index) => {
+            const uri = typeof item.uri === "string" ? item.uri : null;
+            if (!uri) return;
+            const name = basename(uri);
+            const sourceFile = new File(fieldMediaDir, name);
+            if (!sourceFile.exists) return;
+            const destFile = new File(
+              Paths.document,
+              `import_module_${envelope.id}_${loc.locatorKey}_${index}_${name}`,
+            );
+            sourceFile.copy(destFile);
+            materialized.push({ ...item, uri: destFile.uri });
+          });
+          loc.write(JSON.stringify(materialized));
+        });
+
+        const moduleData = serializeModules(envelope.modules ?? {}, pointProtocolId, registry);
 
         const newId = await createPoint({
           id: envelope.id,
