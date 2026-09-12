@@ -17,7 +17,16 @@ import {
   requestRecordingPermissionsAsync,
   RecordingPresets,
 } from "expo-audio";
-import type { AudioPlayer } from "expo-audio";
+import type { AudioPlayer, AudioStatus } from "expo-audio";
+
+// expo-audio@57's own AudioPlayer/SharedObject .d.ts chain doesn't resolve
+// addListener's type correctly (a pre-existing upstream typings gap, not an
+// API removal - the method is real and still fires at runtime); this local
+// alias is the narrow surface this file actually calls, cast at the two
+// call sites below instead of widening AudioPlayer itself.
+type ListenableAudioPlayer = AudioPlayer & {
+  addListener(event: "playbackStatusUpdate", listener: (status: AudioStatus) => void): { remove(): void };
+};
 import { useI18n } from "@/contexts/i18n-context";
 import { useAlertDialog } from "@/hooks/use-dialog";
 import { BUTTON_RADIUS } from "@/constants/shape";
@@ -160,7 +169,7 @@ export default function AudioNotesInput({ value, onChange }: AudioNotesInputProp
       try {
         await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
 
-        const player = createAudioPlayer({ uri: note.uri });
+        const player = createAudioPlayer({ uri: note.uri }) as ListenableAudioPlayer;
         player.addListener("playbackStatusUpdate", (status) => {
           if (status.didJustFinish) {
             player.remove();

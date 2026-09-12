@@ -118,7 +118,7 @@ describe("restoreOwnProjectFromDrive", () => {
       project_name: "Projeto Teste",
       protocol_id: "paisageo",
       protocol_source: "official",
-      drive_ids: { submissions_folder_id: "submissions-1", approved_folder_id: "approved-1" },
+      drive_ids: { approved_folder_id: "approved-1" },
     };
     mockManifestFile(manifest);
     mockGetProjectById.mockResolvedValue({
@@ -173,7 +173,7 @@ describe("restoreOwnProjectFromDrive", () => {
       project_name: "Projeto Fauna",
       protocol_id: "old-device-local-id",
       protocol_source: "custom",
-      drive_ids: { submissions_folder_id: "submissions-2", approved_folder_id: "approved-2" },
+      drive_ids: { approved_folder_id: "approved-2" },
     };
     const protocolPackage = {
       uuid: "protocol-uuid-1",
@@ -224,7 +224,7 @@ describe("restoreOwnProjectFromDrive", () => {
       project_name: "Projeto Vegetação",
       protocol_id: "paisageo",
       protocol_source: "official",
-      drive_ids: { submissions_folder_id: "submissions-3", approved_folder_id: "approved-3" },
+      drive_ids: { approved_folder_id: "approved-3" },
       active_vegetation_classification: { type: "custom", custom_classification_uuid: "veg-uuid-1" },
     };
 

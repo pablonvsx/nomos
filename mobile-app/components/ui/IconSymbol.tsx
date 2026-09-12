@@ -5,7 +5,11 @@ import { SymbolWeight, SymbolViewProps } from 'expo-symbols';
 import { ComponentProps } from 'react';
 import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
 
-type IconMapping = Record<SymbolViewProps['name'], ComponentProps<typeof MaterialIcons>['name']>;
+// expo-symbols@57's SymbolViewProps['name'] widened to accept a per-platform
+// object ({ ios, android, web }) alongside the plain SF Symbol string this
+// mapping's keys actually are - Extract keeps only the string branch so
+// Record's key constraint (string | number | symbol) is satisfied again.
+type IconMapping = Record<Extract<SymbolViewProps['name'], string>, ComponentProps<typeof MaterialIcons>['name']>;
 type IconSymbolName = keyof typeof MAPPING;
 
 /**

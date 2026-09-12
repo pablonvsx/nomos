@@ -28,9 +28,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [themeMode, setThemeModeState] = useState<ThemeMode>("auto");
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Determine actual color scheme based on mode
+  // Determine actual color scheme based on mode. react-native's
+  // ColorSchemeName can also be "unspecified" (Android) or null - neither
+  // maps to a dark theme, so both fall back to "light" same as before.
   const colorScheme: ColorScheme =
-    themeMode === "auto" ? (systemColorScheme ?? "light") : themeMode;
+    themeMode === "auto"
+      ? systemColorScheme === "dark"
+        ? "dark"
+        : "light"
+      : themeMode;
 
   const isDarkMode = colorScheme === "dark";
 

@@ -60,7 +60,7 @@ import { LocationPickerModal } from "@/components/survey/InsertLocationModal";
 import { APIKeyManager } from "@/core/species-catalog/api-key-manager";
 import { BUTTON_RADIUS, SEGMENTED_BUTTONS_SHAPE_THEME } from "@/constants/shape";
 import * as DocumentPicker from "expo-document-picker";
-import { File, Paths } from "expo-file-system/next";
+import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import {
   exportCatalogToJson,

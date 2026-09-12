@@ -84,6 +84,16 @@ const baseConfig = {
       },
     ],
     '@react-native-google-signin/google-signin',
+    // SDK 57: these now ship a config plugin that `expo install --fix` can no
+    // longer auto-register in a dynamic (JS) config file, so they must be
+    // listed explicitly here.
+    'expo-font',
+    'expo-image',
+    'expo-localization',
+    'expo-secure-store',
+    'expo-sharing',
+    'expo-status-bar',
+    'expo-web-browser',
   ],
   experiments: {
     typedRoutes: true,

@@ -30,7 +30,16 @@ import {
   useFocusEffect,
 } from "expo-router";
 import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
-import type { AudioPlayer } from "expo-audio";
+import type { AudioPlayer, AudioStatus } from "expo-audio";
+
+// expo-audio@57's own AudioPlayer/SharedObject .d.ts chain doesn't resolve
+// addListener's type correctly (a pre-existing upstream typings gap, not an
+// API removal - the method is real and still fires at runtime); this local
+// alias is the narrow surface this file actually calls, cast at the call
+// site below instead of widening AudioPlayer itself.
+type ListenableAudioPlayer = AudioPlayer & {
+  addListener(event: "playbackStatusUpdate", listener: (status: AudioStatus) => void): { remove(): void };
+};
 import { useAlertDialog } from "@/hooks/use-dialog";
 import { useBottomContentPadding } from "@/hooks/use-bottom-content-padding";
 import { useGoogleAccount } from "@/hooks/use-google-account";
@@ -140,7 +149,7 @@ function AudioNoteList({ audioNotes }: { audioNotes: AudioNote[] }) {
     setDuration(0);
     try {
       await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
-      const player = createAudioPlayer({ uri });
+      const player = createAudioPlayer({ uri }) as ListenableAudioPlayer;
       player.addListener("playbackStatusUpdate", (status) => {
         if (status.didJustFinish) {
           player.remove();

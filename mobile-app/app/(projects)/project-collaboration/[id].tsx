@@ -1,11 +1,15 @@
 // src/app/project-collaboration/[id].tsx
-// Hub for a project's Drive-backed backup (single-owner model): making it
-// collaborative (creating the Drive structure), submitting/resubmitting
-// local points to the owner's own Drive, backing up every approved point
-// that hasn't been synced yet (COLLAB_MODEL_V2_REFERENCE.md section 8 -
-// replaces the old pull-based "Sincronizar Projeto"), exporting the project
-// config package (Fase 0) and importing points received from a collector
-// (Fase 2), plus links to the pending-approvals and rejected-points queues.
+// Hub for a project's Drive-backed backup (single-owner model), reframed as
+// two clearly separate areas so the screen doesn't imply a team is required:
+// - "Backup": works standalone, zero collaborators needed - submitting/
+//   resubmitting the owner's own local points straight to Drive, backing up
+//   every approved point that hasn't been synced yet (COLLAB_MODEL_V2_REFERENCE.md
+//   section 8 - replaces the old pull-based "Sincronizar Projeto"), and a
+//   link to restoring the owner's own projects from Drive (that flow itself
+//   lives in Meu Nomos/projects.tsx, this is just a shortcut there).
+// - "Colaboração em Equipe": explicitly optional - exporting the project
+//   config package (Fase 0), importing points received from a collector
+//   (Fase 2), and links to the pending-approvals and rejected-points queues.
 // See docs/12_COLLABORATION.md.
 import React, { useState, useCallback, useEffect } from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
@@ -99,9 +103,10 @@ export default function ProjectCollaborationScreen() {
     // Google account required only for this owner-specific action (section
     // 10) - never gate the screen itself. If not connected, the button stays
     // tappable and prompts to connect instead of silently doing nothing or
-    // being disabled. "Fazer backup" (section 8) and "Restaurar meus
-    // projetos do Drive" (section 9), once implemented (Fase F), must follow
-    // this same tap-to-prompt pattern rather than a whole-screen gate.
+    // being disabled. "Fazer backup" (section 8) below follows this same
+    // tap-to-prompt pattern; "Restaurar meus projetos do Drive" (section 9)
+    // is just a link to Meu Nomos here, where that same pattern already
+    // applies on its own trigger.
     if (!googleAccount) {
       confirm(
         t("projectView.makeCollaborative"),
@@ -359,24 +364,34 @@ export default function ProjectCollaborationScreen() {
     (p) => p.approval_status !== "approved" && p.created_by === null,
   );
 
+  // Mirrors the same approved + drive_synced_at IS NULL criterion
+  // getApprovedUnsyncedPointsByProject (db/queries/points.ts:312-322) uses -
+  // the criterion backupAllPendingPoints actually processes - so this count
+  // can never disagree with what "Fazer Backup" below does.
+  const approvedPoints = points.filter((p) => p.approval_status === "approved");
+  const backedUpCount = approvedPoints.filter((p) => !!p.drive_synced_at).length;
+
   return (
     <View style={[styles.container, { backgroundColor: paperTheme.colors.background }]}>
       <Stack.Screen options={{ title: t("projectCollaboration.title"), headerBackTitle: "" }} />
 
       <ScrollView contentContainerStyle={styles.content}>
+        {/* Grupo 1: Backup - funciona sozinho, sem exigir nenhum colaborador. */}
+        <Text variant="titleLarge" style={[styles.groupTitle, { color: paperTheme.colors.primary }]}>
+          {t("projectCollaboration.backupSectionTitle")}
+        </Text>
         <Card style={styles.card}>
-          <List.Item
-            title={t("projectCollaboration.pendingApprovalsSectionTitle")}
-            left={(props) => <List.Icon {...props} icon="clipboard-check-outline" />}
-            right={(props) => <List.Icon {...props} icon="chevron-right" />}
-            onPress={() => router.push(`/project-approvals/${project.id}` as any)}
-          />
-          <List.Item
-            title={t("projectCollaboration.rejectedPointsSectionTitle")}
-            left={(props) => <List.Icon {...props} icon="close-circle-outline" />}
-            right={(props) => <List.Icon {...props} icon="chevron-right" />}
-            onPress={() => router.push(`/project-rejected/${project.id}` as any)}
-          />
+          <Card.Content>
+            <Text variant="bodyMedium">{t("projectCollaboration.backupIntro")}</Text>
+            <Text variant="bodyMedium" style={{ marginTop: 12, fontWeight: "bold" }}>
+              {approvedPoints.length === 0
+                ? t("projectCollaboration.backupStatusEmpty")
+                : t("projectCollaboration.backupStatus", {
+                    backedUp: backedUpCount,
+                    approved: approvedPoints.length,
+                  })}
+            </Text>
+          </Card.Content>
         </Card>
 
         <Text variant="titleMedium" style={[styles.sectionTitle, { color: paperTheme.colors.primary }]}>
@@ -423,6 +438,47 @@ export default function ProjectCollaborationScreen() {
           })
         )}
 
+        <Card style={styles.card}>
+          <Card.Content>
+            <Button mode="contained" loading={isBackingUp} disabled={isBackingUp} onPress={handleBackup}>
+              {t("projectCollaboration.backupButton")}
+            </Button>
+          </Card.Content>
+        </Card>
+
+        <Card style={styles.card}>
+          <List.Item
+            title={t("projectsList.loadFromDrive")}
+            description={t("projectCollaboration.restoreHint")}
+            left={(props) => <List.Icon {...props} icon="cloud-download-outline" />}
+            right={(props) => <List.Icon {...props} icon="chevron-right" />}
+            onPress={() => router.push("/projects")}
+          />
+        </Card>
+
+        {/* Grupo 2: Colaboração em Equipe - opcional, só relevante se outras
+            pessoas também coletam pontos deste projeto. */}
+        <Text variant="titleLarge" style={[styles.groupTitle, { marginTop: 24, color: paperTheme.colors.primary }]}>
+          {t("projectCollaboration.teamSectionTitle")}
+        </Text>
+        <Card style={styles.card}>
+          <Card.Content>
+            <Text variant="bodyMedium">{t("projectCollaboration.teamIntro")}</Text>
+          </Card.Content>
+          <List.Item
+            title={t("projectCollaboration.pendingApprovalsSectionTitle")}
+            left={(props) => <List.Icon {...props} icon="clipboard-check-outline" />}
+            right={(props) => <List.Icon {...props} icon="chevron-right" />}
+            onPress={() => router.push(`/project-approvals/${project.id}` as any)}
+          />
+          <List.Item
+            title={t("projectCollaboration.rejectedPointsSectionTitle")}
+            left={(props) => <List.Icon {...props} icon="close-circle-outline" />}
+            right={(props) => <List.Icon {...props} icon="chevron-right" />}
+            onPress={() => router.push(`/project-rejected/${project.id}` as any)}
+          />
+        </Card>
+
         <Text variant="titleMedium" style={[styles.sectionTitle, { color: paperTheme.colors.primary }]}>
           {t("projectCollaboration.importPointsTitle")}
         </Text>
@@ -430,17 +486,6 @@ export default function ProjectCollaborationScreen() {
           <Card.Content>
             <Button mode="contained" onPress={handleImportPoints}>
               {t("projectCollaboration.importPointsButton")}
-            </Button>
-          </Card.Content>
-        </Card>
-
-        <Text variant="titleMedium" style={[styles.sectionTitle, { color: paperTheme.colors.primary }]}>
-          {t("projectCollaboration.backupSectionTitle")}
-        </Text>
-        <Card style={styles.card}>
-          <Card.Content>
-            <Button mode="contained" loading={isBackingUp} disabled={isBackingUp} onPress={handleBackup}>
-              {t("projectCollaboration.backupButton")}
             </Button>
           </Card.Content>
         </Card>
@@ -527,4 +572,5 @@ const styles = StyleSheet.create({
   content: { padding: 16 },
   card: { marginBottom: 16 },
   sectionTitle: { fontWeight: "bold", marginBottom: 4, marginTop: 8 },
+  groupTitle: { fontWeight: "bold", marginBottom: 8, marginTop: 8 },
 });

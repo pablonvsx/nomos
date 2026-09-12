@@ -39,7 +39,6 @@ export interface ProjectManifest {
   protocol_id: string;
   protocol_source: 'official' | 'custom';
   drive_ids?: {
-    submissions_folder_id: string;
     approved_folder_id: string;
   };
   // Which vegetation classification this project currently has active -
@@ -57,13 +56,16 @@ export interface ProjectManifest {
 // manifest.json written before this field was standardized to snake_case
 // used camelCase keys here - accept either on read, always write the new
 // shape from here on so old projects migrate silently on their next write.
+// A manifest from before the submissions/ folder was retired may still
+// carry a submissions_folder_id/submissionsFolderId value - it's
+// deliberately dropped here (that Drive folder itself is left untouched,
+// just no longer referenced), so the next write of this manifest sheds it.
 function normalizeDriveIds(raw: unknown): ProjectManifest['drive_ids'] {
   if (!raw || typeof raw !== 'object') return undefined;
   const obj = raw as Record<string, string | undefined>;
-  const submissions_folder_id = obj.submissions_folder_id ?? obj.submissionsFolderId;
   const approved_folder_id = obj.approved_folder_id ?? obj.approvedFolderId;
-  if (!submissions_folder_id || !approved_folder_id) return undefined;
-  return { submissions_folder_id, approved_folder_id };
+  if (!approved_folder_id) return undefined;
+  return { approved_folder_id };
 }
 
 const NOMOS_ROOT_FOLDER_NAME = 'Nomos';
@@ -130,7 +132,6 @@ export async function createCollaborativeProjectStructure(
     `Nomos_${params.projectName}_${projectUuid}`,
     rootFolderId
   );
-  const submissionsFolder = await createFolder('submissions', projectFolder.id);
   const approvedFolder = await createFolder('approved', projectFolder.id);
 
   const manifest: ProjectManifest = {
@@ -139,7 +140,6 @@ export async function createCollaborativeProjectStructure(
     protocol_id: params.protocolId,
     protocol_source: params.protocolSource,
     drive_ids: {
-      submissions_folder_id: submissionsFolder.id,
       approved_folder_id: approvedFolder.id,
     },
   };
@@ -180,7 +180,6 @@ export async function updateManifest(driveFolderId: string, manifest: ProjectMan
 }
 
 export interface ProjectDriveIds {
-  submissions_folder_id: string;
   approved_folder_id: string;
 }
 
@@ -188,14 +187,13 @@ export async function resolveProjectDriveIds(
   driveFolderId: string,
   manifest: ProjectManifest
 ): Promise<ProjectDriveIds> {
-  if (manifest.drive_ids?.submissions_folder_id && manifest.drive_ids?.approved_folder_id) {
+  if (manifest.drive_ids?.approved_folder_id) {
     return manifest.drive_ids;
   }
-  const submissions_folder_id = await ensureFolder('submissions', driveFolderId);
   const approved_folder_id = await ensureFolder('approved', driveFolderId);
   const updatedManifest: ProjectManifest = {
     ...manifest,
-    drive_ids: { submissions_folder_id, approved_folder_id },
+    drive_ids: { approved_folder_id },
   };
   await updateManifest(driveFolderId, updatedManifest);
   return updatedManifest.drive_ids!;

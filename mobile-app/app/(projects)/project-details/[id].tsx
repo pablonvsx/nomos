@@ -888,9 +888,10 @@ export default function UnifiedProjectDetailsScreen() {
                   // Three collaboration_role states, three distinct labels -
                   // a 'collaborator' copy can never become 'owner' (see
                   // db/queries/projects.ts:setProjectCollaborative), so it
-                  // must not share the null-role "Tornar colaborativo" label,
-                  // which implies an action this FAB entry cannot perform for
-                  // it (RELATORIO_AUDITORIA_COLABORACAO.md, Menor 5).
+                  // must not share the null-role "Ativar Backup no Drive"
+                  // label, which implies an action this FAB entry cannot
+                  // perform for it (RELATORIO_AUDITORIA_COLABORACAO.md,
+                  // Menor 5).
                   icon:
                     project.collaboration_role === "owner"
                       ? "account-group"
