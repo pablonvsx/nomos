@@ -387,7 +387,7 @@ export default function UnifiedSurveyPointViewScreen() {
     if (!point) return;
 
     const isApprovedCollaborativePoint =
-      Boolean(project?.is_collaborative) && point.approval_status === "approved";
+      project?.collaboration_role === "owner" && point.approval_status === "approved";
     const deleteMessage = isApprovedCollaborativePoint
       ? t("surveyView.deletePointConfirmApprovedCollaborative")
       : t("surveyView.deletePointConfirm");
@@ -674,12 +674,12 @@ export default function UnifiedSurveyPointViewScreen() {
               <Text variant="titleMedium" style={{ color: paperTheme.colors.primary }}>
                 {project.name}
               </Text>
-              {project.is_collaborative ? (
+              {project.collaboration_role === "owner" ? (
                 <Chip compact style={{ alignSelf: "flex-start", marginTop: 8 }}>
                   {t(`surveyView.status_${point.approval_status ?? "local"}`)}
                 </Chip>
               ) : null}
-              {project.is_collaborative && point.approval_status === "rejected" && point.rejection_reason ? (
+              {project.collaboration_role === "owner" && point.approval_status === "rejected" && point.rejection_reason ? (
                 <Text variant="bodySmall" style={{ color: paperTheme.colors.error, marginTop: 4 }}>
                   {t("surveyView.rejectionReasonLabel")}: {point.rejection_reason}
                 </Text>
@@ -983,7 +983,7 @@ export default function UnifiedSurveyPointViewScreen() {
                 },
               ]
             : []),
-          ...(project.is_collaborative && canModify
+          ...(project.collaboration_role === "owner" && canModify
             ? [
                 {
                   icon: "cloud-upload",

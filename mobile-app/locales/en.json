@@ -621,6 +621,7 @@
     "notCollaborativeTitle": "Project is not collaborative yet",
     "notCollaborativeDescription": "Make this project collaborative to share collection points with others via Google Drive, with an approval queue and sync.",
     "connectAccountHint": "Connect your Google account in Settings to continue.",
+    "collaboratorCopyNotice": "This project is a collaborator copy, imported from another owner. It can never become the owner project.",
     "myPointsTitle": "My Points",
     "myPointsEmpty": "No points pending submission.",
     "send": "Send",

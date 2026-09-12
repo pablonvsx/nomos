@@ -38,6 +38,12 @@ export interface ProjectConfigPackage {
   project_name: string;
   protocol_id: string;
   protocol_source: "official" | "custom";
+  // Always "collaborator" - only an owner ever exports this package, and
+  // importing it always produces a collaborator copy on the importing
+  // device. Kept explicit in the wire format for forward-compatibility, but
+  // applyProjectConfigPackage does not trust this value to decide local
+  // state - it always creates the local project as 'collaborator'.
+  package_role_for_importer: "collaborator";
   custom_protocol?: {
     uuid: string;
     name: string;
@@ -112,6 +118,7 @@ export async function buildProjectConfigPackage(
     project_name: project.name,
     protocol_id: project.protocol_id,
     protocol_source: project.protocol_source,
+    package_role_for_importer: "collaborator",
     custom_protocol: customProtocol,
     species_catalog: speciesRows.map((row) => ({
       uuid: row.uuid as string,
@@ -161,6 +168,7 @@ export async function applyProjectConfigPackage(
       pkg.project_name,
       localProtocolId,
       pkg.protocol_source,
+      "collaborator",
     );
     if (!newId) {
       throw new Error("Não foi possível criar o projeto local.");

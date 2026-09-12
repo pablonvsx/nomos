@@ -1,6 +1,6 @@
 // src/db/queries/projects.ts
 import { db } from "../initialize";
-import { Project } from "@/types/database";
+import { Project, ProjectCollaborationRole } from "@/types/database";
 
 /**
  * Retrieves all projects ordered by last edit (most recently updated
@@ -110,14 +110,15 @@ export async function createProjectFromPackage(
   name: string,
   protocolId: string,
   protocolSource: "official" | "custom",
+  collaborationRole: ProjectCollaborationRole,
 ): Promise<number | null> {
   try {
     const createdAt = new Date().toISOString();
 
     const result = await db.runAsync(
-      `INSERT INTO projects (name, protocol_id, description, protocol_source, created_at, last_updated, is_classified, project_uuid)
-       VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
-      [name, protocolId, "", protocolSource, createdAt, createdAt, projectUuid],
+      `INSERT INTO projects (name, protocol_id, description, protocol_source, created_at, last_updated, is_classified, project_uuid, collaboration_role)
+       VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+      [name, protocolId, "", protocolSource, createdAt, createdAt, projectUuid, collaborationRole],
     );
 
     return result.lastInsertRowId;
@@ -194,15 +195,28 @@ export async function updateProject(
 }
 
 /**
- * Marks a project as collaborative, associating it with a Google Drive folder.
+ * Marks a project as 'owner', associating it with a Google Drive folder.
+ * A project already holding a 'collaborator' copy (imported from someone
+ * else's config package) can never become 'owner' for that same
+ * project_uuid - guarded here (not just at the calling screen) since this is
+ * the one place that actually writes collaboration_role, and it has two real
+ * call sites (the "make collaborative" flow and the "restore my own project
+ * from Drive" flow).
  */
 export async function setProjectCollaborative(
   projectId: number,
   driveFolderId: string,
 ): Promise<boolean> {
+  const project = await getProjectById(projectId);
+  if (project?.collaboration_role === "collaborator") {
+    throw new Error(
+      "Este projeto é uma cópia de colaborador e nunca pode se tornar dono.",
+    );
+  }
+
   try {
     await db.runAsync(
-      `UPDATE projects SET is_collaborative = 1, drive_folder_id = ?, last_updated = ? WHERE id = ?`,
+      `UPDATE projects SET collaboration_role = 'owner', drive_folder_id = ?, last_updated = ? WHERE id = ?`,
       [driveFolderId, new Date().toISOString(), projectId],
     );
     return true;

@@ -15,6 +15,8 @@ export interface Protocol {
 }
 
 // This interface represents a project in the database
+export type ProjectCollaborationRole = "owner" | "collaborator";
+
 export interface Project {
   id: number; // Unique identifier for the project (automatically generated)
   name: string; // Name of the project
@@ -29,7 +31,7 @@ export interface Project {
   last_classified_at?: string; // Optional timestamp of the last classification operation
   vegetation_classification_type?: "standard" | "custom"; // Vegetation classification type: 'standard' (Nomos decision tree) or 'custom' (user-defined)
   active_custom_vegetation_classification_id?: number; // ID of the active custom vegetation classification, if type is 'custom'
-  is_collaborative: 0 | 1; // Flag indicating whether the project is shared via Google Drive (0 = no, 1 = yes)
+  collaboration_role: ProjectCollaborationRole | null; // null: plain local project; 'owner': Drive-connected source of truth; 'collaborator': imported copy, can never become 'owner'
   drive_folder_id?: string | null; // Google Drive folder id backing the project, when collaborative
   project_uuid?: string | null; // Stable cross-device id, generated on first export/share
 }

@@ -199,7 +199,7 @@ export async function pushSpeciesEntryIfCollaborative(
   if (!entry.uuid) return;
   try {
     const project = await getProjectById(projectId);
-    if (!project?.is_collaborative || !project.drive_folder_id) return;
+    if (project?.collaboration_role !== "owner" || !project.drive_folder_id) return;
     if (!getCurrentGoogleAccount()) return;
     const folderId = await ensureFolder('species-catalog', project.drive_folder_id);
     await uploadJsonFile(`${entry.uuid}.json`, folderId, toSpeciesPayload(entry));
@@ -215,7 +215,7 @@ export async function pushVegetationClassificationIfCollaborative(
   if (!row.uuid) return;
   try {
     const project = await getProjectById(projectId);
-    if (!project?.is_collaborative || !project.drive_folder_id) return;
+    if (project?.collaboration_role !== "owner" || !project.drive_folder_id) return;
     if (!getCurrentGoogleAccount()) return;
     const folderId = await ensureFolder('vegetation-classes', project.drive_folder_id);
     await uploadJsonFile(`${row.uuid}.json`, folderId, toVegetationPayload(row));

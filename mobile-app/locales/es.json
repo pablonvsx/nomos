@@ -618,6 +618,7 @@
     "notCollaborativeTitle": "El proyecto aún no es colaborativo",
     "notCollaborativeDescription": "Convierte este proyecto en colaborativo para compartir puntos de recolección con otras personas vía Google Drive, con cola de aprobación y sincronización.",
     "connectAccountHint": "Conecta tu cuenta Google en Configuración para continuar.",
+    "collaboratorCopyNotice": "Este proyecto es una copia de colaborador, importada de otro propietario. Nunca puede convertirse en el proyecto propietario.",
     "myPointsTitle": "Mis Puntos",
     "myPointsEmpty": "No hay puntos pendientes de envío.",
     "send": "Enviar",

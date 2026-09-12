@@ -108,7 +108,7 @@ const project: Project = {
   created_at: "2026-01-01T00:00:00.000Z",
   last_updated: "2026-01-01T00:00:00.000Z",
   is_classified: 0,
-  is_collaborative: 0,
+  collaboration_role: null,
   project_uuid: "project-uuid-1",
 };
 

@@ -67,7 +67,7 @@ export async function initDatabase() {
         last_classified_at TEXT,
         vegetation_classification_type TEXT DEFAULT 'standard', -- 'standard' or 'custom'
         active_custom_vegetation_classification_id INTEGER,
-        is_collaborative INTEGER NOT NULL DEFAULT 0,
+        collaboration_role TEXT DEFAULT NULL, -- 'owner' | 'collaborator' | NULL
         drive_folder_id TEXT,
         project_uuid TEXT
       );

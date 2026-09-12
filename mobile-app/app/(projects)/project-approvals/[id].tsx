@@ -85,7 +85,7 @@ export default function ProjectApprovalsScreen() {
     setProcessingId(point.id);
     try {
       await updatePointApprovalStatus(point.id, "approved");
-      if (project.is_collaborative && project.drive_folder_id) {
+      if (project.collaboration_role === "owner" && project.drive_folder_id) {
         await submitPointToProject(point.id, project.id, registry);
       }
       setPendingPoints((prev) => prev.filter((p) => p.id !== point.id));

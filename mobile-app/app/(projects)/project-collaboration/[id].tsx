@@ -214,7 +214,8 @@ export default function ProjectCollaborationScreen() {
     );
   }
 
-  if (!project.is_collaborative) {
+  if (project.collaboration_role !== "owner") {
+    const isCollaboratorCopy = project.collaboration_role === "collaborator";
     return (
       <View style={[styles.container, { backgroundColor: paperTheme.colors.background }]}>
         <Stack.Screen options={{ title: t("projectCollaboration.title"), headerBackTitle: "" }} />
@@ -225,20 +226,28 @@ export default function ProjectCollaborationScreen() {
               <Text variant="bodyMedium" style={{ marginTop: 8 }}>
                 {t("projectCollaboration.notCollaborativeDescription")}
               </Text>
-              {!googleAccount && (
-                <Text variant="bodySmall" style={{ color: paperTheme.colors.error, marginTop: 8 }}>
-                  {t("projectCollaboration.connectAccountHint")}
+              {isCollaboratorCopy ? (
+                <Text variant="bodySmall" style={{ marginTop: 8 }}>
+                  {t("projectCollaboration.collaboratorCopyNotice")}
                 </Text>
+              ) : (
+                <>
+                  {!googleAccount && (
+                    <Text variant="bodySmall" style={{ color: paperTheme.colors.error, marginTop: 8 }}>
+                      {t("projectCollaboration.connectAccountHint")}
+                    </Text>
+                  )}
+                  <Button
+                    mode="contained"
+                    style={{ marginTop: 16 }}
+                    loading={isMakingCollaborative}
+                    disabled={isMakingCollaborative || !googleAccount}
+                    onPress={handleMakeCollaborative}
+                  >
+                    {t("projectView.makeCollaborative")}
+                  </Button>
+                </>
               )}
-              <Button
-                mode="contained"
-                style={{ marginTop: 16 }}
-                loading={isMakingCollaborative}
-                disabled={isMakingCollaborative || !googleAccount}
-                onPress={handleMakeCollaborative}
-              >
-                {t("projectView.makeCollaborative")}
-              </Button>
             </Card.Content>
           </Card>
         </ScrollView>

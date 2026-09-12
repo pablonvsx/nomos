@@ -864,8 +864,8 @@ export default function UnifiedProjectDetailsScreen() {
           ...(project
             ? [
                 {
-                  icon: project.is_collaborative ? "account-group" : "google-drive",
-                  label: project.is_collaborative
+                  icon: project.collaboration_role === "owner" ? "account-group" : "google-drive",
+                  label: project.collaboration_role === "owner"
                     ? t("projectView.collaborationHub")
                     : t("projectView.makeCollaborative"),
                   onPress: () => router.push(`/project-collaboration/${project.id}` as any),

@@ -111,7 +111,7 @@ export default function ProjectsScreen() {
       setProtocolNames(names);
       setProtocolThemes(themes);
 
-      const collaborativeProjects = projectsData.filter((p) => p.is_collaborative);
+      const collaborativeProjects = projectsData.filter((p) => p.collaboration_role === "owner");
       const countsEntries = await Promise.all(
         collaborativeProjects.map(
           async (p) => [p.id, await getUnsyncedPointCount(p.id)] as const,
@@ -373,7 +373,7 @@ export default function ProjectsScreen() {
             >
               {item.name}
             </Text>
-            {item.is_collaborative ? (
+            {item.collaboration_role === "owner" ? (
               <View style={styles.collaborativeBadgeRow}>
                 <Chip compact icon="account-group" style={{ alignSelf: "flex-start" }}>
                   {t("projectsList.collaborative")}
