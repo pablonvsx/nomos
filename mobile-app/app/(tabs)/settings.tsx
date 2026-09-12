@@ -23,6 +23,8 @@ import { useGoogleAccount } from "@/hooks/use-google-account";
 import { APIKeyManager } from "@/core/species-catalog/api-key-manager";
 import { SpeciesLinkSettingsModal } from "@/components/settings/SpeciesLinkSettingsModal";
 import { GoogleAccountSettingsModal } from "@/components/settings/GoogleAccountSettingsModal";
+import { CollectorCodeSettingsModal } from "@/components/settings/CollectorCodeSettingsModal";
+import { getLocalCollectorCode } from "@/core/local-identity/collector-code";
 
 function StatusChip({ active, label, theme }: { active: boolean; label: string; theme: MD3Theme }) {
   return (
@@ -67,7 +69,9 @@ export default function SettingsScreen() {
   const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage);
   const [speciesLinkModalVisible, setSpeciesLinkModalVisible] = useState(false);
   const [googleAccountModalVisible, setGoogleAccountModalVisible] = useState(false);
+  const [collectorCodeModalVisible, setCollectorCodeModalVisible] = useState(false);
   const [speciesLinkConfigured, setSpeciesLinkConfigured] = useState(false);
+  const [localCollectorCode, setLocalCollectorCodeState] = useState<string | null>(null);
 
   const availableLanguages = getAvailableLanguages();
 
@@ -75,8 +79,13 @@ export default function SettingsScreen() {
     APIKeyManager.hasSpeciesLinkApiKey().then(setSpeciesLinkConfigured);
   };
 
+  const refreshCollectorCode = () => {
+    getLocalCollectorCode().then(setLocalCollectorCodeState);
+  };
+
   useEffect(() => {
     refreshSpeciesLinkStatus();
+    refreshCollectorCode();
   }, []);
 
   const openGitHub = () => {
@@ -190,6 +199,31 @@ export default function SettingsScreen() {
               setLanguageDialogVisible(true);
             }}
             titleStyle={styles.itemTitle}
+          />
+        </List.Section>
+
+        <Divider />
+
+        {/* SECTION 2: COLLECTION */}
+        <List.Section>
+          <List.Subheader
+            style={[styles.subheader, { color: paperTheme.colors.primary }]}
+          >
+            {t("settings.collection")}
+          </List.Subheader>
+
+          <List.Item
+            title={t("settings.collectorCodeTitle")}
+            description={
+              localCollectorCode
+                ? t("settings.collectorCodeCurrent", { code: localCollectorCode })
+                : t("settings.collectorCodeDescription")
+            }
+            left={(props) => <List.Icon {...props} icon="account-badge-outline" />}
+            onPress={() => setCollectorCodeModalVisible(true)}
+            titleStyle={styles.itemTitle}
+            descriptionStyle={styles.itemDescription}
+            descriptionNumberOfLines={0}
           />
         </List.Section>
 
@@ -352,6 +386,13 @@ export default function SettingsScreen() {
         error={googleError}
         onConnect={connectGoogle}
         onDisconnect={disconnectGoogle}
+      />
+
+      {/* Collector Code Settings Modal */}
+      <CollectorCodeSettingsModal
+        visible={collectorCodeModalVisible}
+        onDismiss={() => setCollectorCodeModalVisible(false)}
+        onSaved={refreshCollectorCode}
       />
     </ScrollView>
   );

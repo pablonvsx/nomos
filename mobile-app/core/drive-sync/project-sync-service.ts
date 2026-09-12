@@ -23,7 +23,7 @@ export interface SyncProjectResult {
   vegetationClassesPulled: number;
 }
 
-function serializeModules(
+export function serializeModules(
   modules: Record<string, unknown>,
   protocolId: string,
   registry: ProtocolRegistry,

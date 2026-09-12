@@ -1,7 +1,11 @@
 // src/app/project-approvals/[id].tsx
-// Pending-submission approval queue for a collaborative project's admin.
-// Operates only on Google Drive - the admin's local SQLite is not touched
-// here (that only happens in the sync phase).
+// Pending-points approval queue for a project's owner. Reads/writes the
+// local SQLite directly - this is a single-owner model, so whoever opens
+// this screen locally already is the project's owner (no more admin check
+// against a Drive membership manifest). Approving a point that belongs to a
+// Drive-collaborative project also pushes it to Drive via
+// submitPointToProject, now used only by the owner (see
+// core/drive-sync/point-submission-service.ts and docs/12_COLLABORATION.md).
 import React, { useState, useCallback } from "react";
 import { View, StyleSheet, FlatList, RefreshControl } from "react-native";
 import {
@@ -17,17 +21,13 @@ import {
 import { useRouter, useLocalSearchParams, useFocusEffect, Stack } from "expo-router";
 import { useAlertDialog } from "@/hooks/use-dialog";
 import { useI18n } from "@/contexts/i18n-context";
-import { useGoogleAccount } from "@/hooks/use-google-account";
 import { useStableTextInput } from "@/hooks/use-stable-text-input";
+import { useProtocolRegistry } from "@/contexts/protocol-registry-context";
 import { getProjectById } from "@/db/queries/projects";
-import { isProjectAdmin } from "@/core/drive-sync/project-drive-service";
-import {
-  listPendingSubmissions,
-  approveSubmission,
-  rejectSubmission,
-  type PendingSubmission,
-} from "@/core/drive-sync/approval-service";
-import type { Project } from "@/types/database";
+import { getPendingPointsByProject, updatePointApprovalStatus } from "@/db/queries/points";
+import { submitPointToProject } from "@/core/drive-sync/point-submission-service";
+import { parsePhotoUris } from "@/db/mappers/json-utils";
+import type { Project, Point } from "@/types/database";
 
 export default function ProjectApprovalsScreen() {
   const router = useRouter();
@@ -35,15 +35,15 @@ export default function ProjectApprovalsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { alert } = useAlertDialog();
   const { t } = useI18n();
-  const { account: googleAccount } = useGoogleAccount();
+  const registry = useProtocolRegistry();
 
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [submissions, setSubmissions] = useState<PendingSubmission[]>([]);
+  const [pendingPoints, setPendingPoints] = useState<Point[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [rejectDialogVisible, setRejectDialogVisible] = useState(false);
-  const [rejectTarget, setRejectTarget] = useState<PendingSubmission | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<Point | null>(null);
 
   const reasonInput = useStableTextInput(`reject-${rejectDialogVisible}`, "");
 
@@ -51,28 +51,15 @@ export default function ProjectApprovalsScreen() {
     if (!id) return;
     try {
       const projectData = await getProjectById(parseInt(id));
-      if (!projectData || !projectData.is_collaborative || !projectData.drive_folder_id) {
-        alert(t("common.error"), t("projectApprovals.notAuthorized"));
-        router.back();
-        return;
-      }
-
-      if (!googleAccount) {
-        alert(t("common.error"), t("projectApprovals.notAuthorized"));
-        router.back();
-        return;
-      }
-
-      const admin = await isProjectAdmin(projectData.drive_folder_id, googleAccount.email);
-      if (!admin) {
-        alert(t("common.error"), t("projectApprovals.notAuthorized"));
+      if (!projectData) {
+        alert(t("common.error"), t("projectView.projectNotFound"));
         router.back();
         return;
       }
 
       setProject(projectData);
-      const pending = await listPendingSubmissions(projectData.drive_folder_id);
-      setSubmissions(pending);
+      const pending = await getPendingPointsByProject(projectData.id);
+      setPendingPoints(pending);
     } catch (error) {
       console.error("Error loading pending approvals:", error);
       alert(t("common.error"), t("projectApprovals.loadError"));
@@ -80,7 +67,7 @@ export default function ProjectApprovalsScreen() {
       setIsLoading(false);
       setRefreshing(false);
     }
-  }, [id, googleAccount, router, t]);
+  }, [id, router, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -93,68 +80,69 @@ export default function ProjectApprovalsScreen() {
     loadData();
   };
 
-  const handleApprove = async (submission: PendingSubmission) => {
-    if (!project?.drive_folder_id || !googleAccount) return;
-    setProcessingId(submission.pointUuid);
+  const handleApprove = async (point: Point) => {
+    if (!project) return;
+    setProcessingId(point.id);
     try {
-      await approveSubmission(project.drive_folder_id, submission, googleAccount.email);
-      setSubmissions((prev) => prev.filter((s) => s.pointUuid !== submission.pointUuid));
+      await updatePointApprovalStatus(point.id, "approved");
+      if (project.is_collaborative && project.drive_folder_id) {
+        await submitPointToProject(point.id, project.id, registry);
+      }
+      setPendingPoints((prev) => prev.filter((p) => p.id !== point.id));
     } catch (error) {
-      console.error("Error approving submission:", error);
+      console.error("Error approving point:", error);
       alert(t("common.error"), t("projectApprovals.approveError"));
     } finally {
       setProcessingId(null);
     }
   };
 
-  const handleOpenReject = (submission: PendingSubmission) => {
-    setRejectTarget(submission);
+  const handleOpenReject = (point: Point) => {
+    setRejectTarget(point);
     setRejectDialogVisible(true);
   };
 
   const handleConfirmReject = async (reason: string) => {
-    if (!rejectTarget || !project?.drive_folder_id || !googleAccount) return;
+    if (!rejectTarget) return;
     if (!reason.trim()) {
       alert(t("common.error"), t("projectApprovals.rejectReasonRequired"));
       return;
     }
-    setProcessingId(rejectTarget.pointUuid);
+    setProcessingId(rejectTarget.id);
     try {
-      await rejectSubmission(project.drive_folder_id, rejectTarget, reason.trim(), googleAccount.email);
-      setSubmissions((prev) => prev.filter((s) => s.pointUuid !== rejectTarget.pointUuid));
+      await updatePointApprovalStatus(rejectTarget.id, "rejected", reason.trim());
+      setPendingPoints((prev) => prev.filter((p) => p.id !== rejectTarget.id));
       setRejectDialogVisible(false);
       setRejectTarget(null);
     } catch (error) {
-      console.error("Error rejecting submission:", error);
+      console.error("Error rejecting point:", error);
       alert(t("common.error"), t("projectApprovals.rejectError"));
     } finally {
       setProcessingId(null);
     }
   };
 
-  const renderItem = ({ item }: { item: PendingSubmission }) => {
-    const generatedName = item.content.generatedName as string | undefined;
-    const pointNumber = item.content.pointNumber as number | undefined;
-    const lat = item.content.lat as number | undefined;
-    const lon = item.content.lon as number | undefined;
-    const photos = item.content.photos as string[] | undefined;
-    const isProcessing = processingId === item.pointUuid;
+  const renderItem = ({ item }: { item: Point }) => {
+    const photos = parsePhotoUris(item.photos);
+    const isProcessing = processingId === item.id;
 
     return (
       <Card style={styles.card}>
         <Card.Content>
           <Text variant="titleMedium" style={{ fontWeight: "bold" }}>
-            {generatedName || t("projectApprovals.pointLabel", { number: pointNumber ?? "?" })}
+            {item.generated_name || t("projectApprovals.pointLabel", { number: item.point_number })}
           </Text>
           <Text variant="bodySmall" style={{ color: paperTheme.colors.secondary }}>
-            {lat?.toFixed(6)}, {lon?.toFixed(6)}
+            {item.lat.toFixed(6)}, {item.lon.toFixed(6)}
           </Text>
           <Text variant="bodySmall" style={{ color: paperTheme.colors.secondary }}>
-            {t("projectApprovals.photoCount", { count: photos?.length ?? 0 })}
+            {t("projectApprovals.photoCount", { count: photos.length })}
           </Text>
-          <Text variant="bodySmall" style={{ color: paperTheme.colors.secondary }}>
-            {t("projectApprovals.submittedBy", { email: item.submitterEmail })}
-          </Text>
+          {item.created_by && (
+            <Text variant="bodySmall" style={{ color: paperTheme.colors.secondary }}>
+              {t("projectApprovals.submittedBy", { email: item.created_by })}
+            </Text>
+          )}
         </Card.Content>
         <Card.Actions>
           <Button
@@ -200,8 +188,8 @@ export default function ProjectApprovalsScreen() {
       <Stack.Screen options={{ title: t("projectApprovals.title"), headerBackTitle: "" }} />
 
       <FlatList
-        data={submissions}
-        keyExtractor={(item) => item.pointUuid}
+        data={pendingPoints}
+        keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}

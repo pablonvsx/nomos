@@ -45,13 +45,13 @@ import {
 // DB imports
 import { getPoint, deletePoint } from "@/db/queries/points";
 import { getProjectById } from "@/db/queries/projects";
-import { getProjectMembers } from "@/db/queries/project-members";
 import { submitPointToProject } from "@/core/drive-sync/point-submission-service";
+import { exportPointsPackage } from "@/core/project-sharing/export-points";
 import { isProjectAdmin } from "@/core/drive-sync/project-drive-service";
 import { getCustomProtocolById } from "@/db/queries/custom-protocols";
 import { getSpeciesByPoint } from "@/db/queries/species";
-import { getPointDisplayLabel, toMemberLiteList } from "@/core/drive-sync/point-label";
-import { Point, PointModule, Project, CustomProtocol, Species, ProjectMember } from "@/types/database";
+import { getPointDisplayLabel } from "@/core/drive-sync/point-label";
+import { Point, PointModule, Project, CustomProtocol, Species } from "@/types/database";
 import { parseJsonText, parsePhotoUris } from "@/db/mappers/json-utils";
 import { formatAzimuthDisplay } from "@/utils/azimuth";
 import SpeciesInput from "@/components/survey/SpeciesInput";
@@ -236,7 +236,6 @@ export default function UnifiedSurveyPointViewScreen() {
   const [point, setPoint] = useState<Point | null>(null);
   const [pointModules, setPointModules] = useState<PointModule[]>([]);
   const [project, setProject] = useState<Project | null>(null);
-  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
   const [customProtocol, setCustomProtocol] = useState<CustomProtocol | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -368,14 +367,6 @@ export default function UnifiedSurveyPointViewScreen() {
       setProject(proj);
 
       if (proj.is_collaborative) {
-        try {
-          const members = await getProjectMembers(proj.id);
-          setProjectMembers(members);
-        } catch (membersError) {
-          console.error("Error loading project members:", membersError);
-          setProjectMembers([]);
-        }
-
         if (proj.drive_folder_id && googleAccount) {
           try {
             const admin = await isProjectAdmin(proj.drive_folder_id, googleAccount.email);
@@ -388,7 +379,6 @@ export default function UnifiedSurveyPointViewScreen() {
           setIsAdmin(false);
         }
       } else {
-        setProjectMembers([]);
         setIsAdmin(false);
       }
 
@@ -462,6 +452,16 @@ export default function UnifiedSurveyPointViewScreen() {
       alert(t("common.error"), t("surveyView.submitError"));
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleExportToOwner = async () => {
+    if (!point) return;
+    try {
+      await exportPointsPackage([point.id], registry);
+    } catch (error) {
+      console.error("Error exporting point package:", error);
+      alert(t("common.error"), error instanceof Error ? error.message : t("surveyView.exportToOwnerError"));
     }
   };
 
@@ -672,11 +672,10 @@ export default function UnifiedSurveyPointViewScreen() {
     isAdmin;
 
   const pointLabel = isOfficial ? t("surveyView.point") : t("surveyView.parcela");
-  const pointDisplayLabel = getPointDisplayLabel(
-    { pointNumber: point.point_number, createdBy: point.created_by ?? null },
-    Boolean(project.is_collaborative),
-    toMemberLiteList(projectMembers),
-  );
+  const pointDisplayLabel = getPointDisplayLabel({
+    pointNumber: point.point_number,
+    createdBy: point.created_by ?? null,
+  });
 
   // Derived data for the PAISAGEO session
   const conservationStatus = (officialModuleData["vegetation"] as any)?.conservation_status as string | undefined;
@@ -1020,6 +1019,16 @@ export default function UnifiedSurveyPointViewScreen() {
                     ? t("surveyView.resendCorrection")
                     : t("surveyView.submitToProject"),
                   onPress: isSubmitting ? () => {} : handleSubmitPoint,
+                  color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
+                },
+              ]
+            : []),
+          ...(canModify
+            ? [
+                {
+                  icon: "export-variant",
+                  label: t("surveyView.exportToOwner"),
+                  onPress: handleExportToOwner,
                   color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
                 },
               ]

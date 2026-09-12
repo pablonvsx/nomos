@@ -46,6 +46,7 @@ import { syncProjectFromDrive } from "@/core/drive-sync/project-sync-service";
 import { submitPointToProject } from "@/core/drive-sync/point-submission-service";
 import { getPointDisplayLabel } from "@/core/drive-sync/point-label";
 import { exportProjectConfigPackage } from "@/core/project-sharing/project-config-package";
+import { importPointsPackage } from "@/core/project-sharing/import-points";
 import type { Project, Point } from "@/types/database";
 
 export default function ProjectCollaborationScreen() {
@@ -397,6 +398,28 @@ export default function ProjectCollaborationScreen() {
     }
   };
 
+  const handleImportPoints = async () => {
+    if (!project) return;
+    try {
+      const result = await importPointsPackage(project.id, registry);
+      if (result.imported === 0 && result.rejected.length === 0) return; // cancelado
+      await loadData();
+      const summary = result.rejected.length > 0
+        ? t("projectCollaboration.importPointsSummaryWithRejected", {
+            imported: result.imported,
+            rejected: result.rejected.map((r) => `${r.pointLabel}: ${r.reason}`).join("\n"),
+          })
+        : t("projectCollaboration.importPointsSummary", { imported: result.imported });
+      alert(t("projectCollaboration.importPointsTitle"), summary);
+    } catch (error) {
+      console.error("Error importing points package:", error);
+      alert(
+        t("common.error"),
+        error instanceof Error ? error.message : t("projectCollaboration.importPointsError"),
+      );
+    }
+  };
+
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centerContent, { backgroundColor: paperTheme.colors.background }]}>
@@ -609,11 +632,10 @@ export default function ProjectCollaborationScreen() {
         ) : (
           pointsNeedingAttention.map((point) => {
             const isSubmitting = submittingPointId === point.id;
-            const pointDisplayLabel = getPointDisplayLabel(
-              { pointNumber: point.point_number, createdBy: point.created_by ?? null },
-              Boolean(project.is_collaborative),
-              manifest?.members ?? [],
-            );
+            const pointDisplayLabel = getPointDisplayLabel({
+              pointNumber: point.point_number,
+              createdBy: point.created_by ?? null,
+            });
             return (
               <Card key={point.id} style={styles.card}>
                 <Card.Content>
@@ -643,6 +665,17 @@ export default function ProjectCollaborationScreen() {
             );
           })
         )}
+
+        <Text variant="titleMedium" style={[styles.sectionTitle, { color: paperTheme.colors.primary }]}>
+          {t("projectCollaboration.importPointsTitle")}
+        </Text>
+        <Card style={styles.card}>
+          <Card.Content>
+            <Button mode="contained" onPress={handleImportPoints}>
+              {t("projectCollaboration.importPointsButton")}
+            </Button>
+          </Card.Content>
+        </Card>
 
         <Text variant="titleMedium" style={[styles.sectionTitle, { color: paperTheme.colors.primary }]}>
           {t("projectCollaboration.syncSectionTitle")}

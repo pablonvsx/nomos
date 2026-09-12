@@ -38,16 +38,15 @@ import {
   updateProjectGeoJSON,
 } from "@/db/queries/projects";
 import { getPointsByProject, classifyProjectPoints, getPointsWithModulesByProject } from "@/db/queries/points";
-import { getProjectMembers } from "@/db/queries/project-members";
 import { buildPointEnvelope } from "@/db/mappers/point.mapper";
-import { getPointDisplayLabel, toMemberLiteList } from "@/core/drive-sync/point-label";
+import { getPointDisplayLabel } from "@/core/drive-sync/point-label";
 import {
   getActiveVegetationClassificationConfig,
   getVegetationClassificationById,
   setActiveVegetationClassification,
   getVegetationClassificationsByProject,
 } from "@/db/queries/vegetation-classifications";
-import { Project, Point, VegetationClassification, CustomProtocol, ProjectMember } from "@/types/database";
+import { Project, Point, VegetationClassification, CustomProtocol } from "@/types/database";
 import type { PointEnvelope, ProjectRef, LanguageCode } from "@/protocol-kernel/types";
 import { useI18n } from "@/contexts/i18n-context";
 import { parseJsonText } from "@/db/mappers/json-utils";
@@ -92,7 +91,6 @@ export default function UnifiedProjectDetailsScreen() {
   const [project, setProject] = useState<Project | null>(null);
   const [protocolLabel, setProtocolLabel] = useState<string>("");
   const [surveyPoints, setSurveyPoints] = useState<Point[]>([]);
-  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [isClassifying, setIsClassifying] = useState(false);
@@ -240,17 +238,6 @@ export default function UnifiedProjectDetailsScreen() {
         setSurveyPoints([]);
       }
 
-      if (projectData.is_collaborative) {
-        try {
-          const members = await getProjectMembers(projectData.id);
-          setProjectMembers(members);
-        } catch (membersError) {
-          console.error("Error loading project members:", membersError);
-          setProjectMembers([]);
-        }
-      } else {
-        setProjectMembers([]);
-      }
     } catch (error) {
       console.error("Error loading project:", error);
       alert(t("common.error"), t("projectView.loadError"));
@@ -504,13 +491,9 @@ export default function UnifiedProjectDetailsScreen() {
       setIsExporting(true);
       const pointsWithMods = await getPointsWithModulesByProject(parseInt(id), registry);
       const envelopes = pointsWithMods.map(buildPointEnvelope);
-      if (project.is_collaborative) {
-        const membersLite = toMemberLiteList(projectMembers);
-        envelopes.forEach((env, i) => {
-          const createdBy = pointsWithMods[i].created_by;
-          env.collectorCode = membersLite.find((m) => m.email === createdBy)?.collector_code;
-        });
-      }
+      envelopes.forEach((env, i) => {
+        env.collectorCode = pointsWithMods[i].created_by ?? undefined;
+      });
       await mf.exporter({ bus }).exportGeoJSON(envelopes, buildProjectRef(project), currentLanguage as LanguageCode);
     } catch (error) {
       console.error("Error exporting GeoJSON:", error);
@@ -531,13 +514,9 @@ export default function UnifiedProjectDetailsScreen() {
       setIsExporting(true);
       const pointsWithMods = await getPointsWithModulesByProject(parseInt(id), registry);
       const envelopes = pointsWithMods.map(buildPointEnvelope);
-      if (project.is_collaborative) {
-        const membersLite = toMemberLiteList(projectMembers);
-        envelopes.forEach((env, i) => {
-          const createdBy = pointsWithMods[i].created_by;
-          env.collectorCode = membersLite.find((m) => m.email === createdBy)?.collector_code;
-        });
-      }
+      envelopes.forEach((env, i) => {
+        env.collectorCode = pointsWithMods[i].created_by ?? undefined;
+      });
       await mf.exporter({ bus }).exportCSV(envelopes, buildProjectRef(project), currentLanguage as LanguageCode);
     } catch (error) {
       console.error("Error exporting CSV:", error);
@@ -576,11 +555,10 @@ export default function UnifiedProjectDetailsScreen() {
   const renderSurveyPoint = ({ item }: { item: Point }) => {
     const surveyRoute = `/survey-point-details/${item.id}?projectId=${project?.id}`;
     const pointLabel = t("surveyView.point");
-    const pointDisplayLabel = getPointDisplayLabel(
-      { pointNumber: item.point_number, createdBy: item.created_by ?? null },
-      Boolean(project?.is_collaborative),
-      toMemberLiteList(projectMembers),
-    );
+    const pointDisplayLabel = getPointDisplayLabel({
+      pointNumber: item.point_number,
+      createdBy: item.created_by ?? null,
+    });
 
     const handleNavigateToPoint = () => {
       if (isNavigating) return;
