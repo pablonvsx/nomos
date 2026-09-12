@@ -18,7 +18,12 @@ import {
   setCustomProtocolUuid,
   createCustomProtocolFromPackage,
 } from '@/db/queries/custom-protocols';
+import {
+  getVegetationClassificationsByProject,
+  setActiveVegetationClassification,
+} from '@/db/queries/vegetation-classifications';
 import { serializeModules } from './project-sync-service';
+import { pullReferenceDataFromDrive } from './reference-data-sync-service';
 import { resolveCustomModuleDescriptors, forEachModuleMediaField, type MediaFieldLocation } from '@/core/project-sharing/module-media';
 import { parseJsonText } from '@/db/mappers/json-utils';
 import type { CustomProtocolSchema, Project } from '@/types/database';
@@ -36,6 +41,16 @@ export interface ProjectManifest {
   drive_ids?: {
     submissions_folder_id: string;
     approved_folder_id: string;
+  };
+  // Which vegetation classification this project currently has active -
+  // kept fresh by point-submission-service.ts on every backup, and resolved
+  // back into the local pointer at the end of restoreOwnProjectFromDrive so
+  // a project restored on another device doesn't silently fall back to the
+  // standard Nomos tree (COLLAB_MODEL_V2_REFERENCE.md section 9 audit
+  // follow-up).
+  active_vegetation_classification?: {
+    type: 'standard' | 'custom';
+    custom_classification_uuid?: string;
   };
 }
 
@@ -363,6 +378,26 @@ export async function restoreOwnProjectFromDrive(
 
   const project = await getProjectById(newId);
   if (!project) throw new Error("Local project creation failed");
+
+  // Species/vegetation-classification entries added after the project's
+  // initial setup were only ever pushed to Drive, never pulled back on their
+  // own - without this, restoring on another device silently lost them (see
+  // COLLAB_MODEL_V2_REFERENCE.md section 9 audit follow-up). A failure here
+  // must not abort the restore of the protocol/points that already worked.
+  try {
+    await pullReferenceDataFromDrive(newId, driveFolderId);
+  } catch (error) {
+    console.error('Error pulling species/vegetation reference data from Drive:', error);
+  }
+
+  const activeVegetation = manifest.active_vegetation_classification;
+  if (activeVegetation?.type === 'custom' && activeVegetation.custom_classification_uuid) {
+    const vegRows = await getVegetationClassificationsByProject(newId);
+    const activeRow = vegRows.find((row) => row.uuid === activeVegetation.custom_classification_uuid);
+    if (activeRow) {
+      await setActiveVegetationClassification(newId, activeRow.id, 'custom');
+    }
+  }
 
   const { approved_folder_id: approvedFolderId } = await resolveProjectDriveIds(driveFolderId, manifest);
   const files = await listChildren(approvedFolderId);

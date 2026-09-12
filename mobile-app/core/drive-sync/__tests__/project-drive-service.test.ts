@@ -66,6 +66,22 @@ jest.mock("@/core/project-sharing/module-media", () => ({
   forEachModuleMediaField: jest.fn(),
 }));
 
+const mockGetVegetationClassificationsByProject = jest.fn();
+const mockSetActiveVegetationClassification = jest.fn();
+jest.mock("@/db/queries/vegetation-classifications", () => ({
+  getVegetationClassificationsByProject: (...args: unknown[]) => mockGetVegetationClassificationsByProject(...args),
+  setActiveVegetationClassification: (...args: unknown[]) => mockSetActiveVegetationClassification(...args),
+}));
+
+// pullReferenceDataFromDrive (species/vegetation catalog restore) is
+// exercised on its own in reference-data-sync-service.test.ts - stubbed out
+// here so this file stays focused on protocol/point restoration and the
+// active-vegetation-classification pointer resolution.
+const mockPullReferenceDataFromDrive = jest.fn();
+jest.mock("../reference-data-sync-service", () => ({
+  pullReferenceDataFromDrive: (...args: unknown[]) => mockPullReferenceDataFromDrive(...args),
+}));
+
 import { restoreOwnProjectFromDrive } from "../project-drive-service";
 import type { ProtocolRegistry } from "@/protocol-kernel/types";
 
@@ -92,6 +108,8 @@ describe("restoreOwnProjectFromDrive", () => {
     mockCreateProject.mockResolvedValue(42);
     mockSetProjectCollaborative.mockResolvedValue(true);
     mockCreatePoint.mockResolvedValue("point-1");
+    mockPullReferenceDataFromDrive.mockResolvedValue({ speciesPulled: 0, vegetationClassesPulled: 0 });
+    mockGetVegetationClassificationsByProject.mockResolvedValue([]);
   });
 
   it("creates the local project as 'owner' and imports approved points with drive_synced_at filled", async () => {
@@ -193,5 +211,62 @@ describe("restoreOwnProjectFromDrive", () => {
     expect(mockGetCustomProtocolByUuid).toHaveBeenCalledWith("protocol-uuid-1");
     expect(mockCreateCustomProtocolFromPackage).toHaveBeenCalledWith(protocolPackage);
     expect(mockCreateProject).toHaveBeenCalledWith("Projeto Fauna", "55", "", "custom");
+  });
+
+  // Critical finding from RELATORIO_AUDITORIA_COLABORACAO.md: the
+  // vegetation_classifications rows already came back via
+  // pullReferenceDataFromDrive, but without resolving the manifest's
+  // active_vegetation_classification pointer the restored project silently
+  // fell back to the standard Nomos tree.
+  describe("active_vegetation_classification", () => {
+    const manifest = {
+      project_uuid: "project-uuid-3",
+      project_name: "Projeto Vegetação",
+      protocol_id: "paisageo",
+      protocol_source: "official",
+      drive_ids: { submissions_folder_id: "submissions-3", approved_folder_id: "approved-3" },
+      active_vegetation_classification: { type: "custom", custom_classification_uuid: "veg-uuid-1" },
+    };
+
+    beforeEach(() => {
+      mockManifestFile(manifest);
+      mockGetProjectById.mockResolvedValue({
+        id: 42,
+        name: "Projeto Vegetação",
+        protocol_id: "paisageo",
+        protocol_source: "official",
+        collaboration_role: "owner",
+        drive_folder_id: driveFolderId,
+        project_uuid: "project-uuid-3",
+      });
+      mockListChildren.mockResolvedValue([]);
+    });
+
+    it("pulls species/vegetation reference data and resolves the active classification to the local row id", async () => {
+      mockGetVegetationClassificationsByProject.mockResolvedValue([
+        { id: 77, project_id: 42, name: "Minha Classificação", classes: [], created_at: "x", last_updated: "x", uuid: "veg-uuid-1" },
+      ]);
+
+      await restoreOwnProjectFromDrive(driveFolderId, registry);
+
+      expect(mockPullReferenceDataFromDrive).toHaveBeenCalledWith(42, driveFolderId);
+      expect(mockSetActiveVegetationClassification).toHaveBeenCalledWith(42, 77, "custom");
+    });
+
+    it("does not resolve an active classification when the referenced uuid wasn't pulled down", async () => {
+      mockGetVegetationClassificationsByProject.mockResolvedValue([]);
+
+      await restoreOwnProjectFromDrive(driveFolderId, registry);
+
+      expect(mockSetActiveVegetationClassification).not.toHaveBeenCalled();
+    });
+
+    it("does not fail the restore when pulling reference data from Drive throws", async () => {
+      mockPullReferenceDataFromDrive.mockRejectedValue(new Error("network error"));
+
+      const result = await restoreOwnProjectFromDrive(driveFolderId, registry);
+
+      expect(result.projectId).toBe(42);
+    });
   });
 });

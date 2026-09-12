@@ -885,10 +885,24 @@ export default function UnifiedProjectDetailsScreen() {
           ...(project
             ? [
                 {
-                  icon: project.collaboration_role === "owner" ? "account-group" : "google-drive",
-                  label: project.collaboration_role === "owner"
-                    ? t("projectView.collaborationHub")
-                    : t("projectView.makeCollaborative"),
+                  // Three collaboration_role states, three distinct labels -
+                  // a 'collaborator' copy can never become 'owner' (see
+                  // db/queries/projects.ts:setProjectCollaborative), so it
+                  // must not share the null-role "Tornar colaborativo" label,
+                  // which implies an action this FAB entry cannot perform for
+                  // it (RELATORIO_AUDITORIA_COLABORACAO.md, Menor 5).
+                  icon:
+                    project.collaboration_role === "owner"
+                      ? "account-group"
+                      : project.collaboration_role === "collaborator"
+                        ? "information-outline"
+                        : "google-drive",
+                  label:
+                    project.collaboration_role === "owner"
+                      ? t("projectView.collaborationHub")
+                      : project.collaboration_role === "collaborator"
+                        ? t("projectView.collaboratorCopyHub")
+                        : t("projectView.makeCollaborative"),
                   onPress: () => router.push(`/project-collaboration/${project.id}` as any),
                   color: paperTheme.dark
                     ? paperTheme.colors.onSurface

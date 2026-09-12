@@ -28,6 +28,8 @@ import {
   getVegetationClassificationsByProject,
   createVegetationClassification,
   setVegetationClassificationUuid,
+  getActiveVegetationClassificationConfig,
+  setActiveVegetationClassification,
 } from "@/db/queries/vegetation-classifications";
 import { generateUuid } from "@/utils/uuid";
 import type { CustomProtocolSchema, VegetationClass } from "@/types/database";
@@ -61,6 +63,14 @@ export interface ProjectConfigPackage {
     name: string;
     classes: VegetationClass[];
   }>;
+  // Which vegetation classification the exporting project currently has
+  // active - the vegetation_classes rows above always travel, but without
+  // this the importing/restoring side has no way to know which one (if any)
+  // to actually use, and silently falls back to the standard Nomos tree.
+  active_vegetation_classification: {
+    type: "standard" | "custom";
+    custom_classification_uuid?: string;
+  };
 }
 
 export async function buildProjectConfigPackage(
@@ -112,6 +122,16 @@ export async function buildProjectConfigPackage(
     }
   }
 
+  const activeVegetationConfig = await getActiveVegetationClassificationConfig(projectId);
+  const activeVegetationRow =
+    activeVegetationConfig?.type === "custom" && activeVegetationConfig.classificationId
+      ? vegRows.find((row) => row.id === activeVegetationConfig.classificationId)
+      : undefined;
+  const activeVegetationClassification: ProjectConfigPackage["active_vegetation_classification"] =
+    activeVegetationRow?.uuid
+      ? { type: "custom", custom_classification_uuid: activeVegetationRow.uuid }
+      : { type: "standard" };
+
   return {
     format_version: 1,
     project_uuid: projectUuid,
@@ -135,6 +155,7 @@ export async function buildProjectConfigPackage(
       name: row.name,
       classes: row.classes,
     })),
+    active_vegetation_classification: activeVegetationClassification,
   };
 }
 
@@ -193,6 +214,23 @@ export async function applyProjectConfigPackage(
   for (const item of pkg.vegetation_classes) {
     if (existingVegetationUuids.has(item.uuid)) continue;
     await createVegetationClassification(projectId, item.name, item.classes, item.uuid);
+  }
+
+  // The vegetation_classes rows above are only the raw catalog - without
+  // resolving which one is actually active, this project would silently
+  // fall back to the standard Nomos tree (see COLLAB_MODEL_V2_REFERENCE.md
+  // section 9 audit follow-up). Re-fetch so the uuid lookup also covers rows
+  // just created above, then resolve to the LOCAL id, same pattern already
+  // used for custom_protocol.uuid.
+  const activePkg = pkg.active_vegetation_classification;
+  if (activePkg?.type === "custom" && activePkg.custom_classification_uuid) {
+    const allVegetation = await getVegetationClassificationsByProject(projectId);
+    const activeRow = allVegetation.find((row) => row.uuid === activePkg.custom_classification_uuid);
+    if (activeRow) {
+      await setActiveVegetationClassification(projectId, activeRow.id, "custom");
+    }
+  } else {
+    await setActiveVegetationClassification(projectId, null, "standard");
   }
 
   return { projectId, created };

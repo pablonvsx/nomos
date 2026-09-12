@@ -21,10 +21,17 @@ jest.mock("@/core/drive-sync/project-sync-service", () => ({
   serializeModules: jest.fn(() => ({})),
 }));
 
-const mockResolveCustomModuleDescriptors = jest.fn();
-jest.mock("@/core/project-sharing/module-media", () => ({
-  resolveCustomModuleDescriptors: (...args: unknown[]) => mockResolveCustomModuleDescriptors(...args),
-  forEachModuleMediaField: jest.fn(),
+// deletePointEnvelopeMediaFiles (now shared with project-rejected/[id].tsx's
+// permanent-delete action, see RELATORIO_AUDITORIA_COLABORACAO.md Importante
+// 3) is exercised for real here, not re-mocked - only its own heavy
+// transitive dependencies (the custom-protocol DB query and the Paisageo
+// module-descriptor chain, neither reachable for this test's official-
+// protocol project) are stubbed out.
+jest.mock("@/db/queries/custom-protocols", () => ({
+  getCustomProtocolById: jest.fn(),
+}));
+jest.mock("@/modules/custom/manifest", () => ({
+  buildCustomModuleDescriptor: jest.fn(),
 }));
 
 import { resolvePointDuplicate } from "../resolve-duplicates";
@@ -71,7 +78,6 @@ describe("resolvePointDuplicate", () => {
     jest.clearAllMocks();
     FakeFs.__resetFakeFileSystem();
     FakeFs.__setFile(persistedPhotoUri, "PHOTO_BYTES");
-    mockResolveCustomModuleDescriptors.mockResolvedValue([]);
     mockUpdatePoint.mockResolvedValue(true);
   });
 

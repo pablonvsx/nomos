@@ -388,9 +388,15 @@ export default function UnifiedSurveyPointViewScreen() {
   const handleDelete = () => {
     if (!point) return;
 
-    const isApprovedCollaborativePoint =
-      project?.collaboration_role === "owner" && point.approval_status === "approved";
-    const deleteMessage = isApprovedCollaborativePoint
+    // Only warn about the Drive backup when the point was actually backed
+    // up (drive_synced_at set) - an approved point that was never backed up
+    // has no copy on Drive to talk about (COLLAB_MODEL_V2_REFERENCE.md
+    // section 8 audit follow-up).
+    const isBackedUpApprovedPoint =
+      project?.collaboration_role === "owner" &&
+      point.approval_status === "approved" &&
+      point.drive_synced_at != null;
+    const deleteMessage = isBackedUpApprovedPoint
       ? t("surveyView.deletePointConfirmApprovedCollaborative")
       : t("surveyView.deletePointConfirm");
 

@@ -1,8 +1,12 @@
 import { getPoint, updatePoint } from '@/db/queries/points';
 import { getProjectById } from '@/db/queries/projects';
+import {
+  getActiveVegetationClassificationConfig,
+  getVegetationClassificationById,
+} from '@/db/queries/vegetation-classifications';
 import { buildPointWithModules, buildPointEnvelope } from '@/db/mappers/point.mapper';
 import { getCurrentGoogleAccount } from '@/core/google-auth/google-auth-service';
-import { getManifest, ensureFolder, resolveProjectDriveIds } from './project-drive-service';
+import { getManifest, updateManifest, ensureFolder, resolveProjectDriveIds, type ProjectManifest } from './project-drive-service';
 import { uploadJsonFile, updateJsonFile, findChildByName, uploadBinaryFile } from './drive-api-client';
 import { resolveCustomModuleDescriptors, forEachModuleMediaField, type MediaFieldLocation } from '@/core/project-sharing/module-media';
 import { parseJsonText } from '@/db/mappers/json-utils';
@@ -17,6 +21,24 @@ function guessMimeType(filename: string): string {
   if (ext === 'png') return 'image/png';
   if (ext === 'heic') return 'image/heic';
   return 'image/jpeg';
+}
+
+// Backup (section 8) is this model's only explicit "push current state to
+// Drive" moment, so it's also where the manifest's active_vegetation_classification
+// gets refreshed - restoreOwnProjectFromDrive (project-drive-service.ts)
+// reads this same field to resolve the pointer back on another device (see
+// COLLAB_MODEL_V2_REFERENCE.md section 9 audit follow-up).
+async function resolveActiveVegetationClassification(
+  projectId: number,
+): Promise<NonNullable<ProjectManifest['active_vegetation_classification']>> {
+  const activeConfig = await getActiveVegetationClassificationConfig(projectId);
+  if (activeConfig?.type === 'custom' && activeConfig.classificationId) {
+    const row = await getVegetationClassificationById(activeConfig.classificationId);
+    if (row?.uuid) {
+      return { type: 'custom', custom_classification_uuid: row.uuid };
+    }
+  }
+  return { type: 'standard' };
 }
 
 // Single-owner model: whoever calls this already is the project's owner
@@ -40,6 +62,14 @@ export async function submitPointToProject(
 
   const manifest = await getManifest(project.drive_folder_id);
   const { approved_folder_id: approvedFolderId } = await resolveProjectDriveIds(project.drive_folder_id, manifest);
+
+  const activeVegetationClassification = await resolveActiveVegetationClassification(project.id);
+  if (JSON.stringify(manifest.active_vegetation_classification) !== JSON.stringify(activeVegetationClassification)) {
+    await updateManifest(project.drive_folder_id, {
+      ...manifest,
+      active_vegetation_classification: activeVegetationClassification,
+    });
+  }
 
   const account = getCurrentGoogleAccount();
   if (!account) {

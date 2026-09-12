@@ -613,7 +613,8 @@
     "exportedPhotos": "photo(s) exportée(s) !",
     "mediaExportDialogTitle": "Exporter les Médias : {{name}}",
     "export": "Exporter",
-    "collaborationHub": "Projet Collaboratif"
+    "collaborationHub": "Projet Collaboratif",
+    "collaboratorCopyHub": "À Propos de Ce Projet Partagé"
   },
   "projectCollaboration": {
     "title": "Paramètres de Collaboration",
@@ -749,7 +750,7 @@
     "lastUpdated": "Dernière mise à jour",
     "deletePoint": "Supprimer le Point",
     "deletePointConfirm": "Êtes-vous sûr de vouloir supprimer ce point de collecte ? Cette action est irréversible.",
-    "deletePointConfirmApprovedCollaborative": "Ce point a déjà été approuvé et synchronisé avec les autres collaborateurs du projet. Le supprimer ici ne retire pas la version approuvée sur Drive — il peut réapparaître à la prochaine synchronisation du projet, sauf si un administrateur supprime cette version manuellement. Continuer ?",
+    "deletePointConfirmApprovedCollaborative": "Ce point a déjà été sauvegardé sur Drive. Le supprimer ici ne retire pas la copie qui s'y trouve. Continuer ?",
     "deleteError": "Impossible de supprimer le point de collecte.",
     "backupThisPoint": "Sauvegarder ce Point",
     "backupThisPointSuccess": "Point sauvegardé sur Drive !",

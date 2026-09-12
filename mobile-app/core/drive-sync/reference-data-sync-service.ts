@@ -10,10 +10,8 @@ import {
 import {
   getVegetationClassificationsByProject,
   createVegetationClassification,
-  setVegetationClassificationUuid,
 } from '@/db/queries/vegetation-classifications';
 import { getCurrentGoogleAccount } from '@/core/google-auth/google-auth-service';
-import { generateUuid } from '@/utils/uuid';
 import type {
   ProjectSpeciesCatalog,
   ProjectSpeciesCommonName,
@@ -21,50 +19,33 @@ import type {
   VegetationClass,
 } from '@/types/database';
 
-export interface ReferenceDataSyncResult {
-  speciesPushed: number;
-  speciesPulled: number;
-  vegetationClassesPushed: number;
-  vegetationClassesPulled: number;
-}
-
-interface SyncOneCollectionParams<T> {
+interface PullOneCollectionParams {
   folderId: string;
-  localRows: T[];
-  getUuid: (row: T) => string | null | undefined;
-  toPayload: (row: T) => Record<string, unknown>;
+  existingUuids: Set<string>;
   insertLocal: (payload: Record<string, unknown>, uuid: string) => Promise<void>;
 }
 
-async function syncOneReferenceCollection<T>(
-  params: SyncOneCollectionParams<T>
-): Promise<{ pushed: number; pulled: number }> {
+// Pull-only half of what used to be syncOneReferenceCollection's push+pull
+// pair - the push side lives on in pushSpeciesEntryIfCollaborative /
+// pushVegetationClassificationIfCollaborative below (best-effort, fired when
+// an item is created), so this only ever needs to bring down remote entries
+// not yet present locally (by uuid), never push back up.
+async function pullOneReferenceCollection(
+  params: PullOneCollectionParams
+): Promise<number> {
   const remoteFiles = (await listChildren(params.folderId)).filter((f) => f.name.endsWith('.json'));
-  const remoteUuids = new Set(remoteFiles.map((f) => f.name.replace('.json', '')));
-  const localUuids = new Set(
-    params.localRows.map(params.getUuid).filter((uuid): uuid is string => !!uuid)
-  );
-
-  let pushed = 0;
-  for (const row of params.localRows) {
-    const uuid = params.getUuid(row);
-    if (uuid && !remoteUuids.has(uuid)) {
-      await uploadJsonFile(`${uuid}.json`, params.folderId, params.toPayload(row));
-      pushed++;
-    }
-  }
 
   let pulled = 0;
   for (const file of remoteFiles) {
     const uuid = file.name.replace('.json', '');
-    if (!localUuids.has(uuid)) {
+    if (!params.existingUuids.has(uuid)) {
       const content = await readJsonFile<Record<string, unknown>>(file.id);
       await params.insertLocal(content, uuid);
       pulled++;
     }
   }
 
-  return { pushed, pulled };
+  return pulled;
 }
 
 function toSpeciesPayload(row: ProjectSpeciesCatalog): Record<string, unknown> {
@@ -139,53 +120,48 @@ async function insertVegetationClassificationFromRemote(
   );
 }
 
-export async function syncReferenceData(
+export interface PullReferenceDataResult {
+  speciesPulled: number;
+  vegetationClassesPulled: number;
+}
+
+// Restoring the owner's own project onto another device
+// (COLLAB_MODEL_V2_REFERENCE.md section 9) needs to bring down whatever
+// species/vegetation-classification entries were pushed by
+// pushSpeciesEntryIfCollaborative/pushVegetationClassificationIfCollaborative
+// after the project's initial setup - restoreOwnProjectFromDrive
+// (core/drive-sync/project-drive-service.ts) only restores the manifest,
+// protocol and approved points on its own, so without this call anything
+// added to the catalog after that initial setup would be silently lost on
+// restore (it was written to Drive, just never read back).
+export async function pullReferenceDataFromDrive(
   projectId: number,
   driveFolderId: string
-): Promise<ReferenceDataSyncResult> {
+): Promise<PullReferenceDataResult> {
   const speciesFolderId = await ensureFolder('species-catalog', driveFolderId);
   const vegClassesFolderId = await ensureFolder('vegetation-classes', driveFolderId);
 
-  // Rows created before this feature existed have no uuid yet - give them one
-  // now so they don't get silently skipped by the push comparison below.
-  const speciesRows = await getProjectSpeciesCatalogByProject(projectId);
-  for (const row of speciesRows) {
-    if (!row.uuid) {
-      row.uuid = generateUuid();
-      await setProjectSpeciesUuid(row.id, row.uuid);
-    }
-  }
-
-  const vegRows = await getVegetationClassificationsByProject(projectId);
-  for (const row of vegRows) {
-    if (!row.uuid) {
-      row.uuid = generateUuid();
-      await setVegetationClassificationUuid(row.id, row.uuid);
-    }
-  }
-
-  const speciesResult = await syncOneReferenceCollection({
+  const existingSpecies = await getProjectSpeciesCatalogByProject(projectId);
+  const existingSpeciesUuids = new Set(
+    existingSpecies.map((row) => row.uuid).filter((uuid): uuid is string => !!uuid)
+  );
+  const speciesPulled = await pullOneReferenceCollection({
     folderId: speciesFolderId,
-    localRows: speciesRows,
-    getUuid: (row) => row.uuid,
-    toPayload: toSpeciesPayload,
+    existingUuids: existingSpeciesUuids,
     insertLocal: (payload, uuid) => insertSpeciesFromRemote(projectId, payload, uuid),
   });
 
-  const vegResult = await syncOneReferenceCollection({
+  const existingVegetation = await getVegetationClassificationsByProject(projectId);
+  const existingVegetationUuids = new Set(
+    existingVegetation.map((row) => row.uuid).filter((uuid): uuid is string => !!uuid)
+  );
+  const vegetationClassesPulled = await pullOneReferenceCollection({
     folderId: vegClassesFolderId,
-    localRows: vegRows,
-    getUuid: (row) => row.uuid,
-    toPayload: toVegetationPayload,
+    existingUuids: existingVegetationUuids,
     insertLocal: (payload, uuid) => insertVegetationClassificationFromRemote(projectId, payload, uuid),
   });
 
-  return {
-    speciesPushed: speciesResult.pushed,
-    speciesPulled: speciesResult.pulled,
-    vegetationClassesPushed: vegResult.pushed,
-    vegetationClassesPulled: vegResult.pulled,
-  };
+  return { speciesPulled, vegetationClassesPulled };
 }
 
 // Best-effort immediate push for a single newly created item, used by the

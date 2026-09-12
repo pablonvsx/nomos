@@ -1,9 +1,10 @@
 // Proves COLLAB_MODEL_V2_REFERENCE.md section 7: the rejected points area
 // lists rejected points with their reason, and "Excluir permanentemente"
-// reuses deletePoint (db/queries/points.ts) - the same function
-// survey-point-details/[id].tsx already uses for its own delete action,
-// per this phase's decision not to add a second, more thorough deletion
-// path just for this screen. "Reconsiderar" moves a point back to pending.
+// first cleans up the point's media files (deletePointEnvelopeMediaFiles -
+// the same logic resolve-duplicates.ts's 'discard' outcome already uses,
+// see RELATORIO_AUDITORIA_COLABORACAO.md Importante 3) before calling
+// deletePoint (db/queries/points.ts), which only removes the database rows.
+// "Reconsiderar" moves a point back to pending.
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import { PaperProvider } from "react-native-paper";
@@ -32,6 +33,10 @@ jest.mock("@/contexts/i18n-context", () => ({
   useI18n: () => ({ t: (key: string) => key, currentLanguage: "pt", setLanguage: jest.fn() }),
 }));
 
+jest.mock("@/contexts/protocol-registry-context", () => ({
+  useProtocolRegistry: () => ({ getProtocol: jest.fn(() => undefined) }),
+}));
+
 const mockGetProjectById = jest.fn();
 jest.mock("@/db/queries/projects", () => ({
   getProjectById: (...args: unknown[]) => mockGetProjectById(...args),
@@ -40,10 +45,24 @@ jest.mock("@/db/queries/projects", () => ({
 const mockGetRejectedPointsByProject = jest.fn();
 const mockUpdatePointApprovalStatus = jest.fn();
 const mockDeletePoint = jest.fn();
+const mockGetPoint = jest.fn();
 jest.mock("@/db/queries/points", () => ({
   getRejectedPointsByProject: (...args: unknown[]) => mockGetRejectedPointsByProject(...args),
   updatePointApprovalStatus: (...args: unknown[]) => mockUpdatePointApprovalStatus(...args),
   deletePoint: (...args: unknown[]) => mockDeletePoint(...args),
+  getPoint: (...args: unknown[]) => mockGetPoint(...args),
+}));
+
+const mockBuildPointWithModules = jest.fn();
+const mockBuildPointEnvelope = jest.fn();
+jest.mock("@/db/mappers/point.mapper", () => ({
+  buildPointWithModules: (...args: unknown[]) => mockBuildPointWithModules(...args),
+  buildPointEnvelope: (...args: unknown[]) => mockBuildPointEnvelope(...args),
+}));
+
+const mockDeletePointEnvelopeMediaFiles = jest.fn();
+jest.mock("@/core/project-sharing/module-media", () => ({
+  deletePointEnvelopeMediaFiles: (...args: unknown[]) => mockDeletePointEnvelopeMediaFiles(...args),
 }));
 
 import ProjectRejectedScreen from "../project-rejected/[id]";
@@ -90,6 +109,10 @@ describe("ProjectRejectedScreen", () => {
     mockGetRejectedPointsByProject.mockResolvedValue([rejectedPoint]);
     mockDeletePoint.mockResolvedValue(true);
     mockUpdatePointApprovalStatus.mockResolvedValue(true);
+    mockGetPoint.mockResolvedValue({ point: rejectedPoint, modules: [] });
+    mockBuildPointWithModules.mockReturnValue({});
+    mockBuildPointEnvelope.mockReturnValue({ photos: [], audioNotes: [], modules: {} });
+    mockDeletePointEnvelopeMediaFiles.mockResolvedValue(undefined);
   });
 
   it("lists rejected points with their rejection reason", async () => {
@@ -104,7 +127,7 @@ describe("ProjectRejectedScreen", () => {
     expect(mockGetRejectedPointsByProject).toHaveBeenCalledWith(project.id);
   });
 
-  it("permanently deletes a rejected point via the existing deletePoint function", async () => {
+  it("cleans up the point's media files before permanently deleting it", async () => {
     await render(
       <PaperProvider>
         <ProjectRejectedScreen />
@@ -121,6 +144,11 @@ describe("ProjectRejectedScreen", () => {
     const onConfirm = mockConfirm.mock.calls[0][2];
     await onConfirm();
 
+    expect(mockGetPoint).toHaveBeenCalledWith("point-1");
+    expect(mockDeletePointEnvelopeMediaFiles).toHaveBeenCalledWith(
+      { photos: [], audioNotes: [], modules: {} },
+      project,
+    );
     expect(mockDeletePoint).toHaveBeenCalledWith("point-1");
     await waitFor(() => expect(screen.queryByText("Ponto 1")).toBeNull());
   });

@@ -613,7 +613,8 @@
     "exportedPhotos": "photo(s) exported!",
     "mediaExportDialogTitle": "Export Media: {{name}}",
     "export": "Export",
-    "collaborationHub": "Collaborative Project"
+    "collaborationHub": "Collaborative Project",
+    "collaboratorCopyHub": "About This Shared Project"
   },
   "projectCollaboration": {
     "title": "Collaboration Settings",
@@ -749,7 +750,7 @@
     "lastUpdated": "Last updated",
     "deletePoint": "Delete Point",
     "deletePointConfirm": "Are you sure you want to delete this collection point? This action cannot be undone.",
-    "deletePointConfirmApprovedCollaborative": "This point has already been approved and synced with the project's other collaborators. Deleting it here does not remove the approved version on Drive — it may reappear the next time the project syncs, unless an administrator removes that version manually. Continue?",
+    "deletePointConfirmApprovedCollaborative": "This point has already been backed up to Drive. Deleting it here does not remove the copy there. Continue?",
     "deleteError": "Could not delete collection point.",
     "backupThisPoint": "Back Up This Point",
     "backupThisPointSuccess": "Point saved to Drive!",

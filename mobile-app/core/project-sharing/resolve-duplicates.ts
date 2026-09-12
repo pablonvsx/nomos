@@ -4,11 +4,9 @@
 // already materialized into persistent storage at import time regardless of
 // the duplicate outcome - this only decides whether that data lands in the
 // database ('replace') or gets cleaned up as orphaned storage ('discard').
-import { File } from "expo-file-system";
 import { updatePoint } from "@/db/queries/points";
 import { serializeModules } from "@/core/drive-sync/project-sync-service";
-import { resolveCustomModuleDescriptors, forEachModuleMediaField } from "@/core/project-sharing/module-media";
-import { parseJsonText } from "@/db/mappers/json-utils";
+import { deletePointEnvelopeMediaFiles } from "@/core/project-sharing/module-media";
 import type { PendingDuplicate } from "@/core/project-sharing/import-points";
 import type { Project } from "@/types/database";
 import type { ProtocolRegistry } from "@/protocol-kernel/types";
@@ -22,25 +20,7 @@ export async function resolvePointDuplicate(
   const envelope = duplicate.incomingEnvelope;
 
   if (action === "discard") {
-    for (const uri of envelope.photos ?? []) {
-      const file = new File(uri);
-      if (file.exists) file.delete();
-    }
-    for (const note of envelope.audioNotes ?? []) {
-      const file = new File(note.uri);
-      if (file.exists) file.delete();
-    }
-
-    const moduleDescriptors = await resolveCustomModuleDescriptors(project);
-    forEachModuleMediaField(envelope.modules ?? {}, moduleDescriptors, (loc) => {
-      const items = parseJsonText<Array<Record<string, unknown>>>(loc.read() ?? "", [], Array.isArray);
-      for (const item of items) {
-        const uri = typeof item.uri === "string" ? item.uri : null;
-        if (!uri) continue;
-        const file = new File(uri);
-        if (file.exists) file.delete();
-      }
-    });
+    await deletePointEnvelopeMediaFiles(envelope, project);
     return;
   }
 

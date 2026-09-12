@@ -2,13 +2,12 @@
 // Rejected points area for a project's owner (COLLAB_MODEL_V2_REFERENCE.md
 // section 7). Purely local SQL, no Drive/Google account involvement -
 // rejected points are never auto-purged, they stay here until the owner
-// explicitly deletes them (or reconsiders one back to pending). Deleting
-// reuses deletePoint (db/queries/points.ts) exactly as
-// survey-point-details/[id].tsx already does for its own delete action -
-// that function only removes the database rows, it does not clean up
-// media files, and this screen intentionally doesn't add that here either
-// (matching the app's one existing point-deletion path, not inventing a
-// second, more thorough one just for this screen).
+// explicitly deletes them (or reconsiders one back to pending). Permanent
+// deletion cleans up the point's media files first (photos/audio_notes plus
+// anything embedded in custom-protocol module fields), reusing the exact
+// same deletePointEnvelopeMediaFiles logic already used by
+// resolve-duplicates.ts's 'discard' outcome, before calling deletePoint
+// (db/queries/points.ts), which only removes the database rows.
 import React, { useState, useCallback } from "react";
 import { View, StyleSheet, FlatList, RefreshControl } from "react-native";
 import {
@@ -21,9 +20,12 @@ import {
 import { useRouter, useLocalSearchParams, useFocusEffect, Stack } from "expo-router";
 import { useAlertDialog } from "@/hooks/use-dialog";
 import { useI18n } from "@/contexts/i18n-context";
+import { useProtocolRegistry } from "@/contexts/protocol-registry-context";
 import { getProjectById } from "@/db/queries/projects";
-import { getRejectedPointsByProject, updatePointApprovalStatus, deletePoint } from "@/db/queries/points";
+import { getRejectedPointsByProject, updatePointApprovalStatus, deletePoint, getPoint } from "@/db/queries/points";
 import { getPointDisplayLabel } from "@/core/drive-sync/point-label";
+import { buildPointWithModules, buildPointEnvelope } from "@/db/mappers/point.mapper";
+import { deletePointEnvelopeMediaFiles } from "@/core/project-sharing/module-media";
 import type { Project, Point } from "@/types/database";
 
 export default function ProjectRejectedScreen() {
@@ -32,6 +34,7 @@ export default function ProjectRejectedScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { alert, confirm } = useAlertDialog();
   const { t } = useI18n();
+  const registry = useProtocolRegistry();
 
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,6 +82,14 @@ export default function ProjectRejectedScreen() {
       async () => {
         setProcessingId(point.id);
         try {
+          if (project) {
+            const result = await getPoint(point.id);
+            if (result) {
+              const pointWithModules = buildPointWithModules(result.point, result.modules, registry);
+              const envelope = buildPointEnvelope(pointWithModules);
+              await deletePointEnvelopeMediaFiles(envelope, project);
+            }
+          }
           await deletePoint(point.id);
           setRejectedPoints((prev) => prev.filter((p) => p.id !== point.id));
         } catch (error) {

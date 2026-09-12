@@ -41,10 +41,14 @@ jest.mock("@/db/queries/project-species", () => ({
 const mockGetVegetationClassificationsByProject = jest.fn();
 const mockCreateVegetationClassification = jest.fn();
 const mockSetVegetationClassificationUuid = jest.fn();
+const mockGetActiveVegetationClassificationConfig = jest.fn();
+const mockSetActiveVegetationClassification = jest.fn();
 jest.mock("@/db/queries/vegetation-classifications", () => ({
   getVegetationClassificationsByProject: (...args: unknown[]) => mockGetVegetationClassificationsByProject(...args),
   createVegetationClassification: (...args: unknown[]) => mockCreateVegetationClassification(...args),
   setVegetationClassificationUuid: (...args: unknown[]) => mockSetVegetationClassificationUuid(...args),
+  getActiveVegetationClassificationConfig: (...args: unknown[]) => mockGetActiveVegetationClassificationConfig(...args),
+  setActiveVegetationClassification: (...args: unknown[]) => mockSetActiveVegetationClassification(...args),
 }));
 
 jest.mock("@/utils/uuid", () => ({ generateUuid: jest.fn(() => "uuid-mock") }));
@@ -62,6 +66,7 @@ const pkg: ProjectConfigPackage = {
   package_role_for_importer: "collaborator",
   species_catalog: [],
   vegetation_classes: [],
+  active_vegetation_classification: { type: "standard" },
 };
 
 describe("applyProjectConfigPackage", () => {
@@ -152,6 +157,55 @@ describe("applyProjectConfigPackage", () => {
 
     expect(mockCreateVegetationClassification).not.toHaveBeenCalled();
   });
+
+  // Critical finding from RELATORIO_AUDITORIA_COLABORACAO.md: the
+  // vegetation_classes rows themselves already survived import, but without
+  // resolving *which one is active* the importing project silently fell
+  // back to the standard Nomos tree.
+  describe("active_vegetation_classification", () => {
+    it("resolves the incoming custom classification uuid to the local row id", async () => {
+      mockGetProjectByUuid.mockResolvedValue(null);
+      mockCreateProjectFromPackage.mockResolvedValue(42);
+      // Re-fetched after insertion, so it must include rows just created too.
+      mockGetVegetationClassificationsByProject.mockResolvedValue([
+        { id: 99, project_id: 42, name: "Minha Classificação", classes: [], created_at: "x", last_updated: "x", uuid: "veg-uuid-1" },
+      ] as VegetationClassification[]);
+
+      const pkgWithActive: ProjectConfigPackage = {
+        ...pkg,
+        vegetation_classes: [{ uuid: "veg-uuid-1", name: "Minha Classificação", classes: [] }],
+        active_vegetation_classification: { type: "custom", custom_classification_uuid: "veg-uuid-1" },
+      };
+
+      await applyProjectConfigPackage(pkgWithActive);
+
+      expect(mockSetActiveVegetationClassification).toHaveBeenCalledWith(42, 99, "custom");
+    });
+
+    it("resolves to 'standard' (no active row) when the package says standard", async () => {
+      mockGetProjectByUuid.mockResolvedValue(null);
+      mockCreateProjectFromPackage.mockResolvedValue(42);
+
+      await applyProjectConfigPackage(pkg); // pkg fixture defaults to { type: "standard" }
+
+      expect(mockSetActiveVegetationClassification).toHaveBeenCalledWith(42, null, "standard");
+    });
+
+    it("falls back to 'standard' when the referenced uuid isn't found among the imported rows", async () => {
+      mockGetProjectByUuid.mockResolvedValue(null);
+      mockCreateProjectFromPackage.mockResolvedValue(42);
+      mockGetVegetationClassificationsByProject.mockResolvedValue([]);
+
+      const pkgWithMissingActive: ProjectConfigPackage = {
+        ...pkg,
+        active_vegetation_classification: { type: "custom", custom_classification_uuid: "does-not-exist" },
+      };
+
+      await applyProjectConfigPackage(pkgWithMissingActive);
+
+      expect(mockSetActiveVegetationClassification).not.toHaveBeenCalled();
+    });
+  });
 });
 
 // Fase G investigation (manual test report: custom vegetation classes
@@ -234,5 +288,48 @@ describe("buildProjectConfigPackage - vegetation classes", () => {
     // Same query, same project_id argument as the official-protocol case -
     // no separate custom_protocol_id-scoped lookup.
     expect(mockGetVegetationClassificationsByProject).toHaveBeenCalledWith(1);
+  });
+});
+
+describe("buildProjectConfigPackage - active_vegetation_classification", () => {
+  const officialProject: Project = {
+    id: 1,
+    name: "Projeto Fauna",
+    protocol_id: "paisageo",
+    protocol_source: "official",
+    created_at: "2026-01-01T00:00:00.000Z",
+    last_updated: "2026-01-01T00:00:00.000Z",
+    is_classified: 0,
+    collaboration_role: null,
+    project_uuid: "project-uuid-1",
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetProjectSpeciesCatalogByProject.mockResolvedValue([]);
+    mockGetProjectById.mockResolvedValue(officialProject);
+  });
+
+  it("includes the active custom classification's uuid when one is set", async () => {
+    mockGetVegetationClassificationsByProject.mockResolvedValue([
+      { id: 10, project_id: 1, name: "Minha Classificação", classes: [], created_at: "x", last_updated: "x", uuid: "veg-uuid-1" },
+    ] as VegetationClassification[]);
+    mockGetActiveVegetationClassificationConfig.mockResolvedValue({ type: "custom", classificationId: 10 });
+
+    const result = await buildProjectConfigPackage(1);
+
+    expect(result.active_vegetation_classification).toEqual({
+      type: "custom",
+      custom_classification_uuid: "veg-uuid-1",
+    });
+  });
+
+  it("reports 'standard' when the project has no active custom classification", async () => {
+    mockGetVegetationClassificationsByProject.mockResolvedValue([]);
+    mockGetActiveVegetationClassificationConfig.mockResolvedValue({ type: "standard", classificationId: null });
+
+    const result = await buildProjectConfigPackage(1);
+
+    expect(result.active_vegetation_classification).toEqual({ type: "standard" });
   });
 });
