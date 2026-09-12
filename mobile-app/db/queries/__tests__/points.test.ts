@@ -18,7 +18,8 @@ jest.mock("@/utils/uuid", () => ({
   generateUuid: jest.fn(() => "uuid-mock"),
 }));
 
-import { getAllPointIdsForProject } from "../points";
+import { getAllPointIdsForProject, getRejectedPointsByProject } from "../points";
+import type { Point } from "@/types/database";
 
 describe("getAllPointIdsForProject", () => {
   beforeEach(() => {
@@ -43,5 +44,34 @@ describe("getAllPointIdsForProject", () => {
     const ids = await getAllPointIdsForProject(1);
 
     expect(ids).toEqual([]);
+  });
+});
+
+// Backs the rejected-points area (COLLAB_MODEL_V2_REFERENCE.md section 7) -
+// must filter to this project's rejected points only, same pattern as
+// getPendingPointsByProject but with the opposite status.
+describe("getRejectedPointsByProject", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("filters by project_id and approval_status = 'rejected'", async () => {
+    const rejectedPoint = { id: "point-1", project_id: 1, approval_status: "rejected" } as Point;
+    mockGetAllAsync.mockResolvedValue([rejectedPoint]);
+
+    const points = await getRejectedPointsByProject(1);
+
+    expect(points).toEqual([rejectedPoint]);
+    const [sql, params] = mockGetAllAsync.mock.calls[0];
+    expect(sql).toContain("WHERE project_id = ? AND approval_status = 'rejected'");
+    expect(params).toEqual([1]);
+  });
+
+  it("returns an empty array if the query fails", async () => {
+    mockGetAllAsync.mockRejectedValue(new Error("db error"));
+
+    const points = await getRejectedPointsByProject(1);
+
+    expect(points).toEqual([]);
   });
 });

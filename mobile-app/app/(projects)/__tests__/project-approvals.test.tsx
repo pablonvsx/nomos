@@ -6,7 +6,7 @@
 // @/core/drive-sync/* module - if the screen still imported any of those,
 // this test file would fail to resolve them and the suite would error out.
 import React from "react";
-import { render, screen } from "@testing-library/react-native";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 import { PaperProvider } from "react-native-paper";
 
 jest.mock("expo-router", () => {
@@ -38,9 +38,18 @@ jest.mock("@/db/queries/projects", () => ({
 }));
 
 const mockGetPendingPointsByProject = jest.fn();
+const mockUpdatePointApprovalStatus = jest.fn();
 jest.mock("@/db/queries/points", () => ({
   getPendingPointsByProject: (...args: unknown[]) => mockGetPendingPointsByProject(...args),
-  updatePointApprovalStatus: jest.fn(),
+  updatePointApprovalStatus: (...args: unknown[]) => mockUpdatePointApprovalStatus(...args),
+}));
+
+// Not imported by project-approvals/[id].tsx anymore (see its header
+// comment), but mocked here as a tripwire: if a future change reintroduces
+// a Drive push on approve/reject, these assertions below would catch it.
+const mockSubmitPointToProject = jest.fn();
+jest.mock("@/core/drive-sync/point-submission-service", () => ({
+  submitPointToProject: (...args: unknown[]) => mockSubmitPointToProject(...args),
 }));
 
 import ProjectApprovalsScreen from "../project-approvals/[id]";
@@ -96,5 +105,48 @@ describe("ProjectApprovalsScreen without any Google account setup", () => {
 
     expect(await screen.findByText("Ponto 1")).toBeTruthy();
     expect(mockGetPendingPointsByProject).toHaveBeenCalledWith(project.id);
+  });
+
+  it("approving a point only updates approval_status locally, never pushing to Drive", async () => {
+    mockUpdatePointApprovalStatus.mockResolvedValue(true);
+
+    await render(
+      <PaperProvider>
+        <ProjectApprovalsScreen />
+      </PaperProvider>,
+    );
+
+    await screen.findByText("Ponto 1");
+    fireEvent.press(screen.getByText("projectApprovals.approve"));
+
+    await waitFor(() => expect(mockUpdatePointApprovalStatus).toHaveBeenCalledWith("point-1", "approved"));
+    expect(mockSubmitPointToProject).not.toHaveBeenCalled();
+  });
+
+  it("rejecting a point records approval_status and rejection_reason locally, never pushing to Drive", async () => {
+    mockUpdatePointApprovalStatus.mockResolvedValue(true);
+
+    await render(
+      <PaperProvider>
+        <ProjectApprovalsScreen />
+      </PaperProvider>,
+    );
+
+    await screen.findByText("Ponto 1");
+    fireEvent.press(screen.getByText("projectApprovals.reject"));
+
+    const reasonInput = await screen.findByTestId("text-input-outlined");
+    fireEvent.changeText(reasonInput, "Fora da área do projeto");
+    await waitFor(() => expect(reasonInput.props.value).toBe("Fora da área do projeto"));
+    fireEvent.press(screen.getByText("common.confirm"));
+
+    await waitFor(() =>
+      expect(mockUpdatePointApprovalStatus).toHaveBeenCalledWith(
+        "point-1",
+        "rejected",
+        "Fora da área do projeto",
+      ),
+    );
+    expect(mockSubmitPointToProject).not.toHaveBeenCalled();
   });
 });

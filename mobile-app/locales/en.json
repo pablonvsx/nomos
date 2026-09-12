@@ -645,6 +645,7 @@
     "exportPackageButton": "Export Project Package",
     "exportPackageError": "Could not export the project package.",
     "pendingApprovalsSectionTitle": "Pending Approvals",
+    "rejectedPointsSectionTitle": "Rejected Points",
     "syncChooseOption": "Choose what to sync from this collaborative project.",
     "syncDataOnly": "Data Only",
     "syncDataAndMedia": "Data and Media",
@@ -667,6 +668,17 @@
     "rejectReasonLabel": "Describe the reason for rejection",
     "rejectReasonRequired": "Please provide a reason for rejection.",
     "rejectError": "Error rejecting the point."
+  },
+  "projectRejected": {
+    "title": "Rejected Points",
+    "loadError": "Error loading rejected points.",
+    "empty": "No rejected points.",
+    "deleteTitle": "Permanently Delete Point",
+    "deleteConfirm": "This action cannot be undone. Do you want to permanently delete this point?",
+    "deleteError": "Error deleting the point.",
+    "deletePermanently": "Delete Permanently",
+    "reconsider": "Reconsider",
+    "reconsiderError": "Error reconsidering the point."
   },
   "mapView": {
     "title": "Project Map",

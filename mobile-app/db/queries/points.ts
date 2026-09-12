@@ -292,6 +292,18 @@ export async function getPendingPointsByProject(projectId: number): Promise<Poin
   }
 }
 
+export async function getRejectedPointsByProject(projectId: number): Promise<Point[]> {
+  try {
+    return await db.getAllAsync<Point>(
+      "SELECT * FROM points WHERE project_id = ? AND approval_status = 'rejected' ORDER BY point_number ASC",
+      [projectId],
+    );
+  } catch (error) {
+    console.error("Error listing rejected points:", error);
+    return [];
+  }
+}
+
 export async function updatePointApprovalStatus(
   pointId: string,
   status: "local" | "pending" | "approved" | "rejected",

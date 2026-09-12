@@ -367,6 +367,12 @@ export default function ProjectCollaborationScreen() {
             right={(props) => <List.Icon {...props} icon="chevron-right" />}
             onPress={() => router.push(`/project-approvals/${project.id}` as any)}
           />
+          <List.Item
+            title={t("projectCollaboration.rejectedPointsSectionTitle")}
+            left={(props) => <List.Icon {...props} icon="close-circle-outline" />}
+            right={(props) => <List.Icon {...props} icon="chevron-right" />}
+            onPress={() => router.push(`/project-rejected/${project.id}` as any)}
+          />
         </Card>
 
         <Text variant="titleMedium" style={[styles.sectionTitle, { color: paperTheme.colors.primary }]}>

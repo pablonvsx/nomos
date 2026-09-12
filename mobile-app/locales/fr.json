@@ -645,6 +645,7 @@
     "exportPackageButton": "Exporter le Paquet du Projet",
     "exportPackageError": "Impossible d'exporter le paquet du projet.",
     "pendingApprovalsSectionTitle": "Approbations en Attente",
+    "rejectedPointsSectionTitle": "Points Rejetés",
     "syncChooseOption": "Choisissez quoi synchroniser depuis ce projet collaboratif.",
     "syncDataOnly": "Données Seulement",
     "syncDataAndMedia": "Données et Médias",
@@ -667,6 +668,17 @@
     "rejectReasonLabel": "Décrivez le motif du rejet",
     "rejectReasonRequired": "Indiquez un motif pour le rejet.",
     "rejectError": "Erreur lors du rejet du point."
+  },
+  "projectRejected": {
+    "title": "Points Rejetés",
+    "loadError": "Erreur lors du chargement des points rejetés.",
+    "empty": "Aucun point rejeté.",
+    "deleteTitle": "Supprimer le Point Définitivement",
+    "deleteConfirm": "Cette action est irréversible. Voulez-vous supprimer définitivement ce point ?",
+    "deleteError": "Erreur lors de la suppression du point.",
+    "deletePermanently": "Supprimer Définitivement",
+    "reconsider": "Reconsidérer",
+    "reconsiderError": "Erreur lors de la reconsidération du point."
   },
   "mapView": {
     "title": "Carte du Projet",
