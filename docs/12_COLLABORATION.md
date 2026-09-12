@@ -1,5 +1,13 @@
 # 12. Collaboration
 
+> ⚠️ **Este documento descreve um modelo em substituição.** A branch
+> refactor/collab-single-owner-export-import está reformulando a colaboração
+> para um modelo de dono único do projeto + exportação/importação de pacotes
+> e pontos, sem múltiplos administradores nem sincronização multi-dispositivo
+> via Drive. Não usar este documento como referência até a reescrita ser
+> concluída.
+
+
 A project doesn't have to stay on one device. It can be made **collaborative**, backed by a shared Google Drive folder: an admin invites collaborators by email, each collaborator submits points for approval (or auto-approval, depending on policy), and a sync pulls the approved data back down into everyone's local SQLite. This sits entirely on top of the existing offline-first model — collection itself never depends on connectivity; only submission, approval, and sync do. There is no Nomos server: Drive *is* the transport.
 
 ## Google authentication

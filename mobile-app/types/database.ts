@@ -32,6 +32,7 @@ export interface Project {
   is_collaborative: 0 | 1; // Flag indicating whether the project is shared via Google Drive (0 = no, 1 = yes)
   drive_folder_id?: string | null; // Google Drive folder id backing the project, when collaborative
   auto_approve_default: 0 | 1; // Default auto-approve behavior for new members (0 = no, 1 = yes)
+  project_uuid?: string | null; // Stable cross-device id, generated on first export/share
 }
 
 // A member of a collaborative project (Drive-based collaboration, future use)

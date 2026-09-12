@@ -28,6 +28,7 @@ import {
   type SharedProjectOption,
 } from "@/core/drive-sync/project-drive-service";
 import { syncProjectFromDrive } from "@/core/drive-sync/project-sync-service";
+import { importProjectConfigPackage } from "@/core/project-sharing/project-config-package";
 
 // Internal imports: Database queries and Types
 import { getAllProjects, getUsedDriveFolderIds } from "@/db/queries/projects";
@@ -272,11 +273,27 @@ export default function ProjectsScreen() {
     }
   };
 
-  // TODO: implement actual project import (file picker + validation, mirroring
-  // handleImportProtocol below). For now this just surfaces that the action
-  // exists but isn't wired up yet.
-  const handleImportProject = () => {
-    alert(t("projectsList.importProject"), t("projectsList.importProjectComingSoon"));
+  const handleImportProject = async () => {
+    try {
+      const result = await importProjectConfigPackage();
+      if (!result) return; // user cancelled the file picker
+
+      loadData();
+
+      const message = result.created
+        ? t("projectsList.importProjectSuccessMessage")
+        : t("projectsList.importProjectExistingMessage");
+
+      alert(t("projectsList.importProjectSuccessTitle"), message, () =>
+        router.push(`/project-details/${result.projectId}` as any),
+      );
+    } catch (error) {
+      console.error("Error importing project package:", error);
+      alert(
+        t("common.error"),
+        error instanceof Error ? error.message : t("projectsList.importProjectError"),
+      );
+    }
   };
 
   const handleImportProtocol = async () => {

@@ -70,7 +70,8 @@ export async function initDatabase() {
         active_custom_vegetation_classification_id INTEGER,
         is_collaborative INTEGER NOT NULL DEFAULT 0,
         drive_folder_id TEXT,
-        auto_approve_default INTEGER NOT NULL DEFAULT 0
+        auto_approve_default INTEGER NOT NULL DEFAULT 0,
+        project_uuid TEXT
       );
     `);
 

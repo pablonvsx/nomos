@@ -73,6 +73,61 @@ export async function getProjectById(
 }
 
 /**
+ * Retrieves a project by its stable cross-device uuid, used to reconcile a
+ * project config package against a project already imported on this device.
+ */
+export async function getProjectByUuid(uuid: string): Promise<Project | null> {
+  try {
+    const result = await db.getFirstAsync<Project>(
+      "SELECT * FROM projects WHERE project_uuid = ?",
+      [uuid],
+    );
+    return result || null;
+  } catch (error) {
+    console.error("Error fetching project by uuid:", error);
+    throw error;
+  }
+}
+
+/**
+ * Backfills the uuid of a project created before this column existed (e.g.
+ * when exporting its config package for the first time).
+ */
+export async function setProjectUuid(id: number, uuid: string): Promise<void> {
+  await db.runAsync("UPDATE projects SET project_uuid = ? WHERE id = ?", [
+    uuid,
+    id,
+  ]);
+}
+
+/**
+ * Creates a local project from an imported project config package,
+ * preserving its uuid so it can be found again by getProjectByUuid if the
+ * same package is imported again on this or another device.
+ */
+export async function createProjectFromPackage(
+  projectUuid: string,
+  name: string,
+  protocolId: string,
+  protocolSource: "official" | "custom",
+): Promise<number | null> {
+  try {
+    const createdAt = new Date().toISOString();
+
+    const result = await db.runAsync(
+      `INSERT INTO projects (name, protocol_id, description, protocol_source, created_at, last_updated, is_classified, project_uuid)
+       VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
+      [name, protocolId, "", protocolSource, createdAt, createdAt, projectUuid],
+    );
+
+    return result.lastInsertRowId;
+  } catch (error) {
+    console.error("Error creating project from package:", error);
+    return null;
+  }
+}
+
+/**
  * Updates the GeoJSON files associated with a project.
  */
 export async function updateProjectGeoJSON(

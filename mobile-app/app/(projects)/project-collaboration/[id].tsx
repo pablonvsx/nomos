@@ -45,6 +45,7 @@ import {
 import { syncProjectFromDrive } from "@/core/drive-sync/project-sync-service";
 import { submitPointToProject } from "@/core/drive-sync/point-submission-service";
 import { getPointDisplayLabel } from "@/core/drive-sync/point-label";
+import { exportProjectConfigPackage } from "@/core/project-sharing/project-config-package";
 import type { Project, Point } from "@/types/database";
 
 export default function ProjectCollaborationScreen() {
@@ -386,6 +387,16 @@ export default function ProjectCollaborationScreen() {
     }
   };
 
+  const handleExportConfigPackage = async () => {
+    if (!project) return;
+    try {
+      await exportProjectConfigPackage(project.id);
+    } catch (error) {
+      console.error("Error exporting project config package:", error);
+      alert(t("common.error"), t("projectCollaboration.exportPackageError"));
+    }
+  };
+
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centerContent, { backgroundColor: paperTheme.colors.background }]}>
@@ -640,6 +651,17 @@ export default function ProjectCollaborationScreen() {
           <Card.Content>
             <Button mode="contained" onPress={() => setSyncDialogVisible(true)}>
               {t("projectCollaboration.syncButton")}
+            </Button>
+          </Card.Content>
+        </Card>
+
+        <Text variant="titleMedium" style={[styles.sectionTitle, { color: paperTheme.colors.primary }]}>
+          {t("projectCollaboration.exportPackageSectionTitle")}
+        </Text>
+        <Card style={styles.card}>
+          <Card.Content>
+            <Button mode="contained" onPress={handleExportConfigPackage}>
+              {t("projectCollaboration.exportPackageButton")}
             </Button>
           </Card.Content>
         </Card>
