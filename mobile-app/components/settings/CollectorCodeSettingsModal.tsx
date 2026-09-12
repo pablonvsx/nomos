@@ -50,7 +50,7 @@ export const CollectorCodeSettingsModal: React.FC<CollectorCodeSettingsModalProp
 
   const handleSave = async () => {
     const trimmed = code.trim();
-    if (!trimmed || trimmed.length < 2) {
+    if (trimmed.length !== 4) {
       alert(t('common.error'), t('settings.collectorCodeInvalid'));
       return;
     }
