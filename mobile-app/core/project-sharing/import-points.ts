@@ -14,9 +14,19 @@ import { serializeModules } from "@/core/drive-sync/project-sync-service";
 import { resolveCustomModuleDescriptors, forEachModuleMediaField } from "@/core/project-sharing/module-media";
 import type { ProtocolRegistry, PointEnvelope } from "@/protocol-kernel/types";
 
+export interface PendingDuplicate {
+  pointId: string;
+  pointLabel: string;
+  /** Already carries persisted (Paths.document) media paths, same as a
+   *  freshly-imported point - materializing media happens regardless of
+   *  whether the point turns out to be a duplicate. */
+  incomingEnvelope: PointEnvelope;
+}
+
 export interface ImportPointsResult {
   imported: number;
   rejected: Array<{ pointLabel: string; reason: string }>;
+  duplicates: PendingDuplicate[];
 }
 
 interface PointsPackage {
@@ -60,7 +70,7 @@ export async function importPointsPackage(
   });
 
   if (picked.canceled || !picked.assets || picked.assets.length === 0) {
-    return { imported: 0, rejected: [] };
+    return { imported: 0, rejected: [], duplicates: [] };
   }
 
   const extractDir = new Directory(Paths.cache, `points_import_${Date.now()}`);
@@ -104,6 +114,7 @@ export async function importPointsPackage(
           pointLabel: pointLabel(p),
           reason: "Este arquivo pertence a outro projeto.",
         })),
+        duplicates: [],
       };
     }
 
@@ -126,53 +137,33 @@ export async function importPointsPackage(
           pointLabel: pointLabel(p),
           reason: "Este arquivo foi coletado com um protocolo diferente do usado neste projeto.",
         })),
+        duplicates: [],
       };
     }
 
     let imported = 0;
     const rejected: Array<{ pointLabel: string; reason: string }> = [];
+    const duplicates: PendingDuplicate[] = [];
     const mediaRootDir = new Directory(extractDir, "media");
     const moduleDescriptors = await resolveCustomModuleDescriptors(project);
 
     for (const envelope of pkg.points) {
-      if (await pointExists(envelope.id)) {
-        continue; // already imported before - silent dedupe, not counted either way
-      }
-
       try {
         const pointProtocolId =
           envelope.protocolId ??
           (project.protocol_source === "custom" ? "custom" : project.protocol_id);
         const pointMediaDir = new Directory(mediaRootDir, envelope.id);
 
-        let photosJson: string | null = null;
-        const photoNames = envelope.photos ?? [];
-        if (photoNames.length > 0) {
-          const materialized: { uri: string; timestamp: number }[] = [];
-          photoNames.forEach((name, index) => {
-            const sourceFile = new File(pointMediaDir, name);
-            if (!sourceFile.exists) return;
-            const destFile = new File(Paths.document, `import_${envelope.id}_${index}_${name}`);
-            sourceFile.copy(destFile);
-            materialized.push({ uri: destFile.uri, timestamp: Date.now() });
-          });
-          photosJson = JSON.stringify(materialized);
-        }
-
-        let audioNotesJson: string | null = null;
-        const audioNotes = envelope.audioNotes ?? [];
-        if (audioNotes.length > 0) {
-          const materialized: { uri: string; duration: number; timestamp: number }[] = [];
-          audioNotes.forEach((note, index) => {
-            const name = basename(note.uri);
-            const sourceFile = new File(pointMediaDir, name);
-            if (!sourceFile.exists) return;
-            const destFile = new File(Paths.document, `import_audio_${envelope.id}_${index}_${name}`);
-            sourceFile.copy(destFile);
-            materialized.push({ uri: destFile.uri, duration: note.duration, timestamp: note.timestamp });
-          });
-          audioNotesJson = JSON.stringify(materialized);
-        }
+        // Media is always materialized into persistent storage, whether or
+        // not this point turns out to be a duplicate - the owner needs to
+        // be able to see the incoming photos/audio to decide "Substituir" vs
+        // "Descartar" either way (see resolve-duplicates.ts).
+        const materializedPhotos = materializePhotos(envelope.photos ?? [], pointMediaDir, envelope.id);
+        const materializedAudioNotes = materializeAudioNotes(
+          envelope.audioNotes ?? [],
+          pointMediaDir,
+          envelope.id,
+        );
 
         forEachModuleMediaField(envelope.modules ?? {}, moduleDescriptors, (loc) => {
           const items = parseJsonText<Array<Record<string, unknown>>>(loc.read() ?? "", [], Array.isArray);
@@ -196,6 +187,24 @@ export async function importPointsPackage(
           loc.write(JSON.stringify(materialized));
         });
 
+        if (await pointExists(envelope.id)) {
+          const incomingEnvelope: PointEnvelope = {
+            ...envelope,
+            protocolId: pointProtocolId,
+            photos: materializedPhotos.map((p) => p.uri),
+            audioNotes: materializedAudioNotes,
+          };
+          duplicates.push({
+            pointId: envelope.id,
+            pointLabel: `${pkg.collector_code}-${envelope.pointNumber ?? "?"}`,
+            incomingEnvelope,
+          });
+          continue;
+        }
+
+        const photosJson = materializedPhotos.length > 0 ? JSON.stringify(materializedPhotos) : null;
+        const audioNotesJson =
+          materializedAudioNotes.length > 0 ? JSON.stringify(materializedAudioNotes) : null;
         const moduleData = serializeModules(envelope.modules ?? {}, pointProtocolId, registry);
 
         const newId = await createPoint({
@@ -227,8 +236,42 @@ export async function importPointsPackage(
       }
     }
 
-    return { imported, rejected };
+    return { imported, rejected, duplicates };
   } finally {
     if (extractDir.exists) await extractDir.delete();
   }
+}
+
+function materializePhotos(
+  photoUris: string[],
+  pointMediaDir: Directory,
+  envelopeId: string,
+): { uri: string; timestamp: number }[] {
+  const materialized: { uri: string; timestamp: number }[] = [];
+  photoUris.forEach((uri, index) => {
+    const name = basename(uri);
+    const sourceFile = new File(pointMediaDir, name);
+    if (!sourceFile.exists) return;
+    const destFile = new File(Paths.document, `import_${envelopeId}_${index}_${name}`);
+    sourceFile.copy(destFile);
+    materialized.push({ uri: destFile.uri, timestamp: Date.now() });
+  });
+  return materialized;
+}
+
+function materializeAudioNotes(
+  audioNotes: NonNullable<PointEnvelope["audioNotes"]>,
+  pointMediaDir: Directory,
+  envelopeId: string,
+): { uri: string; duration: number; timestamp: number }[] {
+  const materialized: { uri: string; duration: number; timestamp: number }[] = [];
+  audioNotes.forEach((note, index) => {
+    const name = basename(note.uri);
+    const sourceFile = new File(pointMediaDir, name);
+    if (!sourceFile.exists) return;
+    const destFile = new File(Paths.document, `import_audio_${envelopeId}_${index}_${name}`);
+    sourceFile.copy(destFile);
+    materialized.push({ uri: destFile.uri, duration: note.duration, timestamp: note.timestamp });
+  });
+  return materialized;
 }

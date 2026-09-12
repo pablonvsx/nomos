@@ -40,6 +40,7 @@ import {
 import { getPointsByProject, classifyProjectPoints, getPointsWithModulesByProject } from "@/db/queries/points";
 import { buildPointEnvelope } from "@/db/mappers/point.mapper";
 import { getPointDisplayLabel } from "@/core/drive-sync/point-label";
+import { exportAllPointsPackage } from "@/core/project-sharing/export-points";
 import {
   getActiveVegetationClassificationConfig,
   getVegetationClassificationById,
@@ -552,6 +553,19 @@ export default function UnifiedProjectDetailsScreen() {
     }
   };
 
+  const handleExportAllPoints = async () => {
+    if (!project || surveyPoints.length === 0) return;
+    try {
+      setIsExporting(true);
+      await exportAllPointsPackage(project.id, registry);
+    } catch (error) {
+      console.error("Error exporting all points package:", error);
+      alert(t("common.error"), error instanceof Error ? error.message : t("projectView.errorExporting"));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const renderSurveyPoint = ({ item }: { item: Point }) => {
     const surveyRoute = `/survey-point-details/${item.id}?projectId=${project?.id}`;
     const pointLabel = t("surveyView.point");
@@ -907,6 +921,14 @@ export default function UnifiedProjectDetailsScreen() {
             icon: "folder-image",
             label: t("projectView.exportMedia"),
             onPress: (surveyPoints.length === 0 || isExporting) ? () => {} : handleExportMedia,
+            color: paperTheme.dark
+              ? paperTheme.colors.onSurface
+              : paperTheme.colors.primary,
+          },
+          {
+            icon: "export-variant",
+            label: t("projectView.exportAllPoints"),
+            onPress: (surveyPoints.length === 0 || isExporting) ? () => {} : handleExportAllPoints,
             color: paperTheme.dark
               ? paperTheme.colors.onSurface
               : paperTheme.colors.primary,

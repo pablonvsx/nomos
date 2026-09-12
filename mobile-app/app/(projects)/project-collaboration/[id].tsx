@@ -5,7 +5,7 @@
 // exporting the project config package (Fase 0) and importing points
 // received from a collector (Fase 2), plus a link to the pending-approvals
 // queue. See docs/12_COLLABORATION.md.
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
 import {
   Text,
@@ -30,8 +30,21 @@ import { syncProjectFromDrive } from "@/core/drive-sync/project-sync-service";
 import { submitPointToProject } from "@/core/drive-sync/point-submission-service";
 import { getPointDisplayLabel } from "@/core/drive-sync/point-label";
 import { exportProjectConfigPackage } from "@/core/project-sharing/project-config-package";
-import { importPointsPackage } from "@/core/project-sharing/import-points";
+import { importPointsPackage, type PendingDuplicate } from "@/core/project-sharing/import-points";
+import { resolvePointDuplicate } from "@/core/project-sharing/resolve-duplicates";
 import type { Project, Point } from "@/types/database";
+
+// State for the multi-step "resolve each duplicate, then show one
+// consolidated summary" flow (COLLAB_MODEL_V2_REFERENCE.md section 5) -
+// `base` holds the imported/rejected counts already known right after
+// importPointsPackage returns, `pending` shrinks as the owner resolves each
+// duplicate, and `replaced`/`discarded` accumulate for the final summary.
+interface DuplicateResolutionState {
+  base: { imported: number; rejected: Array<{ pointLabel: string; reason: string }> };
+  pending: PendingDuplicate[];
+  replaced: number;
+  discarded: number;
+}
 
 export default function ProjectCollaborationScreen() {
   const router = useRouter();
@@ -39,7 +52,7 @@ export default function ProjectCollaborationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { alert, confirm } = useAlertDialog();
   const { t } = useI18n();
-  const { account: googleAccount } = useGoogleAccount();
+  const { account: googleAccount, connect: connectGoogleAccount } = useGoogleAccount();
   const registry = useProtocolRegistry();
 
   const [project, setProject] = useState<Project | null>(null);
@@ -49,6 +62,8 @@ export default function ProjectCollaborationScreen() {
   const [submittingPointId, setSubmittingPointId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncDialogVisible, setSyncDialogVisible] = useState(false);
+  const [duplicateResolution, setDuplicateResolution] = useState<DuplicateResolutionState | null>(null);
+  const [resolvingDuplicateId, setResolvingDuplicateId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -78,7 +93,24 @@ export default function ProjectCollaborationScreen() {
   );
 
   const handleMakeCollaborative = () => {
-    if (!project || !googleAccount) return;
+    if (!project) return;
+
+    // Google account required only for this owner-specific action (section
+    // 10) - never gate the screen itself. If not connected, the button stays
+    // tappable and prompts to connect instead of silently doing nothing or
+    // being disabled. "Fazer backup" (section 8) and "Restaurar meus
+    // projetos do Drive" (section 9), once implemented (Fase F), must follow
+    // this same tap-to-prompt pattern rather than a whole-screen gate.
+    if (!googleAccount) {
+      confirm(
+        t("projectView.makeCollaborative"),
+        t("projectCollaboration.connectAccountHint"),
+        () => connectGoogleAccount(),
+        () => {},
+        t("settings.googleAccountConnect"),
+      );
+      return;
+    }
 
     confirm(
       t("projectView.makeCollaborative"),
@@ -179,8 +211,23 @@ export default function ProjectCollaborationScreen() {
     if (!project) return;
     try {
       const result = await importPointsPackage(project.id, registry);
-      if (result.imported === 0 && result.rejected.length === 0) return; // cancelado
+      if (result.imported === 0 && result.rejected.length === 0 && result.duplicates.length === 0) {
+        return; // cancelado
+      }
       await loadData();
+
+      if (result.duplicates.length > 0) {
+        // Defer the summary alert until every duplicate has been resolved -
+        // see the useEffect below.
+        setDuplicateResolution({
+          base: { imported: result.imported, rejected: result.rejected },
+          pending: result.duplicates,
+          replaced: 0,
+          discarded: 0,
+        });
+        return;
+      }
+
       const summary = result.rejected.length > 0
         ? t("projectCollaboration.importPointsSummaryWithRejected", {
             imported: result.imported,
@@ -196,6 +243,58 @@ export default function ProjectCollaborationScreen() {
       );
     }
   };
+
+  const handleResolveDuplicate = async (duplicate: PendingDuplicate, action: "replace" | "discard") => {
+    if (!project || !duplicateResolution) return;
+    setResolvingDuplicateId(duplicate.pointId);
+    try {
+      await resolvePointDuplicate(duplicate, action, project, registry);
+      setDuplicateResolution((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          pending: prev.pending.filter((d) => d.pointId !== duplicate.pointId),
+          replaced: prev.replaced + (action === "replace" ? 1 : 0),
+          discarded: prev.discarded + (action === "discard" ? 1 : 0),
+        };
+      });
+    } catch (error) {
+      console.error("Error resolving duplicate point:", error);
+      alert(t("common.error"), t("projectCollaboration.resolveDuplicateError"));
+    } finally {
+      setResolvingDuplicateId(null);
+    }
+  };
+
+  // Fires the consolidated summary (and reloads the point list) once every
+  // duplicate from the last import has been resolved.
+  useEffect(() => {
+    if (!duplicateResolution || duplicateResolution.pending.length > 0) return;
+
+    const { base, replaced, discarded } = duplicateResolution;
+    setDuplicateResolution(null);
+    loadData();
+
+    const parts = [
+      t("projectCollaboration.duplicatesResolvedSummary", {
+        imported: base.imported,
+        replaced,
+        discarded,
+      }),
+    ];
+    if (base.rejected.length > 0) {
+      parts.push(
+        `${t("projectCollaboration.rejectedListLabel")}\n${base.rejected
+          .map((r) => `${r.pointLabel}: ${r.reason}`)
+          .join("\n")}`,
+      );
+    }
+    alert(t("projectCollaboration.importPointsTitle"), parts.join("\n\n"));
+    // alert/loadData/t are stable enough for this one-shot "just finished
+    // resolving" effect; only duplicateResolution's pending-list transition
+    // to empty should re-trigger it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duplicateResolution]);
 
   if (isLoading) {
     return (
@@ -232,16 +331,11 @@ export default function ProjectCollaborationScreen() {
                 </Text>
               ) : (
                 <>
-                  {!googleAccount && (
-                    <Text variant="bodySmall" style={{ color: paperTheme.colors.error, marginTop: 8 }}>
-                      {t("projectCollaboration.connectAccountHint")}
-                    </Text>
-                  )}
                   <Button
                     mode="contained"
                     style={{ marginTop: 16 }}
                     loading={isMakingCollaborative}
-                    disabled={isMakingCollaborative || !googleAccount}
+                    disabled={isMakingCollaborative}
                     onPress={handleMakeCollaborative}
                   >
                     {t("projectView.makeCollaborative")}
@@ -372,6 +466,58 @@ export default function ProjectCollaborationScreen() {
             <ActivityIndicator size="large" />
             <Text style={{ marginTop: 16 }}>{t("projectCollaboration.syncing")}</Text>
           </Dialog.Content>
+        </Dialog>
+      </Portal>
+
+      <Portal>
+        <Dialog visible={!!duplicateResolution} dismissable={false}>
+          <Dialog.Title>{t("projectCollaboration.duplicatesFoundTitle")}</Dialog.Title>
+          <Dialog.ScrollArea style={{ maxHeight: 320 }}>
+            <ScrollView>
+              <Dialog.Content>
+                <Text variant="bodyMedium" style={{ marginBottom: 12 }}>
+                  {t("projectCollaboration.duplicatesFoundDescription")}
+                </Text>
+                {duplicateResolution?.pending.map((duplicate) => {
+                  const isResolving = resolvingDuplicateId === duplicate.pointId;
+                  return (
+                    <View
+                      key={duplicate.pointId}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        paddingVertical: 8,
+                      }}
+                    >
+                      <Text variant="bodyMedium" style={{ flex: 1 }}>
+                        {duplicate.pointLabel}
+                      </Text>
+                      <Button
+                        mode="outlined"
+                        compact
+                        loading={isResolving}
+                        disabled={resolvingDuplicateId !== null}
+                        onPress={() => handleResolveDuplicate(duplicate, "discard")}
+                      >
+                        {t("projectCollaboration.duplicateDiscard")}
+                      </Button>
+                      <Button
+                        mode="contained"
+                        compact
+                        style={{ marginLeft: 8 }}
+                        loading={isResolving}
+                        disabled={resolvingDuplicateId !== null}
+                        onPress={() => handleResolveDuplicate(duplicate, "replace")}
+                      >
+                        {t("projectCollaboration.duplicateReplace")}
+                      </Button>
+                    </View>
+                  );
+                })}
+              </Dialog.Content>
+            </ScrollView>
+          </Dialog.ScrollArea>
         </Dialog>
       </Portal>
     </View>

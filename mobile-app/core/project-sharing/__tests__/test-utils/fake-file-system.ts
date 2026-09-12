@@ -44,6 +44,10 @@ export class File {
       files.set(destination.uri, content);
     }
   }
+
+  delete(): void {
+    files.delete(this.uri);
+  }
 }
 
 export class Directory {

@@ -158,6 +158,24 @@ export async function getPointsByProject(projectId: number): Promise<Point[]> {
   }
 }
 
+/**
+ * All point ids for a project, regardless of approval_status - used for
+ * bulk-exporting a collaborator's entire local project (no status filter,
+ * unlike getPendingPointsByProject).
+ */
+export async function getAllPointIdsForProject(projectId: number): Promise<string[]> {
+  try {
+    const results = await db.getAllAsync<{ id: string }>(
+      "SELECT id FROM points WHERE project_id = ?",
+      [projectId],
+    );
+    return results.map((r) => r.id);
+  } catch (error) {
+    console.error("Error fetching point ids for project:", error);
+    return [];
+  }
+}
+
 export async function updatePoint(
   pointId: string,
   updates: UpdatePointInput,

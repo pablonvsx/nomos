@@ -7,7 +7,7 @@
 import { Directory, File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { zip } from "react-native-zip-archive";
-import { getPoint } from "@/db/queries/points";
+import { getPoint, getAllPointIdsForProject } from "@/db/queries/points";
 import { getProjectById } from "@/db/queries/projects";
 import { getCustomProtocolById, setCustomProtocolUuid } from "@/db/queries/custom-protocols";
 import { buildPointWithModules, buildPointEnvelope } from "@/db/mappers/point.mapper";
@@ -146,4 +146,16 @@ export async function exportPointsPackage(
   } finally {
     if (stagingDir.exists) await stagingDir.delete();
   }
+}
+
+// Bulk variant of exportPointsPackage: every point currently in the local
+// project, regardless of approval_status - re-exporting the same points
+// again is fine, the owner's import step (importPointsPackage) handles
+// duplicates explicitly instead of relying on a local "already sent" flag.
+export async function exportAllPointsPackage(
+  projectId: number,
+  registry: ProtocolRegistry,
+): Promise<void> {
+  const allPointIds = await getAllPointIdsForProject(projectId);
+  await exportPointsPackage(allPointIds, registry);
 }

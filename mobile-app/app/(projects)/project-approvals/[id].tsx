@@ -2,10 +2,11 @@
 // Pending-points approval queue for a project's owner. Reads/writes the
 // local SQLite directly - this is a single-owner model, so whoever opens
 // this screen locally already is the project's owner (no more admin check
-// against a Drive membership manifest). Approving a point that belongs to a
-// Drive-collaborative project also pushes it to Drive via
-// submitPointToProject, now used only by the owner (see
-// core/drive-sync/point-submission-service.ts and docs/12_COLLABORATION.md).
+// against a Drive membership manifest). Approving/rejecting a point is a
+// purely local action with no Drive/Google account involvement of any kind -
+// approval and backup are fully decoupled steps (COLLAB_MODEL_V2_REFERENCE.md
+// sections 6 and 13); backing up approved points to Drive is a separate,
+// explicit action (section 8, not yet implemented).
 import React, { useState, useCallback } from "react";
 import { View, StyleSheet, FlatList, RefreshControl } from "react-native";
 import {
@@ -22,10 +23,8 @@ import { useRouter, useLocalSearchParams, useFocusEffect, Stack } from "expo-rou
 import { useAlertDialog } from "@/hooks/use-dialog";
 import { useI18n } from "@/contexts/i18n-context";
 import { useStableTextInput } from "@/hooks/use-stable-text-input";
-import { useProtocolRegistry } from "@/contexts/protocol-registry-context";
 import { getProjectById } from "@/db/queries/projects";
 import { getPendingPointsByProject, updatePointApprovalStatus } from "@/db/queries/points";
-import { submitPointToProject } from "@/core/drive-sync/point-submission-service";
 import { parsePhotoUris } from "@/db/mappers/json-utils";
 import type { Project, Point } from "@/types/database";
 
@@ -35,7 +34,6 @@ export default function ProjectApprovalsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { alert } = useAlertDialog();
   const { t } = useI18n();
-  const registry = useProtocolRegistry();
 
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -85,9 +83,6 @@ export default function ProjectApprovalsScreen() {
     setProcessingId(point.id);
     try {
       await updatePointApprovalStatus(point.id, "approved");
-      if (project.collaboration_role === "owner" && project.drive_folder_id) {
-        await submitPointToProject(point.id, project.id, registry);
-      }
       setPendingPoints((prev) => prev.filter((p) => p.id !== point.id));
     } catch (error) {
       console.error("Error approving point:", error);
