@@ -36,10 +36,12 @@ jest.mock("@/utils/uuid", () => ({ generateUuid: jest.fn(() => "uuid-mock") }));
 const mockCreateProject = jest.fn();
 const mockSetProjectCollaborative = jest.fn();
 const mockGetProjectById = jest.fn();
+const mockSetProjectUuid = jest.fn();
 jest.mock("@/db/queries/projects", () => ({
   createProject: (...args: unknown[]) => mockCreateProject(...args),
   setProjectCollaborative: (...args: unknown[]) => mockSetProjectCollaborative(...args),
   getProjectById: (...args: unknown[]) => mockGetProjectById(...args),
+  setProjectUuid: (...args: unknown[]) => mockSetProjectUuid(...args),
 }));
 
 const mockCreatePoint = jest.fn();
@@ -267,6 +269,56 @@ describe("restoreOwnProjectFromDrive", () => {
       const result = await restoreOwnProjectFromDrive(driveFolderId, registry);
 
       expect(result.projectId).toBe(42);
+    });
+  });
+
+  // config_project_uuid is the config/points-package identity uuid (a
+  // different concept than this manifest's own project_uuid, which only
+  // names the Drive folder) - without backfilling it here, every
+  // points-package import against a freshly restored project was rejected
+  // as "belongs to another project" (local project_uuid stayed null
+  // forever). See core/project-sharing/import-points.ts.
+  describe("config_project_uuid backfill", () => {
+    beforeEach(() => {
+      mockGetProjectById.mockResolvedValue({
+        id: 42,
+        name: "Projeto Teste",
+        protocol_id: "paisageo",
+        protocol_source: "official",
+        collaboration_role: "owner",
+        drive_folder_id: driveFolderId,
+        project_uuid: null,
+      });
+      mockListChildren.mockResolvedValue([]);
+    });
+
+    it("backfills the local project_uuid from the manifest's config_project_uuid when present", async () => {
+      mockManifestFile({
+        project_uuid: "folder-identity-uuid",
+        project_name: "Projeto Teste",
+        protocol_id: "paisageo",
+        protocol_source: "official",
+        drive_ids: { approved_folder_id: "approved-1" },
+        config_project_uuid: "config-package-uuid-1",
+      });
+
+      await restoreOwnProjectFromDrive(driveFolderId, registry);
+
+      expect(mockSetProjectUuid).toHaveBeenCalledWith(42, "config-package-uuid-1");
+    });
+
+    it("does not call setProjectUuid when the manifest has no config_project_uuid", async () => {
+      mockManifestFile({
+        project_uuid: "folder-identity-uuid",
+        project_name: "Projeto Teste",
+        protocol_id: "paisageo",
+        protocol_source: "official",
+        drive_ids: { approved_folder_id: "approved-1" },
+      });
+
+      await restoreOwnProjectFromDrive(driveFolderId, registry);
+
+      expect(mockSetProjectUuid).not.toHaveBeenCalled();
     });
   });
 });

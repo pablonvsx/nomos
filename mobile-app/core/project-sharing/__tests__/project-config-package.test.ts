@@ -13,6 +13,13 @@ jest.mock("@/core/drive-sync/reference-data-sync-service", () => ({
   insertSpeciesFromRemote: (...args: unknown[]) => mockInsertSpeciesFromRemote(...args),
 }));
 
+const mockGetManifest = jest.fn();
+const mockUpdateManifest = jest.fn();
+jest.mock("@/core/drive-sync/project-drive-service", () => ({
+  getManifest: (...args: unknown[]) => mockGetManifest(...args),
+  updateManifest: (...args: unknown[]) => mockUpdateManifest(...args),
+}));
+
 const mockGetProjectById = jest.fn();
 const mockGetProjectByUuid = jest.fn();
 const mockSetProjectUuid = jest.fn();
@@ -331,5 +338,72 @@ describe("buildProjectConfigPackage - active_vegetation_classification", () => {
     const result = await buildProjectConfigPackage(1);
 
     expect(result.active_vegetation_classification).toEqual({ type: "standard" });
+  });
+});
+
+// project_uuid (this package's identity) only ever lived in local SQLite -
+// without also mirroring it into the Drive manifest's config_project_uuid
+// field, a device that lost its local DB (and restored the project from
+// Drive) could never recover it, permanently breaking points-package
+// imports from existing collaborators (see project-drive-service.ts's
+// restoreOwnProjectFromDrive backfill).
+describe("buildProjectConfigPackage - persisting a freshly generated project_uuid to Drive", () => {
+  const ownerProjectWithoutUuid: Project = {
+    id: 1,
+    name: "Projeto Fauna",
+    protocol_id: "paisageo",
+    protocol_source: "official",
+    created_at: "2026-01-01T00:00:00.000Z",
+    last_updated: "2026-01-01T00:00:00.000Z",
+    is_classified: 0,
+    collaboration_role: "owner",
+    drive_folder_id: "drive-folder-1",
+    project_uuid: null,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetProjectSpeciesCatalogByProject.mockResolvedValue([]);
+    mockGetVegetationClassificationsByProject.mockResolvedValue([]);
+    mockGetActiveVegetationClassificationConfig.mockResolvedValue({ type: "standard", classificationId: null });
+  });
+
+  it("writes the newly generated uuid to the Drive manifest when the project is already a collaborative owner", async () => {
+    mockGetProjectById.mockResolvedValue(ownerProjectWithoutUuid);
+    mockGetManifest.mockResolvedValue({
+      project_uuid: "folder-identity-uuid",
+      project_name: "Projeto Fauna",
+      protocol_id: "paisageo",
+      protocol_source: "official",
+    });
+
+    await buildProjectConfigPackage(1);
+
+    expect(mockSetProjectUuid).toHaveBeenCalledWith(1, "uuid-mock");
+    expect(mockUpdateManifest).toHaveBeenCalledWith(
+      "drive-folder-1",
+      expect.objectContaining({ config_project_uuid: "uuid-mock" }),
+    );
+  });
+
+  it("does not touch the Drive manifest when the project isn't collaborative yet", async () => {
+    mockGetProjectById.mockResolvedValue({ ...ownerProjectWithoutUuid, collaboration_role: null, drive_folder_id: null });
+
+    await buildProjectConfigPackage(1);
+
+    expect(mockSetProjectUuid).toHaveBeenCalledWith(1, "uuid-mock");
+    expect(mockGetManifest).not.toHaveBeenCalled();
+    expect(mockUpdateManifest).not.toHaveBeenCalled();
+  });
+
+  it("does not fail package generation when persisting to the Drive manifest throws", async () => {
+    mockGetProjectById.mockResolvedValue(ownerProjectWithoutUuid);
+    mockGetManifest.mockRejectedValue(new Error("manifest.json not found"));
+    const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await buildProjectConfigPackage(1);
+
+    expect(result.project_uuid).toBe("uuid-mock");
+    consoleSpy.mockRestore();
   });
 });

@@ -43,6 +43,20 @@ export async function setVegetationClassificationUuid(
 }
 
 /**
+ * Records that a vegetation classification was successfully pushed to
+ * Drive, so it stops showing up in getUnsyncedVegetationClassificationsByProject.
+ */
+export async function setVegetationClassificationDriveSyncedAt(
+  id: number,
+  syncedAt: string,
+): Promise<void> {
+  await db.runAsync(
+    "UPDATE vegetation_classifications SET drive_synced_at = ? WHERE id = ?",
+    [syncedAt, id],
+  );
+}
+
+/**
  * Gets all vegetation classifications for a project
  */
 export async function getVegetationClassificationsByProject(
@@ -57,8 +71,9 @@ export async function getVegetationClassificationsByProject(
       created_at: string;
       last_updated: string;
       uuid: string | null;
+      drive_synced_at: string | null;
     }>(
-      `SELECT id, project_id, name, classes, created_at, last_updated, uuid
+      `SELECT id, project_id, name, classes, created_at, last_updated, uuid, drive_synced_at
        FROM vegetation_classifications
        WHERE project_id = ?
        ORDER BY created_at DESC`,
@@ -73,11 +88,25 @@ export async function getVegetationClassificationsByProject(
       created_at: row.created_at,
       last_updated: row.last_updated,
       uuid: row.uuid ?? null,
+      drive_synced_at: row.drive_synced_at ?? null,
     }));
   } catch (error) {
     console.error("Error fetching vegetation classifications:", error);
     return [];
   }
+}
+
+/**
+ * Gets every vegetation classification in a project that has never been
+ * pushed to Drive (drive_synced_at IS NULL). Used by backup-service.ts's
+ * "Fazer Backup" retry, mirroring getApprovedUnsyncedPointsByProject
+ * (db/queries/points.ts) for points.
+ */
+export async function getUnsyncedVegetationClassificationsByProject(
+  projectId: number,
+): Promise<VegetationClassification[]> {
+  const all = await getVegetationClassificationsByProject(projectId);
+  return all.filter((row) => !row.drive_synced_at);
 }
 
 /**
@@ -95,8 +124,9 @@ export async function getVegetationClassificationById(
       created_at: string;
       last_updated: string;
       uuid: string | null;
+      drive_synced_at: string | null;
     }>(
-      `SELECT id, project_id, name, classes, created_at, last_updated, uuid
+      `SELECT id, project_id, name, classes, created_at, last_updated, uuid, drive_synced_at
        FROM vegetation_classifications
        WHERE id = ?`,
       [classificationId],
@@ -112,6 +142,7 @@ export async function getVegetationClassificationById(
       created_at: result.created_at,
       last_updated: result.last_updated,
       uuid: result.uuid ?? null,
+      drive_synced_at: result.drive_synced_at ?? null,
     };
   } catch (error) {
     console.error("Error fetching vegetation classification:", error);

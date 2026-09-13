@@ -64,181 +64,202 @@ export async function importPointsPackage(
   targetProjectId: number,
   registry: ProtocolRegistry,
 ): Promise<ImportPointsResult> {
-  const picked = await DocumentPicker.getDocumentAsync({
-    type: ["application/zip", "*/*"],
-    copyToCacheDirectory: true,
-  });
-
-  if (picked.canceled || !picked.assets || picked.assets.length === 0) {
-    return { imported: 0, rejected: [], duplicates: [] };
-  }
-
-  const extractDir = new Directory(Paths.cache, `points_import_${Date.now()}`);
-  if (extractDir.exists) await extractDir.delete();
-  await extractDir.create();
-
   try {
-    const zipUri = picked.assets[0].uri;
+    const picked = await DocumentPicker.getDocumentAsync({
+      type: ["application/zip", "*/*"],
+      copyToCacheDirectory: true,
+    });
+
+    if (picked.canceled || !picked.assets || picked.assets.length === 0) {
+      return { imported: 0, rejected: [], duplicates: [] };
+    }
+
+    const extractDir = new Directory(Paths.cache, `points_import_${Date.now()}`);
+    if (extractDir.exists) await extractDir.delete();
+    await extractDir.create();
+
     try {
-      await unzip(zipUri.replace("file://", ""), extractDir.uri.replace("file://", ""));
-    } catch {
-      throw new Error("Este arquivo não é um pacote de pontos válido do Nomos.");
-    }
+      const zipUri = picked.assets[0].uri;
 
-    const pointsJsonFile = new File(extractDir, "points.json");
-    if (!pointsJsonFile.exists) {
-      throw new Error("Este arquivo não é um pacote de pontos válido do Nomos.");
-    }
+      // Fails with a clear, catchable message before ever reaching the
+      // native unzip() call - a missing/empty file surfaced as a generic
+      // native extraction error is much harder to tell apart from an
+      // actually corrupt zip.
+      const zipFile = new File(zipUri);
+      if (!zipFile.exists || (zipFile.size ?? 0) <= 0) {
+        throw new Error("Arquivo de pontos inválido ou vazio.");
+      }
 
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(await pointsJsonFile.text());
-    } catch {
-      throw new Error("Este arquivo não é um pacote de pontos válido do Nomos.");
-    }
-
-    if (!isValidPointsPackage(parsed)) {
-      throw new Error("Este arquivo não é um pacote de pontos válido do Nomos.");
-    }
-    const pkg = parsed;
-
-    const project = await getProjectById(targetProjectId);
-    if (!project) {
-      throw new Error("Projeto de destino não encontrado.");
-    }
-
-    if (project.project_uuid !== pkg.project_uuid) {
-      return {
-        imported: 0,
-        rejected: pkg.points.map((p) => ({
-          pointLabel: pointLabel(p),
-          reason: "Este arquivo pertence a outro projeto.",
-        })),
-        duplicates: [],
-      };
-    }
-
-    let protocolMatches: boolean;
-    if (pkg.protocol_source === "official") {
-      protocolMatches =
-        project.protocol_source === "official" && project.protocol_id === pkg.protocol_id;
-    } else {
-      const localProtocol =
-        project.protocol_source === "custom"
-          ? await getCustomProtocolById(Number(project.protocol_id))
-          : null;
-      protocolMatches = !!localProtocol && localProtocol.uuid === pkg.custom_protocol_uuid;
-    }
-
-    if (!protocolMatches) {
-      return {
-        imported: 0,
-        rejected: pkg.points.map((p) => ({
-          pointLabel: pointLabel(p),
-          reason: "Este arquivo foi coletado com um protocolo diferente do usado neste projeto.",
-        })),
-        duplicates: [],
-      };
-    }
-
-    let imported = 0;
-    const rejected: Array<{ pointLabel: string; reason: string }> = [];
-    const duplicates: PendingDuplicate[] = [];
-    const mediaRootDir = new Directory(extractDir, "media");
-    const moduleDescriptors = await resolveCustomModuleDescriptors(project);
-
-    for (const envelope of pkg.points) {
       try {
-        const pointProtocolId =
-          envelope.protocolId ??
-          (project.protocol_source === "custom" ? "custom" : project.protocol_id);
-        const pointMediaDir = new Directory(mediaRootDir, envelope.id);
+        await unzip(zipUri.replace("file://", ""), extractDir.uri.replace("file://", ""));
+      } catch {
+        throw new Error("Este arquivo não é um pacote de pontos válido do Nomos.");
+      }
 
-        // Media is always materialized into persistent storage, whether or
-        // not this point turns out to be a duplicate - the owner needs to
-        // be able to see the incoming photos/audio to decide "Substituir" vs
-        // "Descartar" either way (see resolve-duplicates.ts).
-        const materializedPhotos = materializePhotos(envelope.photos ?? [], pointMediaDir, envelope.id);
-        const materializedAudioNotes = materializeAudioNotes(
-          envelope.audioNotes ?? [],
-          pointMediaDir,
-          envelope.id,
+      const pointsJsonFile = new File(extractDir, "points.json");
+      if (!pointsJsonFile.exists) {
+        throw new Error("Este arquivo não é um pacote de pontos válido do Nomos.");
+      }
+
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(await pointsJsonFile.text());
+      } catch {
+        throw new Error("Este arquivo não é um pacote de pontos válido do Nomos.");
+      }
+
+      if (!isValidPointsPackage(parsed)) {
+        throw new Error("Este arquivo não é um pacote de pontos válido do Nomos.");
+      }
+      const pkg = parsed;
+
+      const project = await getProjectById(targetProjectId);
+      if (!project) {
+        throw new Error("Projeto de destino não encontrado.");
+      }
+
+      if (!project.project_uuid) {
+        throw new Error(
+          "Este projeto não tem uma configuração compartilhada vinculada. Exporte (ou restaure) a configuração do projeto antes de importar pontos.",
         );
+      }
 
-        forEachModuleMediaField(envelope.modules ?? {}, moduleDescriptors, (loc) => {
-          const items = parseJsonText<Array<Record<string, unknown>>>(loc.read() ?? "", [], Array.isArray);
-          if (items.length === 0) return;
+      if (project.project_uuid !== pkg.project_uuid) {
+        return {
+          imported: 0,
+          rejected: pkg.points.map((p) => ({
+            pointLabel: pointLabel(p),
+            reason: "Este arquivo pertence a outro projeto.",
+          })),
+          duplicates: [],
+        };
+      }
 
-          const fieldMediaDir = new Directory(pointMediaDir, "module", loc.locatorKey);
-          const materialized: Record<string, unknown>[] = [];
-          items.forEach((item, index) => {
-            const uri = typeof item.uri === "string" ? item.uri : null;
-            if (!uri) return;
-            const name = basename(uri);
-            const sourceFile = new File(fieldMediaDir, name);
-            if (!sourceFile.exists) return;
-            const destFile = new File(
-              Paths.document,
-              `import_module_${envelope.id}_${loc.locatorKey}_${index}_${name}`,
-            );
-            sourceFile.copy(destFile);
-            materialized.push({ ...item, uri: destFile.uri });
+      let protocolMatches: boolean;
+      if (pkg.protocol_source === "official") {
+        protocolMatches =
+          project.protocol_source === "official" && project.protocol_id === pkg.protocol_id;
+      } else {
+        const localProtocol =
+          project.protocol_source === "custom"
+            ? await getCustomProtocolById(Number(project.protocol_id))
+            : null;
+        protocolMatches = !!localProtocol && localProtocol.uuid === pkg.custom_protocol_uuid;
+      }
+
+      if (!protocolMatches) {
+        return {
+          imported: 0,
+          rejected: pkg.points.map((p) => ({
+            pointLabel: pointLabel(p),
+            reason: "Este arquivo foi coletado com um protocolo diferente do usado neste projeto.",
+          })),
+          duplicates: [],
+        };
+      }
+
+      let imported = 0;
+      const rejected: Array<{ pointLabel: string; reason: string }> = [];
+      const duplicates: PendingDuplicate[] = [];
+      const mediaRootDir = new Directory(extractDir, "media");
+      const moduleDescriptors = await resolveCustomModuleDescriptors(project);
+
+      for (const envelope of pkg.points) {
+        try {
+          const pointProtocolId =
+            envelope.protocolId ??
+            (project.protocol_source === "custom" ? "custom" : project.protocol_id);
+          const pointMediaDir = new Directory(mediaRootDir, envelope.id);
+
+          // Media is always materialized into persistent storage, whether or
+          // not this point turns out to be a duplicate - the owner needs to
+          // be able to see the incoming photos/audio to decide "Substituir" vs
+          // "Descartar" either way (see resolve-duplicates.ts).
+          const materializedPhotos = materializePhotos(envelope.photos ?? [], pointMediaDir, envelope.id);
+          const materializedAudioNotes = materializeAudioNotes(
+            envelope.audioNotes ?? [],
+            pointMediaDir,
+            envelope.id,
+          );
+
+          forEachModuleMediaField(envelope.modules ?? {}, moduleDescriptors, (loc) => {
+            const items = parseJsonText<Array<Record<string, unknown>>>(loc.read() ?? "", [], Array.isArray);
+            if (items.length === 0) return;
+
+            const fieldMediaDir = new Directory(pointMediaDir, "module", loc.locatorKey);
+            const materialized: Record<string, unknown>[] = [];
+            items.forEach((item, index) => {
+              const uri = typeof item.uri === "string" ? item.uri : null;
+              if (!uri) return;
+              const name = basename(uri);
+              const sourceFile = new File(fieldMediaDir, name);
+              if (!sourceFile.exists) return;
+              const destFile = new File(
+                Paths.document,
+                `import_module_${envelope.id}_${loc.locatorKey}_${index}_${name}`,
+              );
+              sourceFile.copy(destFile);
+              materialized.push({ ...item, uri: destFile.uri });
+            });
+            loc.write(JSON.stringify(materialized));
           });
-          loc.write(JSON.stringify(materialized));
-        });
 
-        if (await pointExists(envelope.id)) {
-          const incomingEnvelope: PointEnvelope = {
-            ...envelope,
-            protocolId: pointProtocolId,
-            photos: materializedPhotos.map((p) => p.uri),
-            audioNotes: materializedAudioNotes,
-          };
-          duplicates.push({
-            pointId: envelope.id,
-            pointLabel: `${pkg.collector_code}-${envelope.pointNumber ?? "?"}`,
-            incomingEnvelope,
+          if (await pointExists(envelope.id)) {
+            const incomingEnvelope: PointEnvelope = {
+              ...envelope,
+              protocolId: pointProtocolId,
+              photos: materializedPhotos.map((p) => p.uri),
+              audioNotes: materializedAudioNotes,
+            };
+            duplicates.push({
+              pointId: envelope.id,
+              pointLabel: `${pkg.collector_code}-${envelope.pointNumber ?? "?"}`,
+              incomingEnvelope,
+            });
+            continue;
+          }
+
+          const photosJson = materializedPhotos.length > 0 ? JSON.stringify(materializedPhotos) : null;
+          const audioNotesJson =
+            materializedAudioNotes.length > 0 ? JSON.stringify(materializedAudioNotes) : null;
+          const moduleData = serializeModules(envelope.modules ?? {}, pointProtocolId, registry);
+
+          const newId = await createPoint({
+            id: envelope.id,
+            project_id: targetProjectId,
+            protocol_id: pointProtocolId,
+            lat: envelope.lat,
+            lon: envelope.lon,
+            altitude: envelope.altitude ?? null,
+            generated_name: envelope.generatedName ?? null,
+            photos: photosJson,
+            audio_notes: audioNotesJson,
+            additional_notes: JSON.stringify(envelope.additionalNotes ?? []),
+            point_size: envelope.pointSize ?? null,
+            schema_version: "1.0.0",
+            modules: moduleData,
+            approval_status: "pending",
+            created_by: pkg.collector_code,
           });
-          continue;
-        }
 
-        const photosJson = materializedPhotos.length > 0 ? JSON.stringify(materializedPhotos) : null;
-        const audioNotesJson =
-          materializedAudioNotes.length > 0 ? JSON.stringify(materializedAudioNotes) : null;
-        const moduleData = serializeModules(envelope.modules ?? {}, pointProtocolId, registry);
-
-        const newId = await createPoint({
-          id: envelope.id,
-          project_id: targetProjectId,
-          protocol_id: pointProtocolId,
-          lat: envelope.lat,
-          lon: envelope.lon,
-          altitude: envelope.altitude ?? null,
-          generated_name: envelope.generatedName ?? null,
-          photos: photosJson,
-          audio_notes: audioNotesJson,
-          additional_notes: JSON.stringify(envelope.additionalNotes ?? []),
-          point_size: envelope.pointSize ?? null,
-          schema_version: "1.0.0",
-          modules: moduleData,
-          approval_status: "pending",
-          created_by: pkg.collector_code,
-        });
-
-        if (newId) {
-          imported++;
-        } else {
+          if (newId) {
+            imported++;
+          } else {
+            rejected.push({ pointLabel: pointLabel(envelope), reason: "Falha ao gravar o ponto localmente." });
+          }
+        } catch (error) {
+          console.error("Error importing point from package:", error);
           rejected.push({ pointLabel: pointLabel(envelope), reason: "Falha ao gravar o ponto localmente." });
         }
-      } catch (error) {
-        console.error("Error importing point from package:", error);
-        rejected.push({ pointLabel: pointLabel(envelope), reason: "Falha ao gravar o ponto localmente." });
       }
-    }
 
-    return { imported, rejected, duplicates };
-  } finally {
-    if (extractDir.exists) await extractDir.delete();
+      return { imported, rejected, duplicates };
+    } finally {
+      if (extractDir.exists) await extractDir.delete();
+    }
+  } catch (error) {
+    console.error('importPointsPackage crashed:', error instanceof Error ? error.stack : error);
+    throw error;
   }
 }
 

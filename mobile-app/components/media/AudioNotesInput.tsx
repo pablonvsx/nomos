@@ -30,6 +30,7 @@ type ListenableAudioPlayer = AudioPlayer & {
 import { useI18n } from "@/contexts/i18n-context";
 import { useAlertDialog } from "@/hooks/use-dialog";
 import { BUTTON_RADIUS } from "@/constants/shape";
+import { persistCapturedMedia } from "@/core/media/persist-captured-media";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -141,7 +142,7 @@ export default function AudioNotesInput({ value, onChange }: AudioNotesInputProp
       const duration = recorder.currentTime; // seconds
 
       const newNote: AudioNoteData = {
-        uri,
+        uri: persistCapturedMedia(uri, "audio"),
         duration,
         timestamp: Date.now(),
       };

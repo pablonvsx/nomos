@@ -8,6 +8,7 @@
 import * as DocumentPicker from "expo-document-picker";
 import { writeAndShare } from "@/core/export/file-writer";
 import { insertSpeciesFromRemote } from "@/core/drive-sync/reference-data-sync-service";
+import { getManifest, updateManifest } from "@/core/drive-sync/project-drive-service";
 import {
   getProjectById,
   getProjectByUuid,
@@ -85,6 +86,22 @@ export async function buildProjectConfigPackage(
   if (!projectUuid) {
     projectUuid = generateUuid();
     await setProjectUuid(project.id, projectUuid);
+
+    // Mirrored into the Drive manifest so a device that loses its local DB
+    // can recover this same uuid via restoreOwnProjectFromDrive - otherwise
+    // it only ever lived in local SQLite and in whatever package was already
+    // shared out-of-band, unrecoverable after a restore (see
+    // core/drive-sync/project-drive-service.ts's config_project_uuid field).
+    if (project.collaboration_role === "owner" && project.drive_folder_id) {
+      try {
+        const manifest = await getManifest(project.drive_folder_id);
+        if (manifest.config_project_uuid !== projectUuid) {
+          await updateManifest(project.drive_folder_id, { ...manifest, config_project_uuid: projectUuid });
+        }
+      } catch (error) {
+        console.error("Error persisting config project uuid to Drive manifest:", error);
+      }
+    }
   }
 
   let customProtocol: ProjectConfigPackage["custom_protocol"];

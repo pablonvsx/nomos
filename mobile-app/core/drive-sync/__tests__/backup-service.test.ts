@@ -16,8 +16,27 @@ jest.mock("@/core/drive-sync/point-submission-service", () => ({
   submitPointToProject: (...args: unknown[]) => mockSubmitPointToProject(...args),
 }));
 
+const mockGetUnsyncedProjectSpeciesByProject = jest.fn();
+jest.mock("@/db/queries/project-species", () => ({
+  getUnsyncedProjectSpeciesByProject: (...args: unknown[]) => mockGetUnsyncedProjectSpeciesByProject(...args),
+}));
+
+const mockGetUnsyncedVegetationClassificationsByProject = jest.fn();
+jest.mock("@/db/queries/vegetation-classifications", () => ({
+  getUnsyncedVegetationClassificationsByProject: (...args: unknown[]) =>
+    mockGetUnsyncedVegetationClassificationsByProject(...args),
+}));
+
+const mockPushSpeciesEntryIfCollaborative = jest.fn();
+const mockPushVegetationClassificationIfCollaborative = jest.fn();
+jest.mock("@/core/drive-sync/reference-data-sync-service", () => ({
+  pushSpeciesEntryIfCollaborative: (...args: unknown[]) => mockPushSpeciesEntryIfCollaborative(...args),
+  pushVegetationClassificationIfCollaborative: (...args: unknown[]) =>
+    mockPushVegetationClassificationIfCollaborative(...args),
+}));
+
 import { backupPoint, backupAllPendingPoints } from "../backup-service";
-import type { Point } from "@/types/database";
+import type { Point, ProjectSpeciesCatalog, VegetationClassification } from "@/types/database";
 import type { ProtocolRegistry } from "@/protocol-kernel/types";
 
 const registry = { getProtocol: jest.fn(() => undefined) } as unknown as ProtocolRegistry;
@@ -72,6 +91,8 @@ describe("backupPoint", () => {
 describe("backupAllPendingPoints", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetUnsyncedProjectSpeciesByProject.mockResolvedValue([]);
+    mockGetUnsyncedVegetationClassificationsByProject.mockResolvedValue([]);
   });
 
   it("only backs up approved-and-unsynced points, and one failure doesn't stop the batch", async () => {
@@ -95,5 +116,31 @@ describe("backupAllPendingPoints", () => {
     expect(summary.failed[0].reason).toBe("Sem conexão.");
     // Both points were attempted despite the first one failing.
     expect(mockSubmitPointToProject).toHaveBeenCalledTimes(2);
+    expect(summary.speciesSynced).toBe(0);
+    expect(summary.vegetationClassificationsSynced).toBe(0);
+  });
+
+  // Species/vegetation classifications are pushed fire-and-forget the moment
+  // they're created (reference-data-sync-service.ts) - "Fazer Backup" is
+  // also the retry path for whichever push never actually landed on Drive.
+  it("retries unsynced species and vegetation classifications, counting only the ones that actually synced", async () => {
+    mockGetApprovedUnsyncedPointsByProject.mockResolvedValue([]);
+    const speciesA = { id: 1, uuid: "species-uuid-1" } as ProjectSpeciesCatalog;
+    const speciesB = { id: 2, uuid: "species-uuid-2" } as ProjectSpeciesCatalog;
+    const vegRow = { id: 10, uuid: "veg-uuid-1" } as VegetationClassification;
+    mockGetUnsyncedProjectSpeciesByProject.mockResolvedValue([speciesA, speciesB]);
+    mockGetUnsyncedVegetationClassificationsByProject.mockResolvedValue([vegRow]);
+    mockPushSpeciesEntryIfCollaborative.mockImplementation((_projectId: number, entry: ProjectSpeciesCatalog) =>
+      Promise.resolve(entry.id === 1),
+    );
+    mockPushVegetationClassificationIfCollaborative.mockResolvedValue(true);
+
+    const summary = await backupAllPendingPoints(7, registry);
+
+    expect(mockGetUnsyncedProjectSpeciesByProject).toHaveBeenCalledWith(7);
+    expect(mockGetUnsyncedVegetationClassificationsByProject).toHaveBeenCalledWith(7);
+    expect(mockPushSpeciesEntryIfCollaborative).toHaveBeenCalledTimes(2);
+    expect(summary.speciesSynced).toBe(1);
+    expect(summary.vegetationClassificationsSynced).toBe(1);
   });
 });

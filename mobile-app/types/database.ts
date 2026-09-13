@@ -194,6 +194,7 @@ export interface VegetationClassification {
   created_at: string; // Creation timestamp
   last_updated: string; // Last update timestamp
   uuid?: string | null; // Stable id used to reconcile this classification across devices (collaborative projects)
+  drive_synced_at?: string | null; // Drive modifiedTime of the last vegetation-classes/ push, or null if never synced
 }
 
 // Represents a project-level species entry with support for multiple common names (from GBIF or manual entry)
@@ -209,6 +210,7 @@ export interface ProjectSpeciesCatalog {
   last_updated: string; // Last update timestamp
   common_names?: ProjectSpeciesCommonName[]; // Multiple common names with language support
   uuid?: string | null; // Stable id used to reconcile this entry across devices (collaborative projects)
+  drive_synced_at?: string | null; // Drive modifiedTime of the last species-catalog/ push, or null if never synced
 }
 
 // Represents a common name for a species with language support
@@ -224,7 +226,7 @@ export interface ProjectSpeciesCommonName {
 // Input type for creating project-level species entries
 export type ProjectSpeciesCatalogInput = Omit<
   ProjectSpeciesCatalog,
-  "id" | "created_at" | "last_updated" | "common_names"
+  "id" | "created_at" | "last_updated" | "common_names" | "drive_synced_at"
 > & {
   common_names?: Array<Omit<ProjectSpeciesCommonName, "id" | "species_id" | "created_at">>;
 };

@@ -63,6 +63,9 @@ jest.mock("@/core/drive-sync/project-drive-service", () => ({
 jest.mock("@/core/drive-sync/point-submission-service", () => ({
   submitPointToProject: jest.fn(),
 }));
+jest.mock("@/core/drive-sync/reference-data-sync-service", () => ({
+  pushAllReferenceDataToDrive: jest.fn(),
+}));
 jest.mock("@/core/drive-sync/backup-service", () => ({
   backupAllPendingPoints: jest.fn(),
 }));

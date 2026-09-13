@@ -30,6 +30,10 @@ export class File {
     return files.has(this.uri);
   }
 
+  get size(): number {
+    return files.get(this.uri)?.length ?? 0;
+  }
+
   async text(): Promise<string> {
     return files.get(this.uri) ?? "";
   }
@@ -93,6 +97,10 @@ export async function zip(sourcePath: string, destPath: string): Promise<string>
     }
   }
   archives.set(destPath, snapshot);
+  // The real native zip() also leaves an actual (non-empty) file at
+  // destPath - mirrored here so File(destPath).exists/.size behave
+  // realistically for code that checks the zip file itself before unzip().
+  files.set(destPath, `FAKE_ZIP_ARCHIVE:${destPath}`);
   return destPath;
 }
 

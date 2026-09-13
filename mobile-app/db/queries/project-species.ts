@@ -80,6 +80,7 @@ export async function getProjectSpeciesCatalogByProject(
         last_updated: sp.last_updated,
         common_names: commonNames,
         uuid: sp.uuid ?? null,
+        drive_synced_at: sp.drive_synced_at ?? null,
       });
     }
 
@@ -88,6 +89,20 @@ export async function getProjectSpeciesCatalogByProject(
     console.error("Error fetching project species catalog:", error);
     return [];
   }
+}
+
+/**
+ * Gets every species in a project's catalog that has never been pushed to
+ * Drive (drive_synced_at IS NULL) - reuses the full fetch above (it already
+ * joins common names) instead of duplicating that query, since catalogs are
+ * small. Used by backup-service.ts's "Fazer Backup" retry, mirroring
+ * getApprovedUnsyncedPointsByProject (db/queries/points.ts) for points.
+ */
+export async function getUnsyncedProjectSpeciesByProject(
+  projectId: number,
+): Promise<ProjectSpeciesCatalog[]> {
+  const all = await getProjectSpeciesCatalogByProject(projectId);
+  return all.filter((row) => !row.drive_synced_at);
 }
 
 /**
@@ -123,6 +138,7 @@ export async function getProjectSpeciesById(
       last_updated: species.last_updated,
       common_names: commonNames,
       uuid: species.uuid ?? null,
+      drive_synced_at: species.drive_synced_at ?? null,
     };
   } catch (error) {
     console.error("Error fetching species:", error);
@@ -185,6 +201,20 @@ export async function setProjectSpeciesUuid(
   await db.runAsync(
     "UPDATE project_species_catalog SET uuid = ? WHERE id = ?",
     [uuid, id],
+  );
+}
+
+/**
+ * Records that a species catalog entry was successfully pushed to Drive, so
+ * it stops showing up in getUnsyncedProjectSpeciesByProject.
+ */
+export async function setProjectSpeciesDriveSyncedAt(
+  id: number,
+  syncedAt: string,
+): Promise<void> {
+  await db.runAsync(
+    "UPDATE project_species_catalog SET drive_synced_at = ? WHERE id = ?",
+    [syncedAt, id],
   );
 }
 

@@ -6,7 +6,13 @@
 // so backupPoint is a thin wrapper resolving the point's project id, not a
 // second place recording the sync timestamp.
 import { getPoint, getApprovedUnsyncedPointsByProject } from "@/db/queries/points";
+import { getUnsyncedProjectSpeciesByProject } from "@/db/queries/project-species";
+import { getUnsyncedVegetationClassificationsByProject } from "@/db/queries/vegetation-classifications";
 import { submitPointToProject } from "@/core/drive-sync/point-submission-service";
+import {
+  pushSpeciesEntryIfCollaborative,
+  pushVegetationClassificationIfCollaborative,
+} from "@/core/drive-sync/reference-data-sync-service";
 import { getPointDisplayLabel } from "@/core/drive-sync/point-label";
 import type { ProtocolRegistry } from "@/protocol-kernel/types";
 
@@ -21,6 +27,8 @@ export async function backupPoint(pointId: string, registry: ProtocolRegistry): 
 export interface BackupSummary {
   backedUp: number;
   failed: Array<{ pointLabel: string; reason: string }>;
+  speciesSynced: number;
+  vegetationClassificationsSynced: number;
 }
 
 export async function backupAllPendingPoints(
@@ -43,5 +51,20 @@ export async function backupAllPendingPoints(
     }
   }
 
-  return { backedUp, failed };
+  // Species/vegetation classifications are pushed fire-and-forget the moment
+  // they're created (reference-data-sync-service.ts) - "Fazer Backup" is
+  // also the retry path for whichever of those pushes never landed (a
+  // network blip, the app closing mid-push), same as it already is for
+  // points above.
+  let speciesSynced = 0;
+  for (const entry of await getUnsyncedProjectSpeciesByProject(projectId)) {
+    if (await pushSpeciesEntryIfCollaborative(projectId, entry)) speciesSynced++;
+  }
+
+  let vegetationClassificationsSynced = 0;
+  for (const row of await getUnsyncedVegetationClassificationsByProject(projectId)) {
+    if (await pushVegetationClassificationIfCollaborative(projectId, row)) vegetationClassificationsSynced++;
+  }
+
+  return { backedUp, failed, speciesSynced, vegetationClassificationsSynced };
 }

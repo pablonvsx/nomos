@@ -193,3 +193,48 @@ describe("export -> import cycle preserves audio notes", () => {
     expect(FakeFs.__getFile(importedPhotos[0].uri)).toBe("PHOTO_BYTES");
   });
 });
+
+// A point's photo/audio uri can point to a file the OS already reclaimed
+// (see core/media/persist-captured-media.ts's fix for new captures going
+// forward) - export must not fail or silently produce a package that looks
+// fine when it's actually missing media; it should report how many files
+// it had to skip so the caller can warn the user (see the two UI call
+// sites in app/(survey)/survey-point-details/[id].tsx and
+// app/(projects)/project-details/[id].tsx).
+describe("exportPointsPackage - missing media reporting", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    FakeFs.__resetFakeFileSystem();
+
+    // Photo exists, audio note's underlying file does NOT - simulates the
+    // exact bug report: the DB still references it, but the OS already
+    // reclaimed the cache file it pointed to.
+    FakeFs.__setFile(originalPhotoUri, "PHOTO_BYTES");
+
+    mockGetPoint.mockResolvedValue({ point, modules: [] });
+    mockGetProjectById.mockResolvedValue(project);
+  });
+
+  it("still exports successfully but reports and logs each missing media file", async () => {
+    const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    const result = await exportPointsPackage(["point-1"], registry);
+
+    expect(result.missingMedia).toBe(1);
+    expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining(originalAudioUri));
+
+    // The package itself is still produced with whatever media DID exist.
+    const archivePaths = FakeFs.__archivePaths();
+    expect(archivePaths).toHaveLength(1);
+
+    consoleWarnSpy.mockRestore();
+  });
+
+  it("reports zero missing media when every referenced file still exists", async () => {
+    FakeFs.__setFile(originalAudioUri, "AUDIO_BYTES");
+
+    const result = await exportPointsPackage(["point-1"], registry);
+
+    expect(result.missingMedia).toBe(0);
+  });
+});

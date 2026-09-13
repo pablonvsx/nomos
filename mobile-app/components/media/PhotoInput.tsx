@@ -5,6 +5,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useI18n } from "@/contexts/i18n-context";
 import { useAlertDialog } from "@/hooks/use-dialog";
 import { BUTTON_RADIUS } from "@/constants/shape";
+import { persistCapturedMedia } from "@/core/media/persist-captured-media";
 
 interface PhotoData {
   uri: string;
@@ -109,7 +110,7 @@ export default function PhotoInput({ value, onChange, maxPhotos = 10 }: Props) {
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const newPhoto: PhotoData = {
-          uri: result.assets[0].uri,
+          uri: persistCapturedMedia(result.assets[0].uri, "photo"),
           timestamp: Date.now(),
         };
         updateParent([...photos, newPhoto]);
@@ -146,7 +147,7 @@ export default function PhotoInput({ value, onChange, maxPhotos = 10 }: Props) {
         setProgress({ current: 0, total });
         const accumulated: PhotoData[] = [...photos];
         for (let i = 0; i < result.assets.length; i++) {
-          accumulated.push({ uri: result.assets[i].uri, timestamp: Date.now() });
+          accumulated.push({ uri: persistCapturedMedia(result.assets[i].uri, "photo"), timestamp: Date.now() });
           setPhotos([...accumulated]);
           setProgress({ current: i + 1, total });
           if (i < result.assets.length - 1) {

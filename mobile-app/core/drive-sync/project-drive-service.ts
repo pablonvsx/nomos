@@ -10,7 +10,7 @@ import {
   type DriveFile,
 } from './drive-api-client';
 import { generateUuid } from '@/utils/uuid';
-import { createProject, setProjectCollaborative, getProjectById } from '@/db/queries/projects';
+import { createProject, setProjectCollaborative, getProjectById, setProjectUuid } from '@/db/queries/projects';
 import { createPoint } from '@/db/queries/points';
 import {
   getCustomProtocolById,
@@ -51,6 +51,14 @@ export interface ProjectManifest {
     type: 'standard' | 'custom';
     custom_classification_uuid?: string;
   };
+  // The project_uuid used to identify this project's exported config/points
+  // packages to collaborators (see project-config-package.ts) - a DIFFERENT
+  // id than this manifest's own project_uuid above (that one only names the
+  // Drive folder). Written the first time buildProjectConfigPackage generates
+  // one, so restoreOwnProjectFromDrive can recover it on another device -
+  // without this, every points-package import after a restore was rejected
+  // as "belongs to another project" (local project_uuid stayed null forever).
+  config_project_uuid?: string;
 }
 
 // manifest.json written before this field was standardized to snake_case
@@ -376,6 +384,10 @@ export async function restoreOwnProjectFromDrive(
 
   const project = await getProjectById(newId);
   if (!project) throw new Error("Local project creation failed");
+
+  if (manifest.config_project_uuid) {
+    await setProjectUuid(newId, manifest.config_project_uuid);
+  }
 
   // Species/vegetation-classification entries added after the project's
   // initial setup were only ever pushed to Drive, never pulled back on their

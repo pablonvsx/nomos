@@ -1,12 +1,9 @@
 import { getPoint, updatePoint } from '@/db/queries/points';
 import { getProjectById } from '@/db/queries/projects';
-import {
-  getActiveVegetationClassificationConfig,
-  getVegetationClassificationById,
-} from '@/db/queries/vegetation-classifications';
 import { buildPointWithModules, buildPointEnvelope } from '@/db/mappers/point.mapper';
 import { getCurrentGoogleAccount } from '@/core/google-auth/google-auth-service';
-import { getManifest, updateManifest, ensureFolder, resolveProjectDriveIds, type ProjectManifest } from './project-drive-service';
+import { getManifest, updateManifest, ensureFolder, resolveProjectDriveIds } from './project-drive-service';
+import { resolveActiveVegetationClassification } from './reference-data-sync-service';
 import { uploadJsonFile, updateJsonFile, findChildByName, uploadBinaryFile } from './drive-api-client';
 import { resolveCustomModuleDescriptors, forEachModuleMediaField, type MediaFieldLocation } from '@/core/project-sharing/module-media';
 import { parseJsonText } from '@/db/mappers/json-utils';
@@ -21,24 +18,6 @@ function guessMimeType(filename: string): string {
   if (ext === 'png') return 'image/png';
   if (ext === 'heic') return 'image/heic';
   return 'image/jpeg';
-}
-
-// Backup (section 8) is this model's only explicit "push current state to
-// Drive" moment, so it's also where the manifest's active_vegetation_classification
-// gets refreshed - restoreOwnProjectFromDrive (project-drive-service.ts)
-// reads this same field to resolve the pointer back on another device (see
-// COLLAB_MODEL_V2_REFERENCE.md section 9 audit follow-up).
-async function resolveActiveVegetationClassification(
-  projectId: number,
-): Promise<NonNullable<ProjectManifest['active_vegetation_classification']>> {
-  const activeConfig = await getActiveVegetationClassificationConfig(projectId);
-  if (activeConfig?.type === 'custom' && activeConfig.classificationId) {
-    const row = await getVegetationClassificationById(activeConfig.classificationId);
-    if (row?.uuid) {
-      return { type: 'custom', custom_classification_uuid: row.uuid };
-    }
-  }
-  return { type: 'standard' };
 }
 
 // Single-owner model: whoever calls this already is the project's owner

@@ -557,7 +557,10 @@ export default function UnifiedProjectDetailsScreen() {
     if (!project || surveyPoints.length === 0) return;
     try {
       setIsExporting(true);
-      await exportAllPointsPackage(project.id, registry);
+      const { missingMedia } = await exportAllPointsPackage(project.id, registry);
+      if (missingMedia > 0) {
+        alert(t("common.warning"), t("surveyView.exportMissingMediaWarning", { count: missingMedia }));
+      }
     } catch (error) {
       console.error("Error exporting all points package:", error);
       alert(t("common.error"), error instanceof Error ? error.message : t("projectView.errorExporting"));

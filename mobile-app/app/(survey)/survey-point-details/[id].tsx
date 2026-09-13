@@ -467,7 +467,10 @@ export default function UnifiedSurveyPointViewScreen() {
   const handleExportToOwner = async () => {
     if (!point) return;
     try {
-      await exportPointsPackage([point.id], registry);
+      const { missingMedia } = await exportPointsPackage([point.id], registry);
+      if (missingMedia > 0) {
+        alert(t("common.warning"), t("surveyView.exportMissingMediaWarning", { count: missingMedia }));
+      }
     } catch (error) {
       console.error("Error exporting point package:", error);
       alert(t("common.error"), error instanceof Error ? error.message : t("surveyView.exportToOwnerError"));

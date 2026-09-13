@@ -79,60 +79,62 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   return (
     <DialogContext.Provider value={contextValue}>
       {children}
-      <Portal>
-        <Dialog
-          visible={visible}
-          onDismiss={options?.dismissable !== false ? hideDialog : undefined}
-          style={{ backgroundColor: theme.colors.surface }}
-        >
-          {options?.title && (
-            <Dialog.Title
-              style={{
-                color: theme.colors.onSurface,
-                textAlign: "justify",
-                fontSize: 19,
-              }}
-            >
-              {options.title}
-            </Dialog.Title>
-          )}
-          {options?.message && (
-            <Dialog.Content>
-              <Text
-                variant="bodyMedium"
+      {options && (
+        <Portal>
+          <Dialog
+            visible={visible}
+            onDismiss={options?.dismissable !== false ? hideDialog : undefined}
+            style={{ backgroundColor: theme.colors.surface }}
+          >
+            {options?.title && (
+              <Dialog.Title
                 style={{
-                  color: theme.colors.onSurfaceVariant,
+                  color: theme.colors.onSurface,
                   textAlign: "justify",
+                  fontSize: 19,
                 }}
               >
-                {options.message}
-              </Text>
-            </Dialog.Content>
-          )}
-          <Dialog.Actions>
-            {options?.buttons && options.buttons.length > 0 ? (
-              options.buttons.map((button, index) => (
-                <Button
-                  key={index}
-                  mode={button.mode || "text"}
-                  onPress={() => handleButtonPress(button.onPress)}
-                  textColor={
-                    button.style === "destructive"
-                      ? theme.colors.error
-                      : undefined
-                  }
-                >
-                  {button.label}
-                </Button>
-              ))
-            ) : (
-              <Button mode="text" onPress={hideDialog}>
-                OK
-              </Button>
+                {options.title}
+              </Dialog.Title>
             )}
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+            {options?.message && (
+              <Dialog.Content>
+                <Text
+                  variant="bodyMedium"
+                  style={{
+                    color: theme.colors.onSurfaceVariant,
+                    textAlign: "justify",
+                  }}
+                >
+                  {options.message}
+                </Text>
+              </Dialog.Content>
+            )}
+            <Dialog.Actions>
+              {options?.buttons && options.buttons.length > 0 ? (
+                options.buttons.map((button, index) => (
+                  <Button
+                    key={index}
+                    mode={button.mode || "text"}
+                    onPress={() => handleButtonPress(button.onPress)}
+                    textColor={
+                      button.style === "destructive"
+                        ? theme.colors.error
+                        : undefined
+                    }
+                  >
+                    {button.label}
+                  </Button>
+                ))
+              ) : (
+                <Button mode="text" onPress={hideDialog}>
+                  OK
+                </Button>
+              )}
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
+      )}
     </DialogContext.Provider>
   );
 }

@@ -5,7 +5,7 @@ import * as SQLite from "expo-sqlite";
 const db = SQLite.openDatabaseSync("nomos.db");
 
 // Development trigger: set to true to wipe and recreate the full schema on app start.
-const RESET_DATABASE_ON_INIT = false; // Set to true for development/testing purposes only
+const RESET_DATABASE_ON_INIT = true; // Set to true for development/testing purposes only
 
 async function resetDatabase() {
   console.warn("⚠️ RESET_DATABASE_ON_INIT is enabled. Dropping all tables...");
@@ -101,6 +101,7 @@ export async function initDatabase() {
         created_at TEXT NOT NULL,
         last_updated TEXT NOT NULL,
         uuid TEXT,                    -- stable id used to reconcile across devices
+        drive_synced_at TEXT,         -- Drive modifiedTime of the last species-catalog/ push, NULL if never synced
 
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
         UNIQUE(project_id, gbif_id)
@@ -140,6 +141,7 @@ export async function initDatabase() {
         created_at TEXT NOT NULL,
         last_updated TEXT NOT NULL,
         uuid TEXT,                    -- stable id used to reconcile across devices
+        drive_synced_at TEXT,         -- Drive modifiedTime of the last vegetation-classes/ push, NULL if never synced
 
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
       );

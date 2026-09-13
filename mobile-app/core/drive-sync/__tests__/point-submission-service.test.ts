@@ -16,11 +16,14 @@ jest.mock("@/db/queries/projects", () => ({
   getProjectById: (...args: unknown[]) => mockGetProjectById(...args),
 }));
 
-const mockGetActiveVegetationClassificationConfig = jest.fn();
-const mockGetVegetationClassificationById = jest.fn();
-jest.mock("@/db/queries/vegetation-classifications", () => ({
-  getActiveVegetationClassificationConfig: (...args: unknown[]) => mockGetActiveVegetationClassificationConfig(...args),
-  getVegetationClassificationById: (...args: unknown[]) => mockGetVegetationClassificationById(...args),
+// resolveActiveVegetationClassification now lives in reference-data-sync-service.ts
+// (shared with pushAllReferenceDataToDrive's activation-time write) - mocked
+// here as a single resolved value per test instead of pulling in the real
+// module, which would also drag in db/initialize.ts (expo-sqlite) through
+// its other, unrelated exports.
+const mockResolveActiveVegetationClassification = jest.fn();
+jest.mock("../reference-data-sync-service", () => ({
+  resolveActiveVegetationClassification: (...args: unknown[]) => mockResolveActiveVegetationClassification(...args),
 }));
 
 const mockBuildPointWithModules = jest.fn();
@@ -95,8 +98,7 @@ describe("submitPointToProject - manifest active_vegetation_classification sync"
       protocol_source: "official",
       active_vegetation_classification: { type: "standard" },
     });
-    mockGetActiveVegetationClassificationConfig.mockResolvedValue({ type: "custom", classificationId: 10 });
-    mockGetVegetationClassificationById.mockResolvedValue({ id: 10, uuid: "veg-uuid-1" });
+    mockResolveActiveVegetationClassification.mockResolvedValue({ type: "custom", custom_classification_uuid: "veg-uuid-1" });
 
     await submitPointToProject("point-1", 1, {} as any);
 
@@ -116,8 +118,7 @@ describe("submitPointToProject - manifest active_vegetation_classification sync"
       protocol_source: "official",
       active_vegetation_classification: { type: "custom", custom_classification_uuid: "veg-uuid-1" },
     });
-    mockGetActiveVegetationClassificationConfig.mockResolvedValue({ type: "custom", classificationId: 10 });
-    mockGetVegetationClassificationById.mockResolvedValue({ id: 10, uuid: "veg-uuid-1" });
+    mockResolveActiveVegetationClassification.mockResolvedValue({ type: "custom", custom_classification_uuid: "veg-uuid-1" });
 
     await submitPointToProject("point-1", 1, {} as any);
 
@@ -132,7 +133,7 @@ describe("submitPointToProject - manifest active_vegetation_classification sync"
       protocol_source: "official",
       active_vegetation_classification: { type: "custom", custom_classification_uuid: "veg-uuid-1" },
     });
-    mockGetActiveVegetationClassificationConfig.mockResolvedValue({ type: "standard", classificationId: null });
+    mockResolveActiveVegetationClassification.mockResolvedValue({ type: "standard" });
 
     await submitPointToProject("point-1", 1, {} as any);
 

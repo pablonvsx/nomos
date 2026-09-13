@@ -33,11 +33,13 @@ import { getProjectById, setProjectCollaborative } from "@/db/queries/projects";
 import { getPointsByProject } from "@/db/queries/points";
 import { createCollaborativeProjectStructure } from "@/core/drive-sync/project-drive-service";
 import { submitPointToProject } from "@/core/drive-sync/point-submission-service";
+import { pushAllReferenceDataToDrive } from "@/core/drive-sync/reference-data-sync-service";
 import { backupAllPendingPoints } from "@/core/drive-sync/backup-service";
 import { getPointDisplayLabel } from "@/core/drive-sync/point-label";
 import { exportProjectConfigPackage } from "@/core/project-sharing/project-config-package";
 import { importPointsPackage, type PendingDuplicate } from "@/core/project-sharing/import-points";
 import { resolvePointDuplicate } from "@/core/project-sharing/resolve-duplicates";
+import { BUTTON_RADIUS } from "@/constants/shape";
 import type { Project, Point } from "@/types/database";
 
 // State for the multi-step "resolve each duplicate, then show one
@@ -130,6 +132,7 @@ export default function ProjectCollaborationScreen() {
             protocolSource: project.protocol_source,
           });
           await setProjectCollaborative(project.id, driveFolderId);
+          await pushAllReferenceDataToDrive(project.id, driveFolderId);
           await loadData();
           alert(t("common.success"), t("projectView.makeCollaborativeSuccess"));
         } catch (error) {
@@ -191,13 +194,23 @@ export default function ProjectCollaborationScreen() {
       const result = await backupAllPendingPoints(project.id, registry);
       const refreshedPoints = await getPointsByProject(project.id);
       setPoints(refreshedPoints);
-      const summary = result.failed.length > 0
-        ? t("projectCollaboration.backupSummaryWithFailed", {
-            backedUp: result.backedUp,
-            failed: result.failed.map((f) => `${f.pointLabel}: ${f.reason}`).join("\n"),
-          })
-        : t("projectCollaboration.backupSummary", { backedUp: result.backedUp });
-      alert(t("projectCollaboration.backupButton"), summary);
+      const summaryParts = [
+        result.failed.length > 0
+          ? t("projectCollaboration.backupSummaryWithFailed", {
+              backedUp: result.backedUp,
+              failed: result.failed.map((f) => `${f.pointLabel}: ${f.reason}`).join("\n"),
+            })
+          : t("projectCollaboration.backupSummary", { backedUp: result.backedUp }),
+      ];
+      if (result.speciesSynced > 0 || result.vegetationClassificationsSynced > 0) {
+        summaryParts.push(
+          t("projectCollaboration.backupReferenceDataSummary", {
+            species: result.speciesSynced,
+            vegetation: result.vegetationClassificationsSynced,
+          }),
+        );
+      }
+      alert(t("projectCollaboration.backupButton"), summaryParts.join("\n\n"));
     } catch (error) {
       console.error("Error backing up project points:", error);
       alert(t("common.error"), t("projectCollaboration.backupError"));
@@ -331,18 +344,18 @@ export default function ProjectCollaborationScreen() {
           <Card style={styles.card}>
             <Card.Content>
               <Text variant="titleMedium">{t("projectCollaboration.notCollaborativeTitle")}</Text>
-              <Text variant="bodyMedium" style={{ marginTop: 8 }}>
+              <Text variant="bodyMedium" style={[styles.paragraph, { marginTop: 8 }]}>
                 {t("projectCollaboration.notCollaborativeDescription")}
               </Text>
               {isCollaboratorCopy ? (
-                <Text variant="bodySmall" style={{ marginTop: 8 }}>
+                <Text variant="bodySmall" style={[styles.paragraph, { marginTop: 8 }]}>
                   {t("projectCollaboration.collaboratorCopyNotice")}
                 </Text>
               ) : (
                 <>
                   <Button
                     mode="contained"
-                    style={{ marginTop: 16 }}
+                    style={{ marginTop: 16, borderRadius: BUTTON_RADIUS }}
                     loading={isMakingCollaborative}
                     disabled={isMakingCollaborative}
                     onPress={handleMakeCollaborative}
@@ -382,7 +395,7 @@ export default function ProjectCollaborationScreen() {
         </Text>
         <Card style={styles.card}>
           <Card.Content>
-            <Text variant="bodyMedium">{t("projectCollaboration.backupIntro")}</Text>
+            <Text variant="bodyMedium" style={styles.paragraph}>{t("projectCollaboration.backupIntro")}</Text>
             <Text variant="bodyMedium" style={{ marginTop: 12, fontWeight: "bold" }}>
               {approvedPoints.length === 0
                 ? t("projectCollaboration.backupStatusEmpty")
@@ -398,7 +411,10 @@ export default function ProjectCollaborationScreen() {
           {t("projectCollaboration.myPointsTitle")}
         </Text>
         {pointsNeedingAttention.length === 0 ? (
-          <Text variant="bodyMedium" style={{ color: paperTheme.colors.secondary, marginBottom: 16 }}>
+          <Text
+            variant="bodyMedium"
+            style={[styles.paragraph, { color: paperTheme.colors.secondary, marginBottom: 16 }]}
+          >
             {t("projectCollaboration.myPointsEmpty")}
           </Text>
         ) : (
@@ -426,6 +442,7 @@ export default function ProjectCollaborationScreen() {
                 <Card.Actions>
                   <Button
                     mode="contained"
+                    style={{ borderRadius: BUTTON_RADIUS }}
                     loading={isSubmitting}
                     disabled={submittingPointId !== null}
                     onPress={() => handleSubmitPoint(point)}
@@ -440,7 +457,13 @@ export default function ProjectCollaborationScreen() {
 
         <Card style={styles.card}>
           <Card.Content>
-            <Button mode="contained" loading={isBackingUp} disabled={isBackingUp} onPress={handleBackup}>
+            <Button
+              mode="contained"
+              style={{ borderRadius: BUTTON_RADIUS }}
+              loading={isBackingUp}
+              disabled={isBackingUp}
+              onPress={handleBackup}
+            >
               {t("projectCollaboration.backupButton")}
             </Button>
           </Card.Content>
@@ -463,7 +486,7 @@ export default function ProjectCollaborationScreen() {
         </Text>
         <Card style={styles.card}>
           <Card.Content>
-            <Text variant="bodyMedium">{t("projectCollaboration.teamIntro")}</Text>
+            <Text variant="bodyMedium" style={styles.paragraph}>{t("projectCollaboration.teamIntro")}</Text>
           </Card.Content>
           <List.Item
             title={t("projectCollaboration.pendingApprovalsSectionTitle")}
@@ -484,7 +507,7 @@ export default function ProjectCollaborationScreen() {
         </Text>
         <Card style={styles.card}>
           <Card.Content>
-            <Button mode="contained" onPress={handleImportPoints}>
+            <Button mode="contained" style={{ borderRadius: BUTTON_RADIUS }} onPress={handleImportPoints}>
               {t("projectCollaboration.importPointsButton")}
             </Button>
           </Card.Content>
@@ -495,7 +518,7 @@ export default function ProjectCollaborationScreen() {
         </Text>
         <Card style={styles.card}>
           <Card.Content>
-            <Button mode="contained" onPress={handleExportConfigPackage}>
+            <Button mode="contained" style={{ borderRadius: BUTTON_RADIUS }} onPress={handleExportConfigPackage}>
               {t("projectCollaboration.exportPackageButton")}
             </Button>
           </Card.Content>
@@ -517,7 +540,7 @@ export default function ProjectCollaborationScreen() {
           <Dialog.ScrollArea style={{ maxHeight: 320 }}>
             <ScrollView>
               <Dialog.Content>
-                <Text variant="bodyMedium" style={{ marginBottom: 12 }}>
+                <Text variant="bodyMedium" style={[styles.paragraph, { marginBottom: 12 }]}>
                   {t("projectCollaboration.duplicatesFoundDescription")}
                 </Text>
                 {duplicateResolution?.pending.map((duplicate) => {
@@ -538,6 +561,7 @@ export default function ProjectCollaborationScreen() {
                       <Button
                         mode="outlined"
                         compact
+                        style={{ borderRadius: BUTTON_RADIUS }}
                         loading={isResolving}
                         disabled={resolvingDuplicateId !== null}
                         onPress={() => handleResolveDuplicate(duplicate, "discard")}
@@ -547,7 +571,7 @@ export default function ProjectCollaborationScreen() {
                       <Button
                         mode="contained"
                         compact
-                        style={{ marginLeft: 8 }}
+                        style={{ marginLeft: 8, borderRadius: BUTTON_RADIUS }}
                         loading={isResolving}
                         disabled={resolvingDuplicateId !== null}
                         onPress={() => handleResolveDuplicate(duplicate, "replace")}
@@ -571,6 +595,7 @@ const styles = StyleSheet.create({
   centerContent: { justifyContent: "center", alignItems: "center" },
   content: { padding: 16 },
   card: { marginBottom: 16 },
+  paragraph: { lineHeight: 20, textAlign: "justify" },
   sectionTitle: { fontWeight: "bold", marginBottom: 4, marginTop: 8 },
   groupTitle: { fontWeight: "bold", marginBottom: 8, marginTop: 8 },
 });

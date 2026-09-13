@@ -21,10 +21,14 @@ function basename(uri: string): string {
   return uri.split("/").pop() ?? uri;
 }
 
+export interface ExportPointsResult {
+  missingMedia: number;
+}
+
 export async function exportPointsPackage(
   pointIds: string[],
   registry: ProtocolRegistry,
-): Promise<void> {
+): Promise<ExportPointsResult> {
   if (pointIds.length === 0) {
     throw new Error("Nenhum ponto selecionado para exportar.");
   }
@@ -79,6 +83,7 @@ export async function exportPointsPackage(
   await stagingDir.create();
 
   const moduleDescriptors = await resolveCustomModuleDescriptors(project);
+  let missingMedia = 0;
 
   try {
     for (const envelope of envelopes) {
@@ -90,7 +95,11 @@ export async function exportPointsPackage(
       const copiedPhotoNames: string[] = [];
       for (const uri of localPhotoUris) {
         const sourceFile = new File(uri);
-        if (!sourceFile.exists) continue;
+        if (!sourceFile.exists) {
+          console.warn(`Photo file no longer exists on device, skipping from export: ${uri}`);
+          missingMedia++;
+          continue;
+        }
         sourceFile.copy(new File(mediaDir, basename(uri)));
         copiedPhotoNames.push(basename(uri));
       }
@@ -99,7 +108,11 @@ export async function exportPointsPackage(
       const copiedAudioNotes: typeof localAudioNotes = [];
       for (const note of localAudioNotes) {
         const sourceFile = new File(note.uri);
-        if (!sourceFile.exists) continue;
+        if (!sourceFile.exists) {
+          console.warn(`Audio note file no longer exists on device, skipping from export: ${note.uri}`);
+          missingMedia++;
+          continue;
+        }
         sourceFile.copy(new File(mediaDir, basename(note.uri)));
         copiedAudioNotes.push({ ...note, uri: basename(note.uri) });
       }
@@ -117,7 +130,11 @@ export async function exportPointsPackage(
           const uri = typeof item.uri === "string" ? item.uri : null;
           if (!uri) continue;
           const sourceFile = new File(uri);
-          if (!sourceFile.exists) continue;
+          if (!sourceFile.exists) {
+            console.warn(`Module media file no longer exists on device, skipping from export: ${uri}`);
+            missingMedia++;
+            continue;
+          }
           sourceFile.copy(new File(fieldMediaDir, basename(uri)));
           copiedItems.push({ ...item, uri: basename(uri) });
         }
@@ -143,6 +160,8 @@ export async function exportPointsPackage(
     if (await Sharing.isAvailableAsync()) {
       await Sharing.shareAsync(zipFile.uri, { mimeType: "application/zip" });
     }
+
+    return { missingMedia };
   } finally {
     if (stagingDir.exists) await stagingDir.delete();
   }
@@ -155,7 +174,7 @@ export async function exportPointsPackage(
 export async function exportAllPointsPackage(
   projectId: number,
   registry: ProtocolRegistry,
-): Promise<void> {
+): Promise<ExportPointsResult> {
   const allPointIds = await getAllPointIdsForProject(projectId);
-  await exportPointsPackage(allPointIds, registry);
+  return exportPointsPackage(allPointIds, registry);
 }

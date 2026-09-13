@@ -1,17 +1,22 @@
 import { listChildren, uploadJsonFile, readJsonFile } from './drive-api-client';
-import { ensureFolder } from './project-drive-service';
+import { ensureFolder, getManifest, updateManifest } from './project-drive-service';
 import { getProjectById } from '@/db/queries/projects';
 import {
   getProjectSpeciesCatalogByProject,
   createProjectSpecies,
   setProjectSpeciesUuid,
+  setProjectSpeciesDriveSyncedAt,
   getProjectSpeciesIdByGbifId,
 } from '@/db/queries/project-species';
 import {
   getVegetationClassificationsByProject,
   createVegetationClassification,
+  setVegetationClassificationDriveSyncedAt,
+  getActiveVegetationClassificationConfig,
+  getVegetationClassificationById,
 } from '@/db/queries/vegetation-classifications';
 import { getCurrentGoogleAccount } from '@/core/google-auth/google-auth-service';
+import type { ProjectManifest } from './project-drive-service';
 import type {
   ProjectSpeciesCatalog,
   ProjectSpeciesCommonName,
@@ -167,35 +172,95 @@ export async function pullReferenceDataFromDrive(
 // Best-effort immediate push for a single newly created item, used by the
 // manual "add one species / one classification" flows so collaborators see
 // it before the next full project sync. Never throws - a missing connection
-// must not block the local creation that already succeeded.
+// must not block the local creation that already succeeded. Returns whether
+// the push actually landed on Drive, so callers that DO care (the bulk push
+// at activation, and the "Fazer Backup" retry) can tell success from a
+// no-op/failure instead of firing-and-forgetting blindly.
 export async function pushSpeciesEntryIfCollaborative(
   projectId: number,
   entry: ProjectSpeciesCatalog
-): Promise<void> {
-  if (!entry.uuid) return;
+): Promise<boolean> {
+  if (!entry.uuid) return false;
   try {
     const project = await getProjectById(projectId);
-    if (project?.collaboration_role !== "owner" || !project.drive_folder_id) return;
-    if (!getCurrentGoogleAccount()) return;
+    if (project?.collaboration_role !== "owner" || !project.drive_folder_id) return false;
+    if (!getCurrentGoogleAccount()) return false;
     const folderId = await ensureFolder('species-catalog', project.drive_folder_id);
     await uploadJsonFile(`${entry.uuid}.json`, folderId, toSpeciesPayload(entry));
+    await setProjectSpeciesDriveSyncedAt(entry.id, new Date().toISOString());
+    return true;
   } catch (error) {
     console.error('Error pushing species entry to Drive:', error);
+    return false;
   }
 }
 
 export async function pushVegetationClassificationIfCollaborative(
   projectId: number,
   row: VegetationClassification
-): Promise<void> {
-  if (!row.uuid) return;
+): Promise<boolean> {
+  if (!row.uuid) return false;
   try {
     const project = await getProjectById(projectId);
-    if (project?.collaboration_role !== "owner" || !project.drive_folder_id) return;
-    if (!getCurrentGoogleAccount()) return;
+    if (project?.collaboration_role !== "owner" || !project.drive_folder_id) return false;
+    if (!getCurrentGoogleAccount()) return false;
     const folderId = await ensureFolder('vegetation-classes', project.drive_folder_id);
     await uploadJsonFile(`${row.uuid}.json`, folderId, toVegetationPayload(row));
+    await setVegetationClassificationDriveSyncedAt(row.id, new Date().toISOString());
+    return true;
   } catch (error) {
     console.error('Error pushing vegetation classification to Drive:', error);
+    return false;
+  }
+}
+
+// Resolves which vegetation classification is currently active into the
+// manifest's wire shape - shared by point-submission-service.ts (refreshed on
+// every backup) and pushAllReferenceDataToDrive below (written once, right
+// when Drive backup is first activated, so a project restored on another
+// device before ever submitting a point still knows which classification was
+// active, see COLLAB_MODEL_V2_REFERENCE.md section 9 audit follow-up).
+export async function resolveActiveVegetationClassification(
+  projectId: number,
+): Promise<NonNullable<ProjectManifest['active_vegetation_classification']>> {
+  const activeConfig = await getActiveVegetationClassificationConfig(projectId);
+  if (activeConfig?.type === 'custom' && activeConfig.classificationId) {
+    const row = await getVegetationClassificationById(activeConfig.classificationId);
+    if (row?.uuid) {
+      return { type: 'custom', custom_classification_uuid: row.uuid };
+    }
+  }
+  return { type: 'standard' };
+}
+
+// Bulk counterpart of the best-effort single-item pushes above, run once
+// right after "Ativar backup no Drive" - activation itself only scaffolds
+// the Drive folder (see createCollaborativeProjectStructure), so anything the
+// project already had BEFORE activation (species catalog, custom vegetation
+// classifications, and which one is active) would otherwise never reach
+// Drive at all, unlike items created afterward. Awaited (not fire-and-forget)
+// since this is an explicit, one-time activation step.
+export async function pushAllReferenceDataToDrive(
+  projectId: number,
+  driveFolderId: string,
+): Promise<void> {
+  const species = await getProjectSpeciesCatalogByProject(projectId);
+  for (const entry of species) {
+    await pushSpeciesEntryIfCollaborative(projectId, entry);
+  }
+
+  const vegetation = await getVegetationClassificationsByProject(projectId);
+  for (const row of vegetation) {
+    await pushVegetationClassificationIfCollaborative(projectId, row);
+  }
+
+  try {
+    const manifest = await getManifest(driveFolderId);
+    const activeVegetationClassification = await resolveActiveVegetationClassification(projectId);
+    if (JSON.stringify(manifest.active_vegetation_classification) !== JSON.stringify(activeVegetationClassification)) {
+      await updateManifest(driveFolderId, { ...manifest, active_vegetation_classification: activeVegetationClassification });
+    }
+  } catch (error) {
+    console.error('Error setting initial active vegetation classification pointer:', error);
   }
 }
