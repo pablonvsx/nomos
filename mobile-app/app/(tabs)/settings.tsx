@@ -30,6 +30,8 @@ function StatusChip({ active, label, theme }: { active: boolean; label: string; 
   return (
     <Chip
       compact
+      icon={active ? "check-circle" : "alert-circle-outline"}
+      selectedColor={active ? (theme.dark ? "#a5d6a7" : "#2e7d32") : theme.colors.onErrorContainer}
       style={[
         styles.statusChip,
         {
@@ -38,14 +40,7 @@ function StatusChip({ active, label, theme }: { active: boolean; label: string; 
             : theme.colors.errorContainer,
         },
       ]}
-      textStyle={[
-        styles.statusChipText,
-        {
-          color: active
-            ? (theme.dark ? "#a5d6a7" : "#2e7d32")
-            : theme.colors.onErrorContainer,
-        },
-      ]}
+      textStyle={styles.statusChipText}
     >
       {label}
     </Chip>
@@ -204,7 +199,39 @@ export default function SettingsScreen() {
 
         <Divider />
 
-        {/* SECTION 2: COLLECTION */}
+        {/* SECTION 2: GOOGLE ACCOUNT */}
+        <List.Section>
+          <List.Subheader
+            style={[styles.subheader, { color: paperTheme.colors.primary }]}
+          >
+            {t("settings.account")}
+          </List.Subheader>
+
+          <List.Item
+            title={t("settings.googleAccountTitle")}
+            description={t("settings.googleAccountDescription")}
+            left={(props) => <List.Icon {...props} icon="google" />}
+            right={() => (
+              <StatusChip
+                active={!!googleAccount}
+                label={
+                  googleAccount
+                    ? t("settings.connected")
+                    : t("settings.notConnected")
+                }
+                theme={paperTheme}
+              />
+            )}
+            onPress={() => setGoogleAccountModalVisible(true)}
+            titleStyle={styles.itemTitle}
+            descriptionStyle={styles.itemDescription}
+            descriptionNumberOfLines={0}
+          />
+        </List.Section>
+
+        <Divider />
+
+        {/* SECTION 3: COLLECTION */}
         <List.Section>
           <List.Subheader
             style={[styles.subheader, { color: paperTheme.colors.primary }]}
@@ -229,7 +256,7 @@ export default function SettingsScreen() {
 
         <Divider />
 
-        {/* SECTION 3: INTEGRATIONS & APIS */}
+        {/* SECTION 4: INTEGRATIONS & APIS */}
         <List.Section>
           <List.Subheader
             style={[styles.subheader, { color: paperTheme.colors.primary }]}
@@ -257,32 +284,11 @@ export default function SettingsScreen() {
             descriptionStyle={styles.itemDescription}
             descriptionNumberOfLines={0}
           />
-
-          <List.Item
-            title={t("settings.googleAccountTitle")}
-            description={t("settings.googleAccountDescription")}
-            left={(props) => <List.Icon {...props} icon="google" />}
-            right={() => (
-              <StatusChip
-                active={!!googleAccount}
-                label={
-                  googleAccount
-                    ? t("settings.connected")
-                    : t("settings.notConnected")
-                }
-                theme={paperTheme}
-              />
-            )}
-            onPress={() => setGoogleAccountModalVisible(true)}
-            titleStyle={styles.itemTitle}
-            descriptionStyle={styles.itemDescription}
-            descriptionNumberOfLines={0}
-          />
         </List.Section>
 
         <Divider />
 
-        {/* SECTION 4: SYSTEM INFO */}
+        {/* SECTION 5: SYSTEM INFO */}
         <List.Section>
           <List.Subheader
             style={[styles.subheader, { color: paperTheme.colors.primary }]}
@@ -438,6 +444,8 @@ const styles = StyleSheet.create({
   },
   statusChip: {
     alignSelf: "center",
+    minWidth: 132,
+    justifyContent: "center",
   },
   statusChipText: {
     fontSize: 12,

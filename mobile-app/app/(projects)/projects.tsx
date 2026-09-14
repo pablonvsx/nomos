@@ -170,10 +170,13 @@ export default function ProjectsScreen() {
     if (!googleAccount) return;
     setDownloadingFolderId(option.driveFolderId);
     try {
-      const { imported } = await restoreOwnProjectFromDrive(option.driveFolderId, registry);
+      await restoreOwnProjectFromDrive(option.driveFolderId, registry);
       await loadData();
-      await refreshDriveAvailableProjects();
-      alert(t("common.success"), t("projectsList.downloadSummary", { imported }));
+      setDriveDialogVisible(false);
+      alert(
+        t("common.success"),
+        t("projectsList.downloadSummary", { name: option.manifest.project_name }),
+      );
     } catch (error) {
       console.error("Error restoring project from Drive:", error);
       alert(t("common.error"), t("projectsList.downloadError"));
@@ -747,7 +750,14 @@ export default function ProjectsScreen() {
                   <Text variant="bodyMedium" style={{ textAlign: "center", marginBottom: 16 }}>
                     {t("projectsList.driveConnectRequired")}
                   </Text>
-                  <Button mode="contained" onPress={connect} loading={isConnecting} disabled={isConnecting} icon="google">
+                  <Button
+                    mode="contained"
+                    style={{ borderRadius: BUTTON_RADIUS }}
+                    onPress={connect}
+                    loading={isConnecting}
+                    disabled={isConnecting}
+                    icon="google"
+                  >
                     {t("settings.googleAccountConnect")}
                   </Button>
                 </View>
@@ -766,6 +776,7 @@ export default function ProjectsScreen() {
                       </View>
                       <Button
                         mode="contained"
+                        style={{ borderRadius: BUTTON_RADIUS }}
                         loading={downloadingFolderId === option.driveFolderId}
                         disabled={downloadingFolderId !== null}
                         onPress={() => handleDownloadDriveProject(option)}

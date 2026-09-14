@@ -28,6 +28,7 @@ import { useRouter, useLocalSearchParams, useFocusEffect, Stack } from "expo-rou
 import { useAlertDialog } from "@/hooks/use-dialog";
 import { useI18n } from "@/contexts/i18n-context";
 import { useGoogleAccount } from "@/hooks/use-google-account";
+import { useBottomContentPadding } from "@/hooks/use-bottom-content-padding";
 import { useProtocolRegistry } from "@/contexts/protocol-registry-context";
 import { getProjectById, setProjectCollaborative } from "@/db/queries/projects";
 import { getPointsByProject } from "@/db/queries/points";
@@ -62,6 +63,7 @@ export default function ProjectCollaborationScreen() {
   const { t } = useI18n();
   const { account: googleAccount, connect: connectGoogleAccount } = useGoogleAccount();
   const registry = useProtocolRegistry();
+  const bottomPadding = useBottomContentPadding();
 
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -340,7 +342,7 @@ export default function ProjectCollaborationScreen() {
     return (
       <View style={[styles.container, { backgroundColor: paperTheme.colors.background }]}>
         <Stack.Screen options={{ title: t("projectCollaboration.title"), headerBackTitle: "" }} />
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}>
           <Card style={styles.card}>
             <Card.Content>
               <Text variant="titleMedium">{t("projectCollaboration.notCollaborativeTitle")}</Text>
@@ -388,7 +390,7 @@ export default function ProjectCollaborationScreen() {
     <View style={[styles.container, { backgroundColor: paperTheme.colors.background }]}>
       <Stack.Screen options={{ title: t("projectCollaboration.title"), headerBackTitle: "" }} />
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}>
         {/* Grupo 1: Backup - funciona sozinho, sem exigir nenhum colaborador. */}
         <Text variant="titleLarge" style={[styles.groupTitle, { color: paperTheme.colors.primary }]}>
           {t("projectCollaboration.backupSectionTitle")}
@@ -396,7 +398,7 @@ export default function ProjectCollaborationScreen() {
         <Card style={styles.card}>
           <Card.Content>
             <Text variant="bodyMedium" style={styles.paragraph}>{t("projectCollaboration.backupIntro")}</Text>
-            <Text variant="bodyMedium" style={{ marginTop: 12, fontWeight: "bold" }}>
+            <Text variant="bodyMedium" style={[styles.paragraph, { marginTop: 12, fontWeight: "bold" }]}>
               {approvedPoints.length === 0
                 ? t("projectCollaboration.backupStatusEmpty")
                 : t("projectCollaboration.backupStatus", {
@@ -473,6 +475,9 @@ export default function ProjectCollaborationScreen() {
           <List.Item
             title={t("projectsList.loadFromDrive")}
             description={t("projectCollaboration.restoreHint")}
+            titleNumberOfLines={0}
+            descriptionNumberOfLines={0}
+            descriptionStyle={styles.paragraph}
             left={(props) => <List.Icon {...props} icon="cloud-download-outline" />}
             right={(props) => <List.Icon {...props} icon="chevron-right" />}
             onPress={() => router.push("/projects")}
@@ -490,12 +495,14 @@ export default function ProjectCollaborationScreen() {
           </Card.Content>
           <List.Item
             title={t("projectCollaboration.pendingApprovalsSectionTitle")}
+            titleNumberOfLines={0}
             left={(props) => <List.Icon {...props} icon="clipboard-check-outline" />}
             right={(props) => <List.Icon {...props} icon="chevron-right" />}
             onPress={() => router.push(`/project-approvals/${project.id}` as any)}
           />
           <List.Item
             title={t("projectCollaboration.rejectedPointsSectionTitle")}
+            titleNumberOfLines={0}
             left={(props) => <List.Icon {...props} icon="close-circle-outline" />}
             right={(props) => <List.Icon {...props} icon="chevron-right" />}
             onPress={() => router.push(`/project-rejected/${project.id}` as any)}

@@ -57,7 +57,6 @@ export const GoogleAccountSettingsModal: React.FC<GoogleAccountSettingsModalProp
         <Divider />
 
         <ScrollView
-          style={styles.content}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
@@ -78,6 +77,12 @@ export const GoogleAccountSettingsModal: React.FC<GoogleAccountSettingsModalProp
           </Text>
 
           <Chip
+            icon={account ? 'check-circle' : 'alert-circle-outline'}
+            selectedColor={
+              account
+                ? (theme.dark ? '#a5d6a7' : '#2e7d32')
+                : theme.colors.onErrorContainer
+            }
             style={[
               styles.statusChip,
               {
@@ -86,11 +91,6 @@ export const GoogleAccountSettingsModal: React.FC<GoogleAccountSettingsModalProp
                   : theme.colors.errorContainer,
               },
             ]}
-            textStyle={{
-              color: account
-                ? (theme.dark ? '#a5d6a7' : '#2e7d32')
-                : theme.colors.onErrorContainer,
-            }}
           >
             {account ? t('settings.connected') : t('settings.notConnected')}
           </Chip>
@@ -150,9 +150,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontWeight: '600',
   },
-  content: {
-    maxHeight: '80%',
-  },
   contentContainer: {
     padding: 16,
     paddingTop: 20,
@@ -160,6 +157,7 @@ const styles = StyleSheet.create({
   description: {
     marginBottom: 20,
     lineHeight: 22,
+    textAlign: 'justify',
   },
   sectionLabel: {
     fontWeight: '700',
@@ -171,9 +169,11 @@ const styles = StyleSheet.create({
   },
   accountEmail: {
     marginTop: 8,
+    textAlign: 'justify',
   },
   errorText: {
     marginTop: 8,
+    textAlign: 'justify',
   },
   divider: {
     marginVertical: 20,

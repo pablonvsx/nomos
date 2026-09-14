@@ -888,13 +888,14 @@ export default function UnifiedProjectDetailsScreen() {
           ...(project
             ? [
                 {
-                  // Three collaboration_role states, three distinct labels -
-                  // a 'collaborator' copy can never become 'owner' (see
-                  // db/queries/projects.ts:setProjectCollaborative), so it
-                  // must not share the null-role "Ativar Backup no Drive"
-                  // label, which implies an action this FAB entry cannot
-                  // perform for it (RELATORIO_AUDITORIA_COLABORACAO.md,
-                  // Menor 5).
+                  // Both the null (not yet activated) and 'owner' roles
+                  // navigate to the same Backup e Colaboração hub - where
+                  // "Ativar Backup no Drive" itself lives as the on-screen
+                  // action - so they share this label. A 'collaborator'
+                  // copy can never become 'owner' (see
+                  // db/queries/projects.ts:setProjectCollaborative) and
+                  // lands on a different, read-only screen, so it keeps its
+                  // own distinct label.
                   icon:
                     project.collaboration_role === "owner"
                       ? "account-group"
@@ -902,11 +903,9 @@ export default function UnifiedProjectDetailsScreen() {
                         ? "information-outline"
                         : "google-drive",
                   label:
-                    project.collaboration_role === "owner"
-                      ? t("projectView.collaborationHub")
-                      : project.collaboration_role === "collaborator"
-                        ? t("projectView.collaboratorCopyHub")
-                        : t("projectView.makeCollaborative"),
+                    project.collaboration_role === "collaborator"
+                      ? t("projectView.collaboratorCopyHub")
+                      : t("projectView.collaborationHub"),
                   onPress: () => router.push(`/project-collaboration/${project.id}` as any),
                   color: paperTheme.dark
                     ? paperTheme.colors.onSurface
