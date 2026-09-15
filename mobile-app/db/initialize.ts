@@ -7,6 +7,9 @@ const db = SQLite.openDatabaseSync("nomos.db");
 // Development trigger: set to true to wipe and recreate the full schema on app start.
 const RESET_DATABASE_ON_INIT = false; // Set to true for development/testing purposes only
 
+// Bump whenever a new column-migration set is added to migrateSchema() below.
+const SCHEMA_VERSION = 1;
+
 async function resetDatabase() {
   console.warn("⚠️ RESET_DATABASE_ON_INIT is enabled. Dropping all tables...");
 
@@ -21,7 +24,49 @@ async function resetDatabase() {
   await db.execAsync("DROP TABLE IF EXISTS custom_protocols");
   await db.execAsync("DROP TABLE IF EXISTS protocols");
 
+  // user_version is a database-level pragma, not tied to individual tables,
+  // so it must be reset explicitly alongside a full table drop.
+  await db.execAsync("PRAGMA user_version = 0");
+
   console.warn("🧹 Database tables dropped successfully.");
+}
+
+async function columnExists(table: string, column: string): Promise<boolean> {
+  const columns = await db.getAllAsync<{ name: string }>(
+    `PRAGMA table_info(${table})`,
+  );
+  return columns.some((c) => c.name === column);
+}
+
+async function addColumnIfMissing(
+  table: string,
+  column: string,
+  definition: string,
+): Promise<void> {
+  if (await columnExists(table, column)) return;
+  await db.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
+
+// Adds nullable columns to existing installs whose tables were already
+// created before this schema version. Fresh installs (and RESET_DATABASE_ON_INIT
+// runs) already get these columns from the CREATE TABLE statements below, so
+// addColumnIfMissing's existence check makes every call here a safe no-op in
+// that case.
+async function migrateSchema(): Promise<void> {
+  const versionRow = await db.getFirstAsync<{ user_version: number }>(
+    "PRAGMA user_version",
+  );
+  const currentVersion = versionRow?.user_version ?? 0;
+  if (currentVersion >= SCHEMA_VERSION) return;
+
+  // Version 0 -> 1: add nullable uuid/ownership columns for project sharing (Fase 0).
+  await addColumnIfMissing("projects", "project_uuid", "TEXT");
+  await addColumnIfMissing("projects", "owner_email", "TEXT DEFAULT NULL");
+  await addColumnIfMissing("custom_protocols", "uuid", "TEXT");
+  await addColumnIfMissing("project_species_catalog", "uuid", "TEXT");
+  await addColumnIfMissing("vegetation_classifications", "uuid", "TEXT");
+
+  await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 }
 
 export async function initDatabase() {
@@ -66,7 +111,9 @@ export async function initDatabase() {
         is_classified INTEGER DEFAULT 0,
         last_classified_at TEXT,
         vegetation_classification_type TEXT DEFAULT 'standard', -- 'standard' or 'custom'
-        active_custom_vegetation_classification_id INTEGER
+        active_custom_vegetation_classification_id INTEGER,
+        project_uuid TEXT,          -- stable cross-device identity, see project-sharing (Fase 0)
+        owner_email TEXT DEFAULT NULL
       );
     `);
 
@@ -80,7 +127,8 @@ export async function initDatabase() {
         collection_instructions TEXT,
         schema TEXT NOT NULL,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        uuid TEXT
       );
     `);
 
@@ -96,6 +144,7 @@ export async function initDatabase() {
         source TEXT DEFAULT 'manual',
         created_at TEXT NOT NULL,
         last_updated TEXT NOT NULL,
+        uuid TEXT,
 
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
         UNIQUE(project_id, gbif_id)
@@ -134,6 +183,7 @@ export async function initDatabase() {
         classes TEXT NOT NULL,        -- JSON array of VegetationClass objects
         created_at TEXT NOT NULL,
         last_updated TEXT NOT NULL,
+        uuid TEXT,
 
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
       );
@@ -157,6 +207,10 @@ export async function initDatabase() {
         point_size REAL,                      -- plot size (provisional)
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
+        uuid TEXT,                             -- stable cross-device identity (Fase 2)
+        approval_status TEXT DEFAULT NULL,     -- NULL | 'pending' | 'approved' | 'rejected' (Fase 2)
+        created_by TEXT DEFAULT NULL,          -- collector code, static since creation/export (Fase 2)
+        drive_synced_at TEXT DEFAULT NULL,     -- reserved for the Drive backup phase (Fase 2)
 
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
       );
@@ -164,6 +218,9 @@ export async function initDatabase() {
 
     await db.execAsync(
       "CREATE INDEX IF NOT EXISTS idx_points_project_id ON points(project_id)",
+    );
+    await db.execAsync(
+      "CREATE INDEX IF NOT EXISTS idx_points_uuid ON points(uuid)",
     );
 
     // Point Modules Table (one record per module per point)
@@ -206,7 +263,11 @@ export async function initDatabase() {
       "CREATE INDEX IF NOT EXISTS idx_species_point_id ON species(point_id)",
     );
 
-    // 2. Paisageo Official Protocol
+    // 2. Column migrations for existing installs (fresh installs already have
+    // these columns from the CREATE TABLE statements above).
+    await migrateSchema();
+
+    // 3. Paisageo Official Protocol
     const protocolId = "nomos-paisageo-v1";
     const checkProtocol = await db.getFirstAsync<{ id: string }>(
       "SELECT id FROM protocols WHERE id = ?",

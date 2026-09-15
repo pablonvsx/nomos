@@ -18,6 +18,7 @@ import { useI18n } from "@/contexts/i18n-context";
 import { getAvailableLanguages } from "@/utils/i18n";
 import { useDialog } from "@/hooks/use-dialog";
 import { SpeciesLinkSettingsModal } from "@/components/settings/SpeciesLinkSettingsModal";
+import { CollectorCodeModal } from "@/components/local-identity/CollectorCodeModal";
 
 export default function SettingsScreen() {
   const paperTheme = usePaperTheme();
@@ -27,6 +28,7 @@ export default function SettingsScreen() {
   const [languageDialogVisible, setLanguageDialogVisible] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage);
   const [speciesLinkModalVisible, setSpeciesLinkModalVisible] = useState(false);
+  const [collectorCodeModalVisible, setCollectorCodeModalVisible] = useState(false);
 
   const availableLanguages = getAvailableLanguages();
 
@@ -167,6 +169,27 @@ export default function SettingsScreen() {
 
         <Divider />
 
+        {/* SECTION 3B: COLLABORATION */}
+        <List.Section>
+          <List.Subheader
+            style={[styles.subheader, { color: paperTheme.colors.primary }]}
+          >
+            {t("settings.collaboration")}
+          </List.Subheader>
+
+          <List.Item
+            title={t("collectorCode.settingsTitle")}
+            description={t("collectorCode.description")}
+            left={(props) => <List.Icon {...props} icon="account-badge-outline" />}
+            onPress={() => setCollectorCodeModalVisible(true)}
+            titleStyle={styles.itemTitle}
+            descriptionStyle={styles.itemDescription}
+            descriptionNumberOfLines={0}
+          />
+        </List.Section>
+
+        <Divider />
+
         {/* SECTION 4: SYSTEM INFO */}
         <List.Section>
           <List.Subheader
@@ -257,6 +280,12 @@ export default function SettingsScreen() {
       <SpeciesLinkSettingsModal
         visible={speciesLinkModalVisible}
         onDismiss={() => setSpeciesLinkModalVisible(false)}
+      />
+
+      {/* Collector Code Modal */}
+      <CollectorCodeModal
+        visible={collectorCodeModalVisible}
+        onDismiss={() => setCollectorCodeModalVisible(false)}
       />
     </ScrollView>
   );

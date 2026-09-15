@@ -52,6 +52,11 @@ import SpeciesInput from "@/components/survey/SpeciesInput";
 
 import { buildCustomModuleDescriptor } from "@/modules/custom/manifest";
 import type { ModuleDescriptor, FieldSchema, LanguageCode } from "@/protocol-kernel/types";
+import {
+  exportPointsPackage,
+  CollectorCodeRequiredError,
+} from "@/core/project-sharing/export-points";
+import { CollectorCodeModal } from "@/components/local-identity/CollectorCodeModal";
 
 const screenWidth = Dimensions.get("window").width;
 // Photo cards show at most 2 rows of 3 thumbnails; the rest sit behind a "view all" gallery.
@@ -235,6 +240,7 @@ export default function UnifiedSurveyPointViewScreen() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [galleryPhotos, setGalleryPhotos] = useState<string[] | null>(null);
+  const [collectorCodeModalVisible, setCollectorCodeModalVisible] = useState(false);
   const [speciesList, setSpeciesList] = useState<Species[]>([]);
 
   const resolvedId = project ? resolveManifestId(project) : null;
@@ -401,6 +407,21 @@ export default function UnifiedSurveyPointViewScreen() {
       t("common.cancel"),
       true,
     );
+  };
+
+  const handleExportSinglePoint = async () => {
+    if (!point) return;
+    try {
+      await exportPointsPackage([point.id.toString()]);
+      alert(t("common.success"), t("surveyView.pointSentToOwner"));
+    } catch (error) {
+      if (error instanceof CollectorCodeRequiredError) {
+        setCollectorCodeModalVisible(true);
+        return;
+      }
+      console.error("Error exporting point:", error);
+      alert(t("common.error"), t("surveyView.errorSendingPoint"));
+    }
   };
 
   const handleEdit = () => {
@@ -928,6 +949,12 @@ export default function UnifiedSurveyPointViewScreen() {
             onPress: handleDelete,
             color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
           },
+          {
+            icon: "send",
+            label: t("surveyView.sendToOwner"),
+            onPress: handleExportSinglePoint,
+            color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
+          },
         ]}
         onStateChange={({ open }) => setFabOpen(open)}
         theme={{
@@ -935,6 +962,15 @@ export default function UnifiedSurveyPointViewScreen() {
             primary: paperTheme.colors.primary,
             onPrimary: paperTheme.colors.onPrimary,
           },
+        }}
+      />
+
+      <CollectorCodeModal
+        visible={collectorCodeModalVisible}
+        onDismiss={() => setCollectorCodeModalVisible(false)}
+        onSaved={() => {
+          setCollectorCodeModalVisible(false);
+          handleExportSinglePoint();
         }}
       />
 

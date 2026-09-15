@@ -1,6 +1,7 @@
 // src/db/queries/projects.ts
 import { db } from "../initialize";
 import { Project } from "@/types/database";
+import { generateUuid } from "@/core/utils/uuid";
 
 /**
  * Retrieves all projects ordered by last edit (most recently updated
@@ -25,14 +26,25 @@ export async function createProject(
   protocolId: string,
   description: string = "",
   protocolSource: "official" | "custom" = "official",
+  projectUuid?: string,
+  ownerEmail?: string | null,
 ): Promise<number | null> {
   try {
     const createdAt = new Date().toISOString();
 
     const result = await db.runAsync(
-      `INSERT INTO projects (name, protocol_id, description, protocol_source, created_at, last_updated, is_classified) 
-       VALUES (?, ?, ?, ?, ?, ?, 0)`,
-      [name, protocolId, description, protocolSource, createdAt, createdAt],
+      `INSERT INTO projects (name, protocol_id, description, protocol_source, created_at, last_updated, is_classified, project_uuid, owner_email)
+       VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+      [
+        name,
+        protocolId,
+        description,
+        protocolSource,
+        createdAt,
+        createdAt,
+        projectUuid ?? null,
+        ownerEmail ?? null,
+      ],
     );
 
     return result.lastInsertRowId;
@@ -124,6 +136,47 @@ export async function updateProject(
     console.error("Error updating project:", error);
     return false;
   }
+}
+
+/**
+ * Get a project by its stable cross-device uuid (project sharing import
+ * idempotency, Fase 0).
+ */
+export async function getProjectByUuid(
+  projectUuid: string,
+): Promise<Project | null> {
+  try {
+    const result = await db.getFirstAsync<Project>(
+      "SELECT * FROM projects WHERE project_uuid = ?",
+      [projectUuid],
+    );
+    return result || null;
+  } catch (error) {
+    console.error("Error fetching project by uuid:", error);
+    throw error;
+  }
+}
+
+/**
+ * Returns the project's uuid, generating and persisting one via the shared
+ * uuid utility if it doesn't have one yet. Never regenerates an existing
+ * uuid, so repeated calls (e.g. re-exporting the same project's
+ * configuration package) always return the same value.
+ */
+export async function ensureProjectUuid(projectId: number): Promise<string> {
+  const row = await db.getFirstAsync<{ project_uuid: string | null }>(
+    "SELECT project_uuid FROM projects WHERE id = ?",
+    [projectId],
+  );
+
+  if (row?.project_uuid) return row.project_uuid;
+
+  const uuid = generateUuid();
+  await db.runAsync("UPDATE projects SET project_uuid = ? WHERE id = ?", [
+    uuid,
+    projectId,
+  ]);
+  return uuid;
 }
 
 /**

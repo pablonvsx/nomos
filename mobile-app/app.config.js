@@ -2,6 +2,9 @@ require('dotenv/config');
 
 const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY ?? '';
 const hasGoogleMapsApiKey = googleMapsApiKey.trim().length > 0;
+
+const googleWebClientId = process.env.GOOGLE_WEB_CLIENT_ID ?? '';
+
 const baseConfig = {
   name: 'Nomos',
   slug: 'nomos',
@@ -80,6 +83,7 @@ const baseConfig = {
           'This app needs access to your location to show your position on the map and record survey coordinates.',
       },
     ],
+    '@react-native-google-signin/google-signin',
   ],
   experiments: {
     typedRoutes: true,
@@ -88,6 +92,7 @@ const baseConfig = {
   extra: {
     router: {},
     googleMapsConfigured: hasGoogleMapsApiKey,
+    googleWebClientId,
     eas: {
       projectId: '79f4d877-182e-4dc0-ba4d-cfc321735e6f',
     },

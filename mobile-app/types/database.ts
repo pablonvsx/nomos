@@ -29,6 +29,8 @@ export interface Project {
   last_classified_at?: string; // Optional timestamp of the last classification operation
   vegetation_classification_type?: "standard" | "custom"; // Vegetation classification type: 'standard' (Nomos decision tree) or 'custom' (user-defined)
   active_custom_vegetation_classification_id?: number; // ID of the active custom vegetation classification, if type is 'custom'
+  project_uuid?: string | null; // Stable cross-device identity, used by the project configuration package (Fase 0)
+  owner_email?: string | null; // Set once when backup is activated for this project (secondary signal, never the identity check)
 }
 
 // Ponto de levantamento (schema-driven, Fase 5+)
@@ -49,6 +51,10 @@ export interface Point {
   point_size?: number | null;   // plot size (provisional)
   created_at: string;
   updated_at: string;
+  uuid?: string | null;                 // Stable cross-device identity (Fase 2)
+  approval_status?: "pending" | "approved" | "rejected" | null;
+  created_by?: string | null;           // Collector code, static since creation/export (Fase 2)
+  drive_synced_at?: string | null;      // Reserved for the Drive backup phase
 }
 
 // A point's module data (one point_modules row)
@@ -162,6 +168,7 @@ export interface CustomProtocol {
   schema: CustomProtocolSchema; // The complete schema (stored as JSON)
   created_at: string; // Creation timestamp
   updated_at: string; // Last update timestamp
+  uuid?: string | null; // Stable cross-device identity, used by the project configuration package (Fase 0)
 }
 
 // ============================================
@@ -183,6 +190,7 @@ export interface VegetationClassification {
   classes: VegetationClass[]; // Array of vegetation classes in JSON format
   created_at: string; // Creation timestamp
   last_updated: string; // Last update timestamp
+  uuid?: string | null; // Stable cross-device identity, used by the project configuration package (Fase 0)
 }
 
 // Represents a project-level species entry with support for multiple common names (from GBIF or manual entry)
@@ -197,6 +205,7 @@ export interface ProjectSpeciesCatalog {
   created_at: string; // Creation timestamp
   last_updated: string; // Last update timestamp
   common_names?: ProjectSpeciesCommonName[]; // Multiple common names with language support
+  uuid?: string | null; // Stable cross-device identity, used by the project configuration package (Fase 0)
 }
 
 // Represents a common name for a species with language support

@@ -30,6 +30,11 @@ import {
 } from "@/db/queries/custom-protocols";
 import { Project, CustomProtocol } from "@/types/database";
 import { useProtocolRegistry, resolveManifestId } from "@/contexts/protocol-registry-context";
+import {
+  importProjectConfigPackage,
+  InvalidPackageError,
+  UnsupportedPackageVersionError,
+} from "@/core/project-sharing/project-config-package";
 
 export default function ProjectsScreen() {
   const router = useRouter();
@@ -197,11 +202,30 @@ export default function ProjectsScreen() {
     }
   };
 
-  // TODO: implement actual project import (file picker + validation, mirroring
-  // handleImportProtocol below). For now this just surfaces that the action
-  // exists but isn't wired up yet.
-  const handleImportProject = () => {
-    alert(t("projectsList.importProject"), t("projectsList.importProjectComingSoon"));
+  const handleImportProject = async () => {
+    try {
+      const result = await importProjectConfigPackage();
+      if (!result) return;
+
+      const { projectId, created } = result;
+      loadData();
+      alert(
+        t("common.success"),
+        created
+          ? t("projectsList.projectImported")
+          : t("projectsList.projectAlreadyExists"),
+        () => router.push(`/project-details/${projectId}` as any),
+      );
+    } catch (error) {
+      console.error("Error importing project:", error);
+      if (error instanceof UnsupportedPackageVersionError) {
+        alert(t("common.error"), t("projectsList.configPackageFormatMismatch"));
+      } else if (error instanceof InvalidPackageError) {
+        alert(t("common.error"), t("projectsList.invalidConfigPackageFile"));
+      } else {
+        alert(t("common.error"), t("projectsList.errorImportingProject"));
+      }
+    }
   };
 
   const handleImportProtocol = async () => {

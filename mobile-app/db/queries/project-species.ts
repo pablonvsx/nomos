@@ -12,6 +12,7 @@ import {
   ProjectSpeciesCommonNameInput,
   Species,
 } from "@/types/database";
+import { generateUuid } from "@/core/utils/uuid";
 
 const VALID_CATALOG_SOURCES: ProjectSpeciesCatalog["source"][] = [
   "gbif",
@@ -78,6 +79,7 @@ export async function getProjectSpeciesCatalogByProject(
         created_at: sp.created_at,
         last_updated: sp.last_updated,
         common_names: commonNames,
+        uuid: sp.uuid ?? null,
       });
     }
 
@@ -86,6 +88,69 @@ export async function getProjectSpeciesCatalogByProject(
     console.error("Error fetching project species catalog:", error);
     return [];
   }
+}
+
+/**
+ * Get all species for a project, backfilling a uuid (via the shared uuid
+ * utility) for any row that doesn't have one yet. This is what the project
+ * configuration package export uses, so every exported row is guaranteed to
+ * carry a stable, persisted uuid.
+ */
+export async function getAllProjectSpeciesCatalogEnsuringUuids(
+  projectId: number,
+): Promise<ProjectSpeciesCatalog[]> {
+  const catalog = await getProjectSpeciesCatalogByProject(projectId);
+  const result: ProjectSpeciesCatalog[] = [];
+
+  for (const species of catalog) {
+    if (species.uuid) {
+      result.push(species);
+    } else {
+      const uuid = await ensureProjectSpeciesUuid(species.id);
+      result.push({ ...species, uuid });
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Get a species by its stable cross-device uuid, scoped to a project
+ * (project sharing import dedupe, Fase 0).
+ */
+export async function getProjectSpeciesByUuid(
+  projectId: number,
+  uuid: string,
+): Promise<ProjectSpeciesCatalog | null> {
+  const row = await db.getFirstAsync<{ id: number }>(
+    "SELECT id FROM project_species_catalog WHERE project_id = ? AND uuid = ?",
+    [projectId, uuid],
+  );
+
+  if (!row) return null;
+
+  return getProjectSpeciesById(row.id);
+}
+
+/**
+ * Returns the species row's uuid, generating and persisting one via the
+ * shared uuid utility if it doesn't have one yet. Never regenerates an
+ * existing uuid.
+ */
+export async function ensureProjectSpeciesUuid(speciesId: number): Promise<string> {
+  const row = await db.getFirstAsync<{ uuid: string | null }>(
+    "SELECT uuid FROM project_species_catalog WHERE id = ?",
+    [speciesId],
+  );
+
+  if (row?.uuid) return row.uuid;
+
+  const uuid = generateUuid();
+  await db.runAsync("UPDATE project_species_catalog SET uuid = ? WHERE id = ?", [
+    uuid,
+    speciesId,
+  ]);
+  return uuid;
 }
 
 /**
@@ -120,6 +185,7 @@ export async function getProjectSpeciesById(
       created_at: species.created_at,
       last_updated: species.last_updated,
       common_names: commonNames,
+      uuid: species.uuid ?? null,
     };
   } catch (error) {
     console.error("Error fetching species:", error);
@@ -137,9 +203,9 @@ export async function createProjectSpecies(
     const now = new Date().toISOString();
     
     const result = await db.runAsync(
-      `INSERT INTO project_species_catalog 
-       (project_id, scientific_name, family, genus, gbif_id, source, created_at, last_updated)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO project_species_catalog
+       (project_id, scientific_name, family, genus, gbif_id, source, created_at, last_updated, uuid)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.project_id,
         data.scientific_name,
@@ -149,6 +215,7 @@ export async function createProjectSpecies(
         data.source || "manual",
         now,
         now,
+        data.uuid || null,
       ],
     );
 

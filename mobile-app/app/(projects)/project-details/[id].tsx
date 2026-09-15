@@ -56,6 +56,18 @@ import VegetationClassificationPicker from "@/modules/paisageo/components/Vegeta
 import VegetationClassificationsManagementModal from "@/modules/paisageo/components/VegetationClassificationsManagementModal";
 import { getProjectSpeciesCatalogByProject } from "@/db/queries/project-species";
 import { getCustomProtocolById } from "@/db/queries/custom-protocols";
+import { exportProjectConfigPackage } from "@/core/project-sharing/project-config-package";
+import {
+  exportAllPointsPackage,
+  CollectorCodeRequiredError,
+} from "@/core/project-sharing/export-points";
+import {
+  importPointsPackage,
+  ProjectMismatchError,
+  type ImportPointsResult,
+} from "@/core/project-sharing/import-points";
+import { CollectorCodeModal } from "@/components/local-identity/CollectorCodeModal";
+import { PointDuplicatesModal } from "@/components/project-sharing/PointDuplicatesModal";
 import {
   useProtocolRegistry,
   useCapabilityBus,
@@ -116,6 +128,11 @@ export default function UnifiedProjectDetailsScreen() {
   // FAB and Edit Dialog states
   const [fabOpen, setFabOpen] = useState(false);
   const [editDialogVisible, setEditDialogVisible] = useState(false);
+
+  // Points package export/import states (Fase 2)
+  const [collectorCodeModalVisible, setCollectorCodeModalVisible] = useState(false);
+  const [pendingExportIntent, setPendingExportIntent] = useState<(() => void) | null>(null);
+  const [duplicatesResult, setDuplicatesResult] = useState<ImportPointsResult | null>(null);
   const bottomPadding = useBottomContentPadding(64);
 
   // resetKey includes editDialogVisible: this screen never unmounts while
@@ -545,6 +562,61 @@ export default function UnifiedProjectDetailsScreen() {
     }
   };
 
+  const handleExportConfigPackage = async () => {
+    if (!project) return;
+    try {
+      await exportProjectConfigPackage(project.id);
+      alert(t("common.success"), t("projectView.configPackageExported"));
+    } catch (error) {
+      console.error("Error exporting project config package:", error);
+      alert(t("common.error"), t("projectView.errorExportingConfigPackage"));
+    }
+  };
+
+  const handleExportAllPoints = async () => {
+    if (!project) return;
+    try {
+      await exportAllPointsPackage(project.id);
+      alert(t("common.success"), t("projectView.pointsPackageExported"));
+    } catch (error) {
+      if (error instanceof CollectorCodeRequiredError) {
+        setPendingExportIntent(() => handleExportAllPoints);
+        setCollectorCodeModalVisible(true);
+        return;
+      }
+      console.error("Error exporting points package:", error);
+      alert(t("common.error"), t("projectView.errorExportingPointsPackage"));
+    }
+  };
+
+  const handleImportPoints = async () => {
+    if (!project) return;
+    try {
+      const result = await importPointsPackage(project.id);
+      if (!result) return;
+
+      if (result.ownerEmailWarning) {
+        alert(t("common.info"), t("projectView.pointsImportOwnerEmailWarning"));
+      }
+
+      if (result.duplicates.length > 0) {
+        setDuplicatesResult(result);
+      } else {
+        alert(
+          t("common.success"),
+          t("projectView.pointsImported", { count: result.imported.toString() }),
+        );
+      }
+    } catch (error) {
+      console.error("Error importing points package:", error);
+      if (error instanceof ProjectMismatchError) {
+        alert(t("common.error"), error.message);
+      } else {
+        alert(t("common.error"), t("projectView.errorImportingPointsPackage"));
+      }
+    }
+  };
+
   const renderSurveyPoint = ({ item }: { item: Point }) => {
     const surveyRoute = `/survey-point-details/${item.id}?projectId=${project?.id}`;
     const pointLabel = t("surveyView.point");
@@ -886,6 +958,30 @@ export default function UnifiedProjectDetailsScreen() {
               ? paperTheme.colors.onSurface
               : paperTheme.colors.primary,
           },
+          {
+            icon: "package-variant",
+            label: t("projectView.exportConfigPackage"),
+            onPress: handleExportConfigPackage,
+            color: paperTheme.dark
+              ? paperTheme.colors.onSurface
+              : paperTheme.colors.primary,
+          },
+          {
+            icon: "database-export",
+            label: t("projectView.exportAllPoints"),
+            onPress: surveyPoints.length === 0 ? () => {} : handleExportAllPoints,
+            color: paperTheme.dark
+              ? paperTheme.colors.onSurface
+              : paperTheme.colors.primary,
+          },
+          {
+            icon: "database-import",
+            label: t("projectView.importPoints"),
+            onPress: handleImportPoints,
+            color: paperTheme.dark
+              ? paperTheme.colors.onSurface
+              : paperTheme.colors.primary,
+          },
         ]}
         onStateChange={({ open }) => setFabOpen(open)}
         theme={{
@@ -909,6 +1005,29 @@ export default function UnifiedProjectDetailsScreen() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
+
+      {/* Collector Code Modal (Fase 2) - triggered when exporting points without a code set yet */}
+      <CollectorCodeModal
+        visible={collectorCodeModalVisible}
+        onDismiss={() => {
+          setCollectorCodeModalVisible(false);
+          setPendingExportIntent(null);
+        }}
+        onSaved={() => {
+          setCollectorCodeModalVisible(false);
+          pendingExportIntent?.();
+          setPendingExportIntent(null);
+        }}
+      />
+
+      {/* Points import duplicates resolution modal (Fase 2) */}
+      {duplicatesResult && (
+        <PointDuplicatesModal
+          visible
+          result={duplicatesResult}
+          onDismiss={() => setDuplicatesResult(null)}
+        />
+      )}
 
       {/* Vegetation Classifications Management Modal */}
       {project && (

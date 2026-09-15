@@ -2,6 +2,7 @@ import { db } from "@/db/initialize";
 import type { Point, PointModule, PointWithModules } from "@/types/database";
 import type { ProtocolRegistry } from "@/protocol-kernel/types";
 import { buildPointWithModules } from "@/db/mappers/point.mapper";
+import { generateUuid } from "@/core/utils/uuid";
 
 // ──────────────────────────────────────────────
 // Input types
@@ -20,9 +21,12 @@ export interface CreatePointInput {
   point_size?: number | null;
   schema_version: string;              // manifest version (applied to all modules)
   modules: Record<string, string>;     // moduleId → already-serialized data_json
+  uuid?: string;                       // supplied when importing an existing point (Fase 2), never regenerated
+  approval_status?: "pending" | "approved" | "rejected" | null;
+  created_by?: string | null;          // collector code
 }
 
-export type UpdatePointInput = Partial<Omit<CreatePointInput, "project_id" | "protocol_id">>;
+export type UpdatePointInput = Partial<Omit<CreatePointInput, "project_id" | "protocol_id" | "uuid">>;
 
 // ──────────────────────────────────────────────
 // Database functions
@@ -43,8 +47,8 @@ export async function createPoint(input: CreatePointInput): Promise<number | nul
       `INSERT INTO points
          (project_id, protocol_id, point_number, lat, lon, altitude,
           generated_name, photos, audio_notes, additional_notes, point_size,
-          created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          created_at, updated_at, uuid, approval_status, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         input.project_id,
         input.protocol_id,
@@ -59,6 +63,9 @@ export async function createPoint(input: CreatePointInput): Promise<number | nul
         input.point_size ?? null,
         now,
         now,
+        input.uuid ?? null,
+        input.approval_status ?? null,
+        input.created_by ?? null,
       ],
     );
 
@@ -139,6 +146,8 @@ export async function updatePoint(
     if (updates.audio_notes !== undefined) { fields.push("audio_notes = ?"); values.push(updates.audio_notes ?? null); }
     if (updates.additional_notes !== undefined) { fields.push("additional_notes = ?"); values.push(updates.additional_notes ?? null); }
     if (updates.point_size !== undefined) { fields.push("point_size = ?"); values.push(updates.point_size ?? null); }
+    if (updates.approval_status !== undefined) { fields.push("approval_status = ?"); values.push(updates.approval_status ?? null); }
+    if (updates.created_by !== undefined) { fields.push("created_by = ?"); values.push(updates.created_by ?? null); }
 
     values.push(pointId);
     await db.runAsync(
@@ -254,6 +263,76 @@ export async function getPointsWithModulesByProject(
     console.error("Error loading points with modules:", error);
     return [];
   }
+}
+
+/**
+ * Returns the point's uuid, generating and persisting one via the shared
+ * uuid utility if it doesn't have one yet. Never regenerates an existing
+ * uuid, so repeated calls (e.g. re-exporting the same point) always return
+ * the same value.
+ */
+export async function ensurePointUuid(pointId: number): Promise<string> {
+  const row = await db.getFirstAsync<{ uuid: string | null }>(
+    "SELECT uuid FROM points WHERE id = ?",
+    [pointId],
+  );
+
+  if (row?.uuid) return row.uuid;
+
+  const uuid = generateUuid();
+  await db.runAsync("UPDATE points SET uuid = ? WHERE id = ?", [uuid, pointId]);
+  return uuid;
+}
+
+/**
+ * Finds a point by its stable cross-device uuid, scoped to a project
+ * (points package import duplicate detection, Fase 2). Matches regardless
+ * of approval_status.
+ */
+export async function getPointByProjectAndUuid(
+  projectId: number,
+  uuid: string,
+): Promise<Point | null> {
+  const row = await db.getFirstAsync<Point>(
+    "SELECT * FROM points WHERE project_id = ? AND uuid = ?",
+    [projectId, uuid],
+  );
+  return row ?? null;
+}
+
+/**
+ * Same as getPointsWithModulesByProject, but keeps each module's data_json
+ * serialized instead of deserializing it through a ProtocolRegistry. Used
+ * by the points package exporter (Fase 2), which has no need for a
+ * registry - it round-trips the already-serialized module data verbatim.
+ */
+export async function getPointsWithRawModulesByProject(
+  projectId: number,
+): Promise<Array<Point & { rawModules: PointModule[] }>> {
+  const points = await db.getAllAsync<Point>(
+    "SELECT * FROM points WHERE project_id = ? ORDER BY point_number ASC",
+    [projectId],
+  );
+  if (!points.length) return [];
+
+  const ids = points.map((p) => p.id);
+  const placeholders = ids.map(() => "?").join(",");
+  const allModules = await db.getAllAsync<PointModule>(
+    `SELECT * FROM point_modules WHERE point_id IN (${placeholders})`,
+    ids,
+  );
+
+  const modulesByPoint = new Map<number, PointModule[]>();
+  for (const mod of allModules) {
+    const list = modulesByPoint.get(mod.point_id) ?? [];
+    list.push(mod);
+    modulesByPoint.set(mod.point_id, list);
+  }
+
+  return points.map((point) => ({
+    ...point,
+    rawModules: modulesByPoint.get(point.id) ?? [],
+  }));
 }
 
 export async function classifyProjectPoints(projectId: number): Promise<boolean> {

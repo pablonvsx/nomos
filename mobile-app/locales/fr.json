@@ -63,6 +63,7 @@
     "languageChanged": "Langue Modifiée",
     "languageChangedDesc": "La langue de l'application a été modifiée avec succès. Les écrans se mettront à jour automatiquement.\n\nImportant : Les données des projets seront générées selon la langue active au moment du remplissage.",
     "integrationsAPIs": "Intégrations et APIs",
+    "collaboration": "Collaboration",
     "systemInfo": "À Propos du Système",
     "appVersion": "Version de l'Application",
     "database": "Base de Données",
@@ -513,7 +514,12 @@
     "custom": "Personnalisé",
     "native": "Nomos",
     "officialProtocol": "Protocole Paisageo",
-    "loadError": "Impossible de charger la base de données."
+    "loadError": "Impossible de charger la base de données.",
+    "projectImported": "Projet importé avec succès.",
+    "projectAlreadyExists": "Ce projet existait déjà sur cet appareil — aucun doublon n'a été créé.",
+    "errorImportingProject": "Impossible d'importer le projet. Vérifiez si le fichier est un paquet de configuration valide.",
+    "invalidConfigPackageFile": "Fichier invalide. Sélectionnez un paquet de configuration de projet (.json) exporté par Nomos.",
+    "configPackageFormatMismatch": "Ce fichier a été créé par une version plus récente de Nomos et ne peut pas être importé dans cette version de l'application."
   },
   "projectView": {
     "title": "Détails du Projet",
@@ -577,7 +583,17 @@
     "exportMediaConfirm": "Un fichier ZIP sera créé avec {{count}} photo(s). Continuer ?",
     "exportedPhotos": "photo(s) exportée(s) !",
     "mediaExportDialogTitle": "Exporter les Médias : {{name}}",
-    "export": "Exporter"
+    "export": "Exporter",
+    "exportConfigPackage": "Exporter le Paquet de Configuration",
+    "configPackageExported": "Paquet de configuration exporté avec succès.",
+    "errorExportingConfigPackage": "Impossible d'exporter le paquet de configuration.",
+    "exportAllPoints": "Exporter Tous les Points du Projet",
+    "pointsPackageExported": "Paquet de points exporté avec succès.",
+    "errorExportingPointsPackage": "Impossible d'exporter le paquet de points.",
+    "importPoints": "Importer les Points Reçus",
+    "pointsImported": "{{count}} point(s) importé(s), en attente de révision.",
+    "errorImportingPointsPackage": "Impossible d'importer le paquet de points. Vérifiez si le fichier est valide.",
+    "pointsImportOwnerEmailWarning": "L'e-mail du propriétaire enregistré dans ce paquet diffère du compte connecté sur cet appareil. Vérifiez la source avant d'approuver les données importées."
   },
   "mapView": {
     "title": "Carte du Projet",
@@ -652,6 +668,9 @@
     "deletePoint": "Supprimer le Point",
     "deletePointConfirm": "Êtes-vous sûr de vouloir supprimer ce point de collecte ? Cette action est irréversible.",
     "deleteError": "Impossible de supprimer le point de collecte.",
+    "sendToOwner": "Envoyer au Responsable",
+    "pointSentToOwner": "Point envoyé avec succès.",
+    "errorSendingPoint": "Impossible d'envoyer le point.",
     "pointSize": "Taille du Point",
     "vegetation": "Végétation",
     "vegStructure": "Structure de la Végétation",
@@ -1069,5 +1088,19 @@
       "hardened": "Durci/Cohésif",
       "water_table": "Nappe Phréatique"
     }
+  },
+  "collectorCode": {
+    "settingsTitle": "Code de Collecteur",
+    "description": "Un code de 4 caractères utilisé pour identifier qui a collecté chaque point exporté vers le responsable du projet.",
+    "modalTitle": "Code de Collecteur",
+    "inputLabel": "Code (4 caractères)",
+    "invalidLength": "Le code doit comporter exactement 4 caractères.",
+    "save": "Enregistrer"
+  },
+  "pointDuplicates": {
+    "title": "Points en Double",
+    "replace": "Remplacer",
+    "discard": "Ignorer",
+    "summary": "{{replaced}} remplacé(s), {{discarded}} ignoré(s)."
   }
 }

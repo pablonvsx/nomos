@@ -22,6 +22,10 @@ export interface PointDbRow {
   point_size: number | null;
   created_at: string;
   updated_at: string;
+  uuid: string | null;
+  approval_status: "pending" | "approved" | "rejected" | null;
+  created_by: string | null;
+  drive_synced_at: string | null;
 }
 
 // ──────────────────────────────────────────────
@@ -45,6 +49,10 @@ export function mapPointFromDb(row: PointDbRow): Point {
     point_size: row.point_size,
     created_at: row.created_at,
     updated_at: row.updated_at,
+    uuid: row.uuid,
+    approval_status: row.approval_status,
+    created_by: row.created_by,
+    drive_synced_at: row.drive_synced_at,
   };
 }
 
