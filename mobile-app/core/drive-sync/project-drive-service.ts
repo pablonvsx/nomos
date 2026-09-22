@@ -1,0 +1,139 @@
+import {
+  ensureFolder,
+  findChildByName,
+  readJsonFile,
+  updateJsonFile,
+  uploadJsonFile,
+} from "@/core/drive-sync/drive-api-client";
+import { getCurrentGoogleAccount } from "@/core/google-auth/google-auth-service";
+import { getProjectById, setProjectAsOwner } from "@/db/queries/projects";
+import { buildProjectConfigPackage } from "@/core/project-sharing/project-config-package";
+
+const NOMOS_ROOT_FOLDER_NAME = "Nomos";
+const DRIVE_ROOT_PARENT_ID = "root";
+
+export interface ProjectManifest {
+  project_uuid: string;
+  project_name: string;
+  protocol_id: string;
+  protocol_source: "official" | "custom";
+  owner_email: string;
+  active_vegetation_classification: {
+    type: "standard" | "custom";
+    custom_classification_uuid?: string;
+  };
+}
+
+/** Thrown when an action needs a connected Google account and none is set - the UI recognizes this to open the connection modal (section 10.1). */
+export class GoogleAccountRequiredError extends Error {
+  constructor() {
+    super("É necessário conectar uma conta Google para ativar o backup no Drive.");
+    this.name = "GoogleAccountRequiredError";
+  }
+}
+
+/** Thrown when trying to activate backup on a project that already has a collaboration role (section 3.1/13 - a collaborator copy can never become an owner, and an owner can't be re-activated). */
+export class InvalidCollaborationRoleError extends Error {
+  constructor(role: "owner" | "collaborator") {
+    super(
+      role === "owner"
+        ? "Este projeto já tem o backup no Drive ativado."
+        : "Este projeto é uma cópia de colaborador e não pode ser vinculado ao Drive.",
+    );
+    this.name = "InvalidCollaborationRoleError";
+  }
+}
+
+async function ensureNomosRootFolder(): Promise<string> {
+  return ensureFolder(NOMOS_ROOT_FOLDER_NAME, DRIVE_ROOT_PARENT_ID);
+}
+
+export async function getManifest(driveFolderId: string): Promise<ProjectManifest> {
+  const file = await findChildByName(driveFolderId, "manifest.json");
+  if (!file) throw new Error("manifest.json não encontrado na pasta do projeto.");
+  return readJsonFile<ProjectManifest>(file.id);
+}
+
+/**
+ * IMPORTANT (sections 14.1 and 14.3): every future write to manifest.json,
+ * in this phase and the following ones, MUST go through this function -
+ * never through an ad hoc updateJsonFile call elsewhere in the code. Reads
+ * the current file, applies the updater, and refuses to write if the
+ * update would lose the manifest's identity (project_uuid) or drop an
+ * owner_email that was already set.
+ */
+export async function updateManifest(
+  driveFolderId: string,
+  updater: (current: ProjectManifest) => ProjectManifest,
+): Promise<void> {
+  const current = await getManifest(driveFolderId);
+  const updated = updater(current);
+
+  if (updated.project_uuid !== current.project_uuid) {
+    throw new Error("Recusado: a escrita perderia o project_uuid do manifest.");
+  }
+  if (current.owner_email && updated.owner_email !== current.owner_email) {
+    throw new Error("Recusado: a escrita perderia/mudaria o owner_email do manifest.");
+  }
+
+  const file = await findChildByName(driveFolderId, "manifest.json");
+  if (!file) throw new Error("manifest.json não encontrado na pasta do projeto.");
+  await updateJsonFile(file.id, updated);
+}
+
+export async function activateDriveBackup(projectId: number): Promise<void> {
+  const account = getCurrentGoogleAccount();
+  if (!account) {
+    throw new GoogleAccountRequiredError();
+  }
+
+  const project = await getProjectById(projectId);
+  if (!project) {
+    throw new Error(`Project ${projectId} not found`);
+  }
+  if (project.collaboration_role === "owner" || project.collaboration_role === "collaborator") {
+    throw new InvalidCollaborationRoleError(project.collaboration_role);
+  }
+
+  // buildProjectConfigPackage (Fase 0) already ensures project_uuid, the
+  // custom protocol's uuid, and a uuid on every species/vegetation row -
+  // reused here instead of re-implementing that check-before-generate
+  // logic a second time.
+  const pkg = await buildProjectConfigPackage(projectId);
+
+  const rootFolderId = await ensureNomosRootFolder();
+  // ensureFolder (not createFolder) so a retry after a failed activation
+  // doesn't create a second folder with the same name.
+  const projectFolderId = await ensureFolder(
+    `Nomos_${project.name}_${pkg.project_uuid}`,
+    rootFolderId,
+  );
+
+  await ensureFolder("approved", projectFolderId);
+
+  if (pkg.protocol_source === "custom" && pkg.custom_protocol) {
+    await uploadJsonFile("protocol-package.json", projectFolderId, pkg.custom_protocol);
+  }
+
+  const speciesCatalogFolderId = await ensureFolder("species-catalog", projectFolderId);
+  for (const speciesEntry of pkg.species_catalog) {
+    await uploadJsonFile(`${speciesEntry.uuid}.json`, speciesCatalogFolderId, speciesEntry);
+  }
+
+  const vegetationClassesFolderId = await ensureFolder("vegetation-classes", projectFolderId);
+  for (const vegEntry of pkg.vegetation_classes) {
+    await uploadJsonFile(`${vegEntry.uuid}.json`, vegetationClassesFolderId, vegEntry);
+  }
+
+  const manifest: ProjectManifest = {
+    project_uuid: pkg.project_uuid,
+    project_name: pkg.project_name,
+    protocol_id: pkg.protocol_id,
+    protocol_source: pkg.protocol_source,
+    owner_email: account.email,
+    active_vegetation_classification: pkg.active_vegetation_classification,
+  };
+  await uploadJsonFile("manifest.json", projectFolderId, manifest);
+
+  await setProjectAsOwner(projectId, projectFolderId, account.email);
+}

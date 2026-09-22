@@ -24,6 +24,7 @@ export interface CreatePointInput {
   uuid?: string;                       // supplied when importing an existing point (Fase 2), never regenerated
   approval_status?: "pending" | "approved" | "rejected" | null;
   created_by?: string | null;          // collector code
+  rejection_reason?: string | null;    // set when approval_status = 'rejected' (Fase 3)
 }
 
 export type UpdatePointInput = Partial<Omit<CreatePointInput, "project_id" | "protocol_id" | "uuid">>;
@@ -129,6 +130,52 @@ export async function getPointsByProject(projectId: number): Promise<Point[]> {
   }
 }
 
+/**
+ * Lists points pending review for a project (Fase 3 local approval queue).
+ * Purely local SQL - no Drive involved.
+ */
+export async function getPendingPointsByProject(projectId: number): Promise<Point[]> {
+  try {
+    return await db.getAllAsync<Point>(
+      "SELECT * FROM points WHERE project_id = ? AND approval_status = ? ORDER BY point_number ASC",
+      [projectId, "pending"],
+    );
+  } catch (error) {
+    console.error("Error listing pending points:", error);
+    return [];
+  }
+}
+
+/**
+ * Lists rejected points for a project (Fase 3 rejected points area).
+ */
+export async function getRejectedPointsByProject(projectId: number): Promise<Point[]> {
+  try {
+    return await db.getAllAsync<Point>(
+      "SELECT * FROM points WHERE project_id = ? AND approval_status = ? ORDER BY point_number ASC",
+      [projectId, "rejected"],
+    );
+  } catch (error) {
+    console.error("Error listing rejected points:", error);
+    return [];
+  }
+}
+
+/**
+ * Approves or rejects a point. Rejecting requires a reason; approving
+ * always clears any previous rejection reason.
+ */
+export async function updatePointApprovalStatus(
+  pointId: number,
+  status: "approved" | "rejected",
+  rejectionReason?: string,
+): Promise<boolean> {
+  return updatePoint(pointId, {
+    approval_status: status,
+    rejection_reason: status === "rejected" ? (rejectionReason ?? null) : null,
+  });
+}
+
 export async function updatePoint(
   pointId: number,
   updates: UpdatePointInput,
@@ -148,6 +195,7 @@ export async function updatePoint(
     if (updates.point_size !== undefined) { fields.push("point_size = ?"); values.push(updates.point_size ?? null); }
     if (updates.approval_status !== undefined) { fields.push("approval_status = ?"); values.push(updates.approval_status ?? null); }
     if (updates.created_by !== undefined) { fields.push("created_by = ?"); values.push(updates.created_by ?? null); }
+    if (updates.rejection_reason !== undefined) { fields.push("rejection_reason = ?"); values.push(updates.rejection_reason ?? null); }
 
     values.push(pointId);
     await db.runAsync(

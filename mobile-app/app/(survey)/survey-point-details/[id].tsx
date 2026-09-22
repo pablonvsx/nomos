@@ -41,7 +41,8 @@ import {
 } from "@/contexts/protocol-registry-context";
 
 // DB imports
-import { getPoint, deletePoint } from "@/db/queries/points";
+import { getPoint } from "@/db/queries/points";
+import { deletePointPermanently } from "@/core/points/delete-point-media";
 import { getProjectById } from "@/db/queries/projects";
 import { getCustomProtocolById } from "@/db/queries/custom-protocols";
 import { getSpeciesByPoint } from "@/db/queries/species";
@@ -394,7 +395,7 @@ export default function UnifiedSurveyPointViewScreen() {
       t("surveyView.deletePointConfirm"),
       async () => {
         try {
-          await deletePoint(point.id);
+          await deletePointPermanently(point);
           clearMapData(point.project_id);
           router.back();
         } catch (error) {

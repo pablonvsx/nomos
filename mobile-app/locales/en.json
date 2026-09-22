@@ -587,7 +587,7 @@
     "exportConfigPackage": "Export Configuration Package",
     "configPackageExported": "Configuration package exported successfully.",
     "errorExportingConfigPackage": "Could not export the configuration package.",
-    "exportAllPoints": "Export All Project Points",
+    "exportAllPoints": "Export All Points",
     "pointsPackageExported": "Points package exported successfully.",
     "errorExportingPointsPackage": "Could not export the points package.",
     "importPoints": "Import Received Points",
@@ -1102,5 +1102,37 @@
     "replace": "Replace",
     "discard": "Discard",
     "summary": "{{replaced}} replaced, {{discarded}} discarded."
+  },
+  "pointApproval": {
+    "pendingApprovalsTitle": "Pending Approvals",
+    "rejectedPointsTitle": "Rejected Points",
+    "noPending": "No points pending approval",
+    "noRejected": "No rejected points",
+    "approve": "Approve",
+    "reject": "Reject",
+    "rejectionReasonLabel": "Rejection reason",
+    "rejectionReasonPlaceholder": "Describe the reason for rejection",
+    "deletePermanently": "Delete Permanently",
+    "deletePermanentlyConfirm": "Are you sure you want to permanently delete this point? This action cannot be undone and will also remove its associated photos and audio.",
+    "errorApproving": "Could not approve the point.",
+    "errorRejecting": "Could not reject the point.",
+    "errorDeleting": "Could not delete the point."
+  },
+  "googleAccount": {
+    "sectionTitle": "Google Account",
+    "settingsItemTitle": "Google Account",
+    "notConnected": "No account connected",
+    "connectedAs": "Connected as {{email}}",
+    "connectExplanation": "Connect a Google account to enable Drive backup and restore projects on other devices.",
+    "connect": "Connect with Google",
+    "disconnect": "Disconnect",
+    "connectError": "Could not connect the Google account.",
+    "disconnectError": "Could not disconnect the Google account.",
+    "unavailable": "Google sign-in isn't available in this build of the app (e.g. Expo Go). A native build (APK) is required to use this feature."
+  },
+  "driveBackup": {
+    "activateAction": "Activate Drive Backup",
+    "activatedSuccess": "Drive backup activated successfully.",
+    "errorActivating": "Could not activate Drive backup."
   }
 }

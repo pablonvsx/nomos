@@ -51,6 +51,9 @@ export interface ProjectConfigPackage {
     custom_classification_uuid?: string;
   };
   owner_email: string | null;
+  // Always "collaborator" - only an owner ever exports this package, and
+  // importing it always produces a collaborator copy (section 3.1).
+  package_role_for_importer: "collaborator";
 }
 
 export async function buildProjectConfigPackage(
@@ -124,6 +127,7 @@ export async function buildProjectConfigPackage(
     vegetation_classes: vegetationClasses,
     active_vegetation_classification: activeVegetationClassification,
     owner_email: project.owner_email ?? null,
+    package_role_for_importer: "collaborator",
   };
 }
 
@@ -226,6 +230,7 @@ export async function applyProjectConfigPackage(
       pkg.protocol_source,
       pkg.project_uuid,
       pkg.owner_email,
+      "collaborator",
     );
     if (!newProjectId) {
       throw new Error("Failed to create local project while importing configuration package");

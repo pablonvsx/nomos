@@ -28,13 +28,14 @@ export async function createProject(
   protocolSource: "official" | "custom" = "official",
   projectUuid?: string,
   ownerEmail?: string | null,
+  collaborationRole?: "owner" | "collaborator" | null,
 ): Promise<number | null> {
   try {
     const createdAt = new Date().toISOString();
 
     const result = await db.runAsync(
-      `INSERT INTO projects (name, protocol_id, description, protocol_source, created_at, last_updated, is_classified, project_uuid, owner_email)
-       VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+      `INSERT INTO projects (name, protocol_id, description, protocol_source, created_at, last_updated, is_classified, project_uuid, owner_email, collaboration_role)
+       VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
       [
         name,
         protocolId,
@@ -44,6 +45,7 @@ export async function createProject(
         createdAt,
         projectUuid ?? null,
         ownerEmail ?? null,
+        collaborationRole ?? null,
       ],
     );
 
@@ -177,6 +179,31 @@ export async function ensureProjectUuid(projectId: number): Promise<string> {
     projectId,
   ]);
   return uuid;
+}
+
+/**
+ * Marks a project as the Drive backup owner, setting the folder id and the
+ * connected account's email. Called once, at the moment backup is
+ * activated (Fase 5) - never afterward for the same project.
+ */
+export async function setProjectAsOwner(
+  projectId: number,
+  driveFolderId: string,
+  ownerEmail: string,
+): Promise<boolean> {
+  try {
+    const lastUpdated = new Date().toISOString();
+    await db.runAsync(
+      `UPDATE projects
+       SET collaboration_role = 'owner', drive_folder_id = ?, owner_email = ?, last_updated = ?
+       WHERE id = ?`,
+      [driveFolderId, ownerEmail, lastUpdated, projectId],
+    );
+    return true;
+  } catch (error) {
+    console.error("Error setting project as owner:", error);
+    return false;
+  }
 }
 
 /**

@@ -19,6 +19,8 @@ import { getAvailableLanguages } from "@/utils/i18n";
 import { useDialog } from "@/hooks/use-dialog";
 import { SpeciesLinkSettingsModal } from "@/components/settings/SpeciesLinkSettingsModal";
 import { CollectorCodeModal } from "@/components/local-identity/CollectorCodeModal";
+import { GoogleConnectionModal } from "@/components/google-account/GoogleConnectionModal";
+import { useGoogleAccount } from "@/hooks/use-google-account";
 
 export default function SettingsScreen() {
   const paperTheme = usePaperTheme();
@@ -29,6 +31,8 @@ export default function SettingsScreen() {
   const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage);
   const [speciesLinkModalVisible, setSpeciesLinkModalVisible] = useState(false);
   const [collectorCodeModalVisible, setCollectorCodeModalVisible] = useState(false);
+  const [googleConnectionModalVisible, setGoogleConnectionModalVisible] = useState(false);
+  const { account: googleAccount } = useGoogleAccount();
 
   const availableLanguages = getAvailableLanguages();
 
@@ -190,6 +194,29 @@ export default function SettingsScreen() {
 
         <Divider />
 
+        {/* SECTION 3C: GOOGLE ACCOUNT */}
+        <List.Section>
+          <List.Subheader
+            style={[styles.subheader, { color: paperTheme.colors.primary }]}
+          >
+            {t("googleAccount.sectionTitle")}
+          </List.Subheader>
+
+          <List.Item
+            title={t("googleAccount.settingsItemTitle")}
+            description={
+              googleAccount ? t("googleAccount.connectedAs", { email: googleAccount.email }) : t("googleAccount.notConnected")
+            }
+            left={(props) => <List.Icon {...props} icon="google" />}
+            onPress={() => setGoogleConnectionModalVisible(true)}
+            titleStyle={styles.itemTitle}
+            descriptionStyle={styles.itemDescription}
+            descriptionNumberOfLines={0}
+          />
+        </List.Section>
+
+        <Divider />
+
         {/* SECTION 4: SYSTEM INFO */}
         <List.Section>
           <List.Subheader
@@ -286,6 +313,12 @@ export default function SettingsScreen() {
       <CollectorCodeModal
         visible={collectorCodeModalVisible}
         onDismiss={() => setCollectorCodeModalVisible(false)}
+      />
+
+      {/* Google Connection Modal */}
+      <GoogleConnectionModal
+        visible={googleConnectionModalVisible}
+        onDismiss={() => setGoogleConnectionModalVisible(false)}
       />
     </ScrollView>
   );

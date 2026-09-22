@@ -113,7 +113,9 @@ export async function initDatabase() {
         vegetation_classification_type TEXT DEFAULT 'standard', -- 'standard' or 'custom'
         active_custom_vegetation_classification_id INTEGER,
         project_uuid TEXT,          -- stable cross-device identity, see project-sharing (Fase 0)
-        owner_email TEXT DEFAULT NULL
+        owner_email TEXT DEFAULT NULL,
+        collaboration_role TEXT DEFAULT NULL,  -- 'owner' | 'collaborator' | NULL (Fase 5)
+        drive_folder_id TEXT DEFAULT NULL      -- set only when collaboration_role = 'owner' (Fase 5)
       );
     `);
 
@@ -211,6 +213,7 @@ export async function initDatabase() {
         approval_status TEXT DEFAULT NULL,     -- NULL | 'pending' | 'approved' | 'rejected' (Fase 2)
         created_by TEXT DEFAULT NULL,          -- collector code, static since creation/export (Fase 2)
         drive_synced_at TEXT DEFAULT NULL,     -- reserved for the Drive backup phase (Fase 2)
+        rejection_reason TEXT DEFAULT NULL,    -- set when approval_status = 'rejected' (Fase 3)
 
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
       );

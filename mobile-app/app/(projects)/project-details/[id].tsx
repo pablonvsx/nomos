@@ -38,7 +38,13 @@ import {
   deleteProject,
   updateProjectGeoJSON,
 } from "@/db/queries/projects";
-import { getPointsByProject, classifyProjectPoints, getPointsWithModulesByProject } from "@/db/queries/points";
+import {
+  getPointsByProject,
+  classifyProjectPoints,
+  getPointsWithModulesByProject,
+  getPendingPointsByProject,
+  getRejectedPointsByProject,
+} from "@/db/queries/points";
 import { buildPointEnvelope } from "@/db/mappers/point.mapper";
 import {
   getActiveVegetationClassificationConfig,
@@ -68,6 +74,12 @@ import {
 } from "@/core/project-sharing/import-points";
 import { CollectorCodeModal } from "@/components/local-identity/CollectorCodeModal";
 import { PointDuplicatesModal } from "@/components/project-sharing/PointDuplicatesModal";
+import { GoogleConnectionModal } from "@/components/google-account/GoogleConnectionModal";
+import { getCurrentGoogleAccount } from "@/core/google-auth/google-auth-service";
+import {
+  activateDriveBackup,
+  GoogleAccountRequiredError,
+} from "@/core/drive-sync/project-drive-service";
 import {
   useProtocolRegistry,
   useCapabilityBus,
@@ -103,6 +115,8 @@ export default function UnifiedProjectDetailsScreen() {
   const [project, setProject] = useState<Project | null>(null);
   const [protocolLabel, setProtocolLabel] = useState<string>("");
   const [surveyPoints, setSurveyPoints] = useState<Point[]>([]);
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
+  const [rejectedPointsCount, setRejectedPointsCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [isClassifying, setIsClassifying] = useState(false);
@@ -133,6 +147,10 @@ export default function UnifiedProjectDetailsScreen() {
   const [collectorCodeModalVisible, setCollectorCodeModalVisible] = useState(false);
   const [pendingExportIntent, setPendingExportIntent] = useState<(() => void) | null>(null);
   const [duplicatesResult, setDuplicatesResult] = useState<ImportPointsResult | null>(null);
+
+  // Drive backup activation states (Fase 5)
+  const [driveConnectionModalVisible, setDriveConnectionModalVisible] = useState(false);
+  const [isActivatingDriveBackup, setIsActivatingDriveBackup] = useState(false);
   const bottomPadding = useBottomContentPadding(64);
 
   // resetKey includes editDialogVisible: this screen never unmounts while
@@ -253,6 +271,19 @@ export default function UnifiedProjectDetailsScreen() {
       } catch (pointsError) {
         console.error("Error loading survey points:", pointsError);
         setSurveyPoints([]);
+      }
+
+      try {
+        const [pending, rejected] = await Promise.all([
+          getPendingPointsByProject(parseInt(id)),
+          getRejectedPointsByProject(parseInt(id)),
+        ]);
+        setPendingApprovalsCount(pending.length);
+        setRejectedPointsCount(rejected.length);
+      } catch (approvalError) {
+        console.error("Error loading approval counts:", approvalError);
+        setPendingApprovalsCount(0);
+        setRejectedPointsCount(0);
       }
     } catch (error) {
       console.error("Error loading project:", error);
@@ -617,6 +648,34 @@ export default function UnifiedProjectDetailsScreen() {
     }
   };
 
+  const handleActivateDriveBackup = async () => {
+    if (!project) return;
+
+    if (!getCurrentGoogleAccount()) {
+      setDriveConnectionModalVisible(true);
+      return;
+    }
+
+    setIsActivatingDriveBackup(true);
+    try {
+      await activateDriveBackup(project.id);
+      alert(t("common.success"), t("driveBackup.activatedSuccess"));
+      loadProjectData();
+    } catch (error) {
+      if (error instanceof GoogleAccountRequiredError) {
+        setDriveConnectionModalVisible(true);
+        return;
+      }
+      console.error("Error activating Drive backup:", error);
+      alert(
+        t("common.error"),
+        error instanceof Error ? error.message : t("driveBackup.errorActivating"),
+      );
+    } finally {
+      setIsActivatingDriveBackup(false);
+    }
+  };
+
   const renderSurveyPoint = ({ item }: { item: Point }) => {
     const surveyRoute = `/survey-point-details/${item.id}?projectId=${project?.id}`;
     const pointLabel = t("surveyView.point");
@@ -897,6 +956,37 @@ export default function UnifiedProjectDetailsScreen() {
             <FlatList data={surveyPoints} keyExtractor={item => item.id.toString()} renderItem={renderSurveyPoint} scrollEnabled={false} />
           </Card.Content>
         </Card>
+
+        {/* Local approval queue links (Fase 3) */}
+        <Card
+          style={[styles.pointCard, { backgroundColor: paperTheme.colors.surface }]}
+          onPress={() => router.push(`/project-pending-approvals/${id}` as any)}
+          mode="elevated"
+        >
+          <Card.Content>
+            <View style={styles.pointHeader}>
+              <Text variant="titleMedium" style={{ fontWeight: "bold" }}>
+                {t("pointApproval.pendingApprovalsTitle")} ({pendingApprovalsCount})
+              </Text>
+              <IconButton icon="chevron-right" size={24} style={{ marginRight: -8 }} />
+            </View>
+          </Card.Content>
+        </Card>
+
+        <Card
+          style={[styles.pointCard, { backgroundColor: paperTheme.colors.surface }]}
+          onPress={() => router.push(`/project-rejected/${id}` as any)}
+          mode="elevated"
+        >
+          <Card.Content>
+            <View style={styles.pointHeader}>
+              <Text variant="titleMedium" style={{ fontWeight: "bold" }}>
+                {t("pointApproval.rejectedPointsTitle")} ({rejectedPointsCount})
+              </Text>
+              <IconButton icon="chevron-right" size={24} style={{ marginRight: -8 }} />
+            </View>
+          </Card.Content>
+        </Card>
       </ScrollView>
 
       <FAB.Group
@@ -982,6 +1072,18 @@ export default function UnifiedProjectDetailsScreen() {
               ? paperTheme.colors.onSurface
               : paperTheme.colors.primary,
           },
+          ...(project.collaboration_role == null
+            ? [
+                {
+                  icon: "backup-restore",
+                  label: t("driveBackup.activateAction"),
+                  onPress: isActivatingDriveBackup ? () => {} : handleActivateDriveBackup,
+                  color: paperTheme.dark
+                    ? paperTheme.colors.onSurface
+                    : paperTheme.colors.primary,
+                },
+              ]
+            : []),
         ]}
         onStateChange={({ open }) => setFabOpen(open)}
         theme={{
@@ -1028,6 +1130,16 @@ export default function UnifiedProjectDetailsScreen() {
           onDismiss={() => setDuplicatesResult(null)}
         />
       )}
+
+      {/* Google Connection Modal (Fase 5) - triggered when activating Drive backup without a connected account */}
+      <GoogleConnectionModal
+        visible={driveConnectionModalVisible}
+        onDismiss={() => setDriveConnectionModalVisible(false)}
+        onConnected={() => {
+          setDriveConnectionModalVisible(false);
+          handleActivateDriveBackup();
+        }}
+      />
 
       {/* Vegetation Classifications Management Modal */}
       {project && (

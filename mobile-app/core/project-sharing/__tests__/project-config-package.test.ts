@@ -17,6 +17,7 @@ interface FakeProject {
   owner_email: string | null;
   vegetation_classification_type: "standard" | "custom";
   active_custom_vegetation_classification_id: number | null;
+  collaboration_role: "owner" | "collaborator" | null;
 }
 
 interface FakeCustomProtocol {
@@ -80,6 +81,7 @@ jest.mock("@/db/queries/projects", () => ({
       protocolSource: "official" | "custom",
       projectUuid?: string,
       ownerEmail?: string | null,
+      collaborationRole?: "owner" | "collaborator" | null,
     ) => {
       const row: FakeProject = {
         id: nextProjectId++,
@@ -90,6 +92,7 @@ jest.mock("@/db/queries/projects", () => ({
         owner_email: ownerEmail ?? null,
         vegetation_classification_type: "standard",
         active_custom_vegetation_classification_id: null,
+        collaboration_role: collaborationRole ?? null,
       };
       projects.push(row);
       return row.id;
@@ -237,6 +240,7 @@ function seedOfficialProject(overrides: Partial<FakeProject> = {}): FakeProject 
     owner_email: null,
     vegetation_classification_type: "standard",
     active_custom_vegetation_classification_id: null,
+    collaboration_role: null,
     ...overrides,
   };
   projects.push(row);
@@ -326,6 +330,7 @@ describe("buildProjectConfigPackage", () => {
       type: "custom",
       custom_classification_uuid: activeVeg.uuid,
     });
+    expect(pkg.package_role_for_importer).toBe("collaborator");
   });
 
   it("reports owner_email when the project has one, and standard classification when active", async () => {
@@ -419,6 +424,7 @@ describe("applyProjectConfigPackage — import behavior", () => {
         custom_classification_uuid: "veg-uuid-1",
       },
       owner_email: null,
+      package_role_for_importer: "collaborator",
       ...overrides,
     };
   }
@@ -440,6 +446,15 @@ describe("applyProjectConfigPackage — import behavior", () => {
     expect(vegClassifications[0].uuid).toBe("veg-uuid-1");
     expect(project.vegetation_classification_type).toBe("custom");
     expect(project.active_custom_vegetation_classification_id).toBe(vegClassifications[0].id);
+  });
+
+  it("always creates the local project as a collaborator copy (section 3.1) - never null, never owner", async () => {
+    const pkg = samplePackage();
+
+    const result = await applyProjectConfigPackage(pkg);
+
+    const project = projects.find((p) => p.id === result.projectId)!;
+    expect(project.collaboration_role).toBe("collaborator");
   });
 
   it("creates a project with the standard active vegetation classification when the package says so", async () => {
@@ -550,6 +565,7 @@ describe("importProjectConfigPackage", () => {
       vegetation_classes: [],
       active_vegetation_classification: { type: "standard" },
       owner_email: null,
+      package_role_for_importer: "collaborator",
     };
     mockPickedFile(JSON.stringify(pkg));
 

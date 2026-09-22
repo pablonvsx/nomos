@@ -31,6 +31,8 @@ export interface Project {
   active_custom_vegetation_classification_id?: number; // ID of the active custom vegetation classification, if type is 'custom'
   project_uuid?: string | null; // Stable cross-device identity, used by the project configuration package (Fase 0)
   owner_email?: string | null; // Set once when backup is activated for this project (secondary signal, never the identity check)
+  collaboration_role?: "owner" | "collaborator" | null; // 'owner' (connected to Drive), 'collaborator' (imported copy), or NULL (plain local project) (Fase 5)
+  drive_folder_id?: string | null; // Drive folder id for this project's backup, only set when collaboration_role = 'owner' (Fase 5)
 }
 
 // Ponto de levantamento (schema-driven, Fase 5+)
@@ -55,6 +57,7 @@ export interface Point {
   approval_status?: "pending" | "approved" | "rejected" | null;
   created_by?: string | null;           // Collector code, static since creation/export (Fase 2)
   drive_synced_at?: string | null;      // Reserved for the Drive backup phase
+  rejection_reason?: string | null;     // Set when approval_status = 'rejected' (Fase 3)
 }
 
 // A point's module data (one point_modules row)

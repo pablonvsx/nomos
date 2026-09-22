@@ -584,7 +584,7 @@
     "exportConfigPackage": "Exportar Paquete de Configuración",
     "configPackageExported": "Paquete de configuración exportado con éxito.",
     "errorExportingConfigPackage": "No se pudo exportar el paquete de configuración.",
-    "exportAllPoints": "Exportar Todos los Puntos del Proyecto",
+    "exportAllPoints": "Exportar Todos los Puntos",
     "pointsPackageExported": "Paquete de puntos exportado con éxito.",
     "errorExportingPointsPackage": "No se pudo exportar el paquete de puntos.",
     "importPoints": "Importar Puntos Recibidos",
@@ -1099,5 +1099,37 @@
     "replace": "Sustituir",
     "discard": "Descartar",
     "summary": "{{replaced}} sustituido(s), {{discarded}} descartado(s)."
+  },
+  "pointApproval": {
+    "pendingApprovalsTitle": "Aprobaciones Pendientes",
+    "rejectedPointsTitle": "Puntos Rechazados",
+    "noPending": "Ningún punto pendiente de aprobación",
+    "noRejected": "Ningún punto rechazado",
+    "approve": "Aprobar",
+    "reject": "Rechazar",
+    "rejectionReasonLabel": "Motivo del rechazo",
+    "rejectionReasonPlaceholder": "Describa el motivo del rechazo",
+    "deletePermanently": "Eliminar Permanentemente",
+    "deletePermanentlyConfirm": "¿Está seguro de que desea eliminar este punto permanentemente? Esta acción no se puede deshacer y también eliminará las fotos y audios asociados.",
+    "errorApproving": "No se pudo aprobar el punto.",
+    "errorRejecting": "No se pudo rechazar el punto.",
+    "errorDeleting": "No se pudo eliminar el punto."
+  },
+  "googleAccount": {
+    "sectionTitle": "Cuenta de Google",
+    "settingsItemTitle": "Cuenta de Google",
+    "notConnected": "Ninguna cuenta conectada",
+    "connectedAs": "Conectado como {{email}}",
+    "connectExplanation": "Conecte una cuenta de Google para activar la copia de seguridad en Drive y restaurar proyectos en otros dispositivos.",
+    "connect": "Conectar con Google",
+    "disconnect": "Desconectar",
+    "connectError": "No se pudo conectar la cuenta de Google.",
+    "disconnectError": "No se pudo desconectar la cuenta de Google.",
+    "unavailable": "El inicio de sesión con Google no está disponible en esta versión de la app (por ejemplo, Expo Go). Se requiere una compilación nativa (APK) para usar esta función."
+  },
+  "driveBackup": {
+    "activateAction": "Activar Copia de Seguridad en Drive",
+    "activatedSuccess": "Copia de seguridad en Drive activada con éxito.",
+    "errorActivating": "No se pudo activar la copia de seguridad en Drive."
   }
 }

@@ -587,7 +587,7 @@
     "exportConfigPackage": "Exportar Pacote de Configuração",
     "configPackageExported": "Pacote de configuração exportado com sucesso.",
     "errorExportingConfigPackage": "Não foi possível exportar o pacote de configuração.",
-    "exportAllPoints": "Exportar Todos os Pontos do Projeto",
+    "exportAllPoints": "Exportar Todos os Pontos",
     "pointsPackageExported": "Pacote de pontos exportado com sucesso.",
     "errorExportingPointsPackage": "Não foi possível exportar o pacote de pontos.",
     "importPoints": "Importar Pontos Recebidos",
@@ -1102,5 +1102,37 @@
     "replace": "Substituir",
     "discard": "Descartar",
     "summary": "{{replaced}} substituído(s), {{discarded}} descartado(s)."
+  },
+  "pointApproval": {
+    "pendingApprovalsTitle": "Aprovações Pendentes",
+    "rejectedPointsTitle": "Pontos Rejeitados",
+    "noPending": "Nenhum ponto pendente de aprovação",
+    "noRejected": "Nenhum ponto rejeitado",
+    "approve": "Aprovar",
+    "reject": "Rejeitar",
+    "rejectionReasonLabel": "Motivo da rejeição",
+    "rejectionReasonPlaceholder": "Descreva o motivo da rejeição",
+    "deletePermanently": "Excluir Permanentemente",
+    "deletePermanentlyConfirm": "Tem certeza que deseja excluir este ponto permanentemente? Esta ação não pode ser desfeita e removerá também as fotos e áudios associados.",
+    "errorApproving": "Não foi possível aprovar o ponto.",
+    "errorRejecting": "Não foi possível rejeitar o ponto.",
+    "errorDeleting": "Não foi possível excluir o ponto."
+  },
+  "googleAccount": {
+    "sectionTitle": "Conta Google",
+    "settingsItemTitle": "Conta Google",
+    "notConnected": "Nenhuma conta conectada",
+    "connectedAs": "Conectado como {{email}}",
+    "connectExplanation": "Conecte uma conta Google para ativar o backup no Drive e restaurar projetos em outros dispositivos.",
+    "connect": "Conectar com Google",
+    "disconnect": "Desconectar",
+    "connectError": "Não foi possível conectar a conta Google.",
+    "disconnectError": "Não foi possível desconectar a conta Google.",
+    "unavailable": "O login com Google não está disponível nesta versão do app (ex.: Expo Go). É necessário um build nativo (APK) para usar este recurso."
+  },
+  "driveBackup": {
+    "activateAction": "Ativar Backup no Drive",
+    "activatedSuccess": "Backup no Drive ativado com sucesso.",
+    "errorActivating": "Não foi possível ativar o backup no Drive."
   }
 }
