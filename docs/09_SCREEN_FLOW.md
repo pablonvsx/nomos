@@ -69,7 +69,33 @@ flowchart LR
     F --> G["7. Share file<br/>writeAndShare() (expo-sharing)"]
 ```
 
-This is the flow that exercises the architecture end to end: the protocol choice in (1) determines, via `resolveManifestId()`, which `ProtocolManifest` the details screen (2) consults to know which modules to show and which exporter to use; the form (4) uses a `ModuleRendererBinding` or `GenericModuleRenderer` depending on whether the module has a specialized renderer or not (see [01_ARCHITECTURE.md](01_ARCHITECTURE.md) and [12_FAQ.md](12_FAQ.md)); and export (6) uses the same generic engine regardless of which protocol was chosen in (1).
+This is the flow that exercises the architecture end to end: the protocol choice in (1) determines, via `resolveManifestId()`, which `ProtocolManifest` the details screen (2) consults to know which modules to show and which exporter to use; the form (4) uses a `ModuleRendererBinding` or `GenericModuleRenderer` depending on whether the module has a specialized renderer or not (see [01_ARCHITECTURE.md](01_ARCHITECTURE.md) and [13_FAQ.md](13_FAQ.md)); and export (6) uses the same generic engine regardless of which protocol was chosen in (1).
+
+## Backup and collaboration screens
+
+These sit alongside the flow above rather than replacing it — a
+collaborator's `survey/form.tsx`/`project-details/[id].tsx` usage is
+identical to the single-device flow. Full model in
+[12_BACKUP_COLLABORATION.md](12_BACKUP_COLLABORATION.md).
+
+```mermaid
+flowchart TD
+    Projects["(projects)/projects.tsx"] -->|"owner: Restaurar Meus Projetos do Drive"| Restore["RestoreProjectsModal<br/>(components/drive-sync/)"]
+    Details["project-details/[id].tsx"] -->|"owner: Ativar/Fazer backup"| GConnect["GoogleConnectionModal<br/>(components/google-account/)"]
+    Projects -->|"owner: same, if not connected"| GConnect
+    Restore -->|"if not connected"| GConnect
+    Details -->|"pending points imported"| Pending["project-pending-approvals/[id].tsx"]
+    Details -->|"rejected points"| Rejected["project-rejected/[id].tsx"]
+    Details -->|"collaborator: export points, no code set yet"| CCode["CollectorCodeModal<br/>(components/local-identity/)"]
+    PointDetails["survey-point-details/[id].tsx"] -->|"collaborator: export single point"| CCode
+    Details -->|"owner: import points package, duplicates found"| Dup["PointDuplicatesModal<br/>(components/project-sharing/)"]
+```
+
+`GoogleConnectionModal` and `CollectorCodeModal` are each a single shared
+component with one home base in Settings
+(`app/(tabs)/settings.tsx`) — every other trigger point above opens the
+same instance in place and resumes the action that needed it once
+connected/set, rather than redirecting to Settings.
 
 ## Specialized vs. generic renderer, inside the form
 

@@ -47,6 +47,7 @@ Beyond data collection based on the primary methodological instrument, the app a
 - **Modular protocol architecture.** The reference protocol is one module among others; users can build and run custom, self-contained protocols on the same platform.
 - **Species catalog integration.** Connects to GBIF and SpeciesLink for taxonomic verification during collection.
 - **Structured exports.** Outputs data as GeoJSON and CSV, and packages field media into a compressed archive, ready for use in GIS and statistical software.
+- **Backup and collaboration.** A project's owner can back it up to Google Drive and restore it on another device; collaborators without a Google account can collect independently and send their points back for review, with no live connection required. See [docs/12_BACKUP_COLLABORATION.md](docs/12_BACKUP_COLLABORATION.md).
 - **Multilingual interface.** Available in Portuguese, English, Spanish, and French.
 
 ---

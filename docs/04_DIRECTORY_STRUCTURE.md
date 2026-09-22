@@ -30,9 +30,11 @@ app/
 ├── about.tsx
 ├── (tabs)/                     _layout.tsx, index.tsx (home), help.tsx, settings.tsx
 ├── (projects)/
-│   ├── projects.tsx            project list
+│   ├── projects.tsx            project list; also "Restaurar Meus Projetos do Drive" (owner-only)
 │   ├── project/new.tsx         create project
-│   ├── project-details/[id].tsx        the SINGLE details screen (PAISAGEO and custom)
+│   ├── project-details/[id].tsx        the SINGLE details screen (PAISAGEO and custom); owner-only backup actions
+│   ├── project-pending-approvals/[id].tsx  local approval queue for imported points (pure SQL, no Drive)
+│   ├── project-rejected/[id].tsx       rejected points area (permanent delete)
 │   ├── protocol/builder.tsx    the "Personalized" protocol builder
 │   ├── protocol/native-catalog.tsx  catalog/picker of native scientific protocols (today only paisageo)
 │   ├── protocol/tutorials.tsx  tutorials screen (protocol picker + step-by-step guide), reads constants/protocol-tutorials.ts
@@ -41,7 +43,7 @@ app/
 └── (survey)/
     ├── insert-location.tsx     captures GPS before collecting a point
     ├── survey/form.tsx         manifest-driven collection form
-    └── survey-point-details/[id].tsx    details of an already-collected point
+    └── survey-point-details/[id].tsx    details of an already-collected point; collector export action
 ```
 
 **Update:** `project-details-custom/[id].tsx` — an earlier compatibility shim that just redirected to `project-details/[id]` — has since been removed entirely; there is now exactly one details screen, `project-details/[id].tsx`, for both PAISAGEO and custom projects. `app/modal.tsx`, an unused Expo template screen, is also gone. `view_map.tsx` and `insert_location.tsx` were renamed to kebab-case (`view-map.tsx`, `insert-location.tsx`).
@@ -63,13 +65,35 @@ core/
 │   ├── module-schema.ts     validateModuleSchema
 │   ├── dynamic-columns.ts   buildColumns (dynamic column expansion, used by generic-export-engine.ts)
 │   └── __tests__/
-└── species-catalog/
-    ├── gbif.ts                    GBIF integration
-    ├── specieslink.ts              SpeciesLink integration
-    ├── api-key-manager.ts          API keys (expo-secure-store)
-    ├── group-by-taxonomy.ts        groups search results by taxonomy
-    ├── search-progress.ts          batch-search progress state (UI)
-    └── species-catalog-sharing.ts  JSON catalog export/import
+├── species-catalog/
+│   ├── gbif.ts                    GBIF integration
+│   ├── specieslink.ts              SpeciesLink integration
+│   ├── api-key-manager.ts          API keys (expo-secure-store)
+│   ├── group-by-taxonomy.ts        groups search results by taxonomy
+│   ├── search-progress.ts          batch-search progress state (UI)
+│   └── species-catalog-sharing.ts  JSON catalog export/import
+├── points/
+│   └── delete-point-media.ts       permanently deletes a rejected point + its media files
+├── utils/
+│   └── uuid.ts                     generateUuid() — the single shared uuid helper, see 12_BACKUP_COLLABORATION.md
+├── drive-sync/                     backup/restore to Google Drive, see 12_BACKUP_COLLABORATION.md
+│   ├── drive-api-client.ts         raw Drive REST v3 calls (no SDK)
+│   ├── project-drive-service.ts    activateDriveBackup, getManifest/updateManifest, listOwnNomosProjectFolders
+│   ├── backup-service.ts           backupPoint, backupAllPendingPoints
+│   ├── catalog-sync-service.ts     best-effort catalog/classification sync after activation
+│   ├── restore-service.ts          restoreOwnProjectFromDrive
+│   └── restore-error-messages.ts   describeRestoreError (pure, testable error→i18n-key mapping)
+├── project-sharing/                the two export/import packages, see 12_BACKUP_COLLABORATION.md
+│   ├── project-config-package.ts   build/apply the configuration package
+│   ├── export-points.ts            build/share the points package (.zip)
+│   ├── import-points.ts            import a points package, duplicate detection
+│   └── package-errors.ts           InvalidPackageError, UnsupportedPackageVersionError (shared by both packages)
+├── local-identity/
+│   ├── collector-code.ts           local 4-character collector code (AsyncStorage)
+│   └── connected-account.ts        getConnectedGoogleAccountEmail() — thin bridge to google-auth
+└── google-auth/
+    ├── google-auth-service.ts      wraps @react-native-google-signin/google-signin behind a lazy require()
+    └── google-account-controller.ts  pure controller logic behind hooks/use-google-account.ts
 ```
 
 ## `modules/`
@@ -184,6 +208,10 @@ components/
 ├── survey/          InsertLocationModal.tsx, SpeciesInput.tsx, SurveySelect.tsx
 ├── map/            MapLegend.tsx, LayerMenu.tsx, map-overlay-styles.ts — map overlays (see 09_SCREEN_FLOW.md)
 ├── settings/        SpeciesLinkSettingsModal.tsx
+├── drive-sync/      RestoreProjectsModal.tsx — see 12_BACKUP_COLLABORATION.md
+├── google-account/  GoogleConnectionModal.tsx — single shared connection modal
+├── local-identity/  CollectorCodeModal.tsx — single shared collector-code modal
+├── project-sharing/ PointDuplicatesModal.tsx — Substituir/Descartar on points-package import
 ├── ErrorBoundary.tsx, HapticTab.tsx
 ```
 
@@ -209,7 +237,10 @@ hooks/
 ├── use-stable-text-input.ts     avoids re-injecting `value` into a focused TextInput (Android flicker bug)
 ├── use-bottom-content-padding.ts  bottom padding to clear floating UI/safe area
 ├── use-scroll-overflow.ts       tracks whether scrollable content overflows its container
-└── use-color-scheme.ts (+.web.ts)
+├── use-color-scheme.ts (+.web.ts)
+└── use-google-account.ts        thin useState wrapper around core/google-auth/google-account-controller.ts
+                                   (the pure logic lives in the controller so it's testable without
+                                   react-test-renderer, which this project's Jest setup doesn't have)
 ```
 
 ## `types/`, `utils/`, `constants/`, `locales/`, `assets/`

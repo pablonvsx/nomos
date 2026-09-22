@@ -26,6 +26,10 @@ erDiagram
         string protocol_source "official | custom"
         string vegetation_classification_type "standard | custom"
         int active_custom_vegetation_classification_id
+        string project_uuid "stable cross-device identity"
+        string owner_email "set once, when backup is activated"
+        string collaboration_role "owner | collaborator | NULL"
+        string drive_folder_id "set only when collaboration_role=owner"
     }
 
     POINTS {
@@ -42,6 +46,11 @@ erDiagram
         text audio_notes "JSON array, provisional"
         text additional_notes "JSON array, provisional"
         real point_size "provisional"
+        string uuid "stable cross-device identity; UNIQUE per project when set"
+        string approval_status "NULL | pending | approved | rejected"
+        string created_by "collector code, static since export"
+        string drive_synced_at "last successful Drive backup"
+        string rejection_reason
     }
 
     POINT_MODULES {
@@ -67,12 +76,21 @@ erDiagram
         int project_id FK
         string scientific_name
         string source "manual | gbif | specieslink | catalog"
+        string uuid "stable cross-device identity"
+    }
+
+    VEGETATION_CLASSIFICATIONS {
+        int id PK
+        int project_id FK
+        string name
+        text classes "JSON array of VegetationClass"
+        string uuid "stable cross-device identity"
     }
 ```
 
 ## The two central tables
 
-### `points` (`db/initialize.ts:144-162`)
+### `points` (`db/initialize.ts:196-219`)
 
 ```sql
 CREATE TABLE points (
@@ -91,13 +109,33 @@ CREATE TABLE points (
   point_size REAL,                      -- plot size (provisional)
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
+  uuid TEXT,                             -- stable cross-device identity
+  approval_status TEXT DEFAULT NULL,     -- NULL | 'pending' | 'approved' | 'rejected'
+  created_by TEXT DEFAULT NULL,          -- collector code, static since creation/export
+  drive_synced_at TEXT DEFAULT NULL,     -- timestamp of the last successful Drive backup
+  rejection_reason TEXT DEFAULT NULL,    -- set when approval_status = 'rejected'
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
+
+CREATE UNIQUE INDEX idx_points_project_uuid_unique
+  ON points(project_id, uuid) WHERE uuid IS NOT NULL;
 ```
 
 The fields marked "provisional" in the source code's own comment (`photos`, `audio_notes`, `additional_notes`, `point_size`) live directly on the `points` table, not inside a module — they're point-level media/annotation data, not a `ModuleDescriptor`'s.
 
-### `point_modules` (`db/initialize.ts:171-178`)
+`approval_status = NULL` is the normal, valid state for a point that was
+never part of any collaboration flow — it only becomes `'pending'` when
+inserted by a points-package import, then `'approved'`/`'rejected'` via
+the local approval queue (see
+[12_BACKUP_COLLABORATION.md](12_BACKUP_COLLABORATION.md)). The partial
+unique index on `(project_id, uuid)` allows any number of points without
+a `uuid` yet (plain local collection never sets one at creation time —
+it's generated lazily, on first export/backup, by `ensurePointUuid`),
+but rejects a second point with the same non-null `uuid` in the same
+project outright, rather than allowing it to be silently duplicated by,
+for example, a stray repeated Drive upload.
+
+### `point_modules` (`db/initialize.ts:238-245`)
 
 ```sql
 CREATE TABLE point_modules (
@@ -202,9 +240,19 @@ The `height_id` field (Kuchler height-class code, e.g. `"7"` for `>35m`) is pres
 
 ## Other tables
 
-- **`projects`**: a project references a protocol via `protocol_id` + `protocol_source` (`'official'` or `'custom'`); `resolveManifestId()` (`contexts/protocol-registry-context.tsx`) translates that into the kernel's manifest id (`"paisageo"` or `"custom"`).
+- **`projects`**: a project references a protocol via `protocol_id` + `protocol_source` (`'official'` or `'custom'`); `resolveManifestId()` (`contexts/protocol-registry-context.tsx`) translates that into the kernel's manifest id (`"paisageo"` or `"custom"`). Also carries the collaboration/backup identity columns — `project_uuid`, `owner_email`, `collaboration_role`, `drive_folder_id` (`db/initialize.ts:101-119`) — detailed in [12_BACKUP_COLLABORATION.md](12_BACKUP_COLLABORATION.md).
 - **`protocols`**: catalog of "official" protocols; today it only contains the PAISAGEO seed (`nomos-paisageo-v1`), inserted near `db/initialize.ts:210-224`, referencing the legacy static JSON at `assets/protocols/paisageo/paisageo_protocol.json`. This JSON is no longer the source of the real manifest (that's `modules/paisageo/manifest.ts`); it's a holdover from the pre-refactor format.
-- **`custom_protocols`**: JSON schema for each user-created Personalized protocol (`schema` holds a serialized `CustomProtocolSchema`). It has a `theme TEXT NOT NULL` column (`db/initialize.ts:78`) — a free-text category/theme label (e.g. "Fauna", "Flora"), shown in the "My Projects" listing; unrelated to the light/dark visual theme (`contexts/theme-context.tsx`), which is a separate concept — note that the kernel's `ProtocolManifest` type also grew its own, optional `theme?: LocalizedString` field for the same purpose at the manifest level (see [02_GLOSSARY.md](02_GLOSSARY.md)). A `CustomSection` inside this schema can have a `moduleRef?: SharedModuleRef` (`types/database.ts`): when present, the whole section *is* a shared PAISAGEO scientific module (vegetation, geoecological constraints, or impacts, looked up in `modules/registry.ts`), and `fields` is left empty — the alternative to fields defined manually by the user in the builder.
-- **`species`**: species observed at a specific point. The old single `common_name TEXT` column was replaced by `common_names TEXT` (a JSON array of strings), matching the same multiple-common-names pattern already used by `project_species_common_names`; it also gained `genus`, `family`, `created_at`, `last_updated` (`db/initialize.ts:183-200`). There's a `CHECK (scientific_name IS NOT NULL OR common_names IS NOT NULL)` constraint. `db/mappers/species.mapper.ts` deserializes `common_names` into `string[]`.
-- **`project_species_catalog` + `project_species_common_names`**: the project's species catalog (sources: `gbif`, `specieslink`, `manual`, `catalog` — the last from JSON catalog import/export via `core/species-catalog/species-catalog-sharing.ts`), not tied to a specific point.
-- **`vegetation_classifications`**: custom per-project vegetation classifications (an alternative to automatic Kuchler classification). Queried via `db/queries/vegetation-classifications.ts` — already generic (not paisageo-specific), which is why it doesn't live inside `modules/paisageo/`.
+- **`custom_protocols`**: JSON schema for each user-created Personalized protocol (`schema` holds a serialized `CustomProtocolSchema`). It has a `theme TEXT NOT NULL` column (`db/initialize.ts:127`) — a free-text category/theme label (e.g. "Fauna", "Flora"), shown in the "My Projects" listing; unrelated to the light/dark visual theme (`contexts/theme-context.tsx`), which is a separate concept — note that the kernel's `ProtocolManifest` type also grew its own, optional `theme?: LocalizedString` field for the same purpose at the manifest level (see [02_GLOSSARY.md](02_GLOSSARY.md)). A `CustomSection` inside this schema can have a `moduleRef?: SharedModuleRef` (`types/database.ts`): when present, the whole section *is* a shared PAISAGEO scientific module (vegetation, geoecological constraints, or impacts, looked up in `modules/registry.ts`), and `fields` is left empty — the alternative to fields defined manually by the user in the builder. Also has a `uuid` column (stable cross-device identity, part of the configuration package described in [12_BACKUP_COLLABORATION.md](12_BACKUP_COLLABORATION.md)).
+- **`species`**: species observed at a specific point. The old single `common_name TEXT` column was replaced by `common_names TEXT` (a JSON array of strings), matching the same multiple-common-names pattern already used by `project_species_common_names`; it also gained `genus`, `family`, `created_at`, `last_updated` (`db/initialize.ts:250-267`). There's a `CHECK (scientific_name IS NOT NULL OR common_names IS NOT NULL)` constraint. `db/mappers/species.mapper.ts` deserializes `common_names` into `string[]`.
+- **`project_species_catalog` + `project_species_common_names`**: the project's species catalog (sources: `gbif`, `specieslink`, `manual`, `catalog` — the last from JSON catalog import/export via `core/species-catalog/species-catalog-sharing.ts`), not tied to a specific point. `project_species_catalog` also has a `uuid` column, same purpose as `custom_protocols.uuid` above.
+- **`vegetation_classifications`**: custom per-project vegetation classifications (an alternative to automatic Kuchler classification). Queried via `db/queries/vegetation-classifications.ts` — already generic (not paisageo-specific), which is why it doesn't live inside `modules/paisageo/`. Also has a `uuid` column, same purpose as above.
+
+Every `uuid` column above (`projects.project_uuid`, `custom_protocols.uuid`,
+`project_species_catalog.uuid`, `vegetation_classifications.uuid`,
+`points.uuid`) is generated by the exact same shared helper
+(`core/utils/uuid.ts`) and follows the same check-before-generate
+discipline: an `ensure*Uuid` query function reads the current value
+first and only calls `generateUuid()` if it's still `NULL`, so
+re-exporting/re-backing-up the same row never produces a different
+identity the second time. See
+[12_BACKUP_COLLABORATION.md](12_BACKUP_COLLABORATION.md).
