@@ -1,12 +1,14 @@
 import {
   ensureFolder,
   findChildByName,
+  listChildren,
   readJsonFile,
   updateJsonFile,
   uploadJsonFile,
+  type DriveFile,
 } from "@/core/drive-sync/drive-api-client";
 import { getCurrentGoogleAccount } from "@/core/google-auth/google-auth-service";
-import { getProjectById, setProjectAsOwner } from "@/db/queries/projects";
+import { getAllDriveFolderIds, getProjectById, setProjectAsOwner } from "@/db/queries/projects";
 import { buildProjectConfigPackage } from "@/core/project-sharing/project-config-package";
 
 const NOMOS_ROOT_FOLDER_NAME = "Nomos";
@@ -136,4 +138,28 @@ export async function activateDriveBackup(projectId: number): Promise<void> {
   await uploadJsonFile("manifest.json", projectFolderId, manifest);
 
   await setProjectAsOwner(projectId, projectFolderId, account.email);
+}
+
+const NOMOS_PROJECT_FOLDER_PREFIX = "Nomos_";
+const FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
+
+/**
+ * Lists the signed-in account's own Nomos project folders in Drive (Fase 7
+ * restore) - every subfolder of the shared "Nomos" root whose name follows
+ * the convention set by activateDriveBackup (`Nomos_<name>_<uuid>`).
+ */
+export async function listOwnNomosProjectFolders(): Promise<DriveFile[]> {
+  const rootId = await ensureNomosRootFolder();
+  const children = await listChildren(rootId);
+  return children.filter(
+    (f) => f.mimeType === FOLDER_MIME_TYPE && f.name.startsWith(NOMOS_PROJECT_FOLDER_PREFIX),
+  );
+}
+
+/**
+ * Drive folder ids already linked to a local project - used to filter out
+ * projects that don't need to be offered again in the restore list.
+ */
+export async function getUsedDriveFolderIds(): Promise<Set<string>> {
+  return new Set(await getAllDriveFolderIds());
 }

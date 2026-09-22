@@ -12,6 +12,7 @@ interface FakePointRow {
   approval_status: string | null;
   rejection_reason: string | null;
   point_number: number;
+  drive_synced_at: string | null;
   [key: string]: unknown;
 }
 
@@ -22,6 +23,14 @@ function resetPointsTable() {
 }
 
 const getAllAsyncMock = jest.fn(async (sql: string, params: unknown[]) => {
+  if (sql.includes("drive_synced_at IS NULL")) {
+    const [projectId] = params as [number];
+    return pointsTable
+      .filter(
+        (p) => p.project_id === projectId && p.approval_status === "approved" && !p.drive_synced_at,
+      )
+      .sort((a, b) => a.point_number - b.point_number);
+  }
   if (sql.includes("approval_status = ?")) {
     const [projectId, status] = params as [number, string];
     return pointsTable
@@ -60,6 +69,7 @@ jest.mock("@/db/initialize", () => ({
 }));
 
 import {
+  getApprovedUnsyncedPointsByProject,
   getPendingPointsByProject,
   getRejectedPointsByProject,
   updatePointApprovalStatus,
@@ -72,6 +82,7 @@ function seedPoint(overrides: Partial<FakePointRow>): FakePointRow {
     approval_status: null,
     rejection_reason: null,
     point_number: pointsTable.length + 1,
+    drive_synced_at: null,
     ...overrides,
   };
   pointsTable.push(row);
@@ -104,6 +115,20 @@ describe("getPendingPointsByProject / getRejectedPointsByProject", () => {
     const result = await getRejectedPointsByProject(1);
 
     expect(result.map((p) => p.id).sort()).toEqual([1, 4]);
+  });
+});
+
+describe("getApprovedUnsyncedPointsByProject", () => {
+  it("returns only approved points with no Drive backup yet, from the requested project", async () => {
+    seedPoint({ id: 1, project_id: 1, approval_status: "approved", drive_synced_at: null });
+    seedPoint({ id: 2, project_id: 1, approval_status: "approved", drive_synced_at: "2026-01-01T00:00:00.000Z" }); // already synced
+    seedPoint({ id: 3, project_id: 1, approval_status: "pending", drive_synced_at: null }); // not approved
+    seedPoint({ id: 4, project_id: 1, approval_status: "rejected", drive_synced_at: null }); // not approved
+    seedPoint({ id: 5, project_id: 2, approval_status: "approved", drive_synced_at: null }); // other project
+
+    const result = await getApprovedUnsyncedPointsByProject(1);
+
+    expect(result.map((p) => p.id)).toEqual([1]);
   });
 });
 

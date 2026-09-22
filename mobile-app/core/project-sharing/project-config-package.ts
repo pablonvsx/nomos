@@ -283,7 +283,7 @@ export async function applyProjectConfigPackage(
   return { projectId, created };
 }
 
-function parseImportedCommonNames(value: unknown): Array<{
+export function parseImportedCommonNames(value: unknown): Array<{
   common_name: string;
   language: string;
   source: "gbif" | "manual" | "specieslink" | "catalog";
@@ -304,7 +304,7 @@ function parseImportedCommonNames(value: unknown): Array<{
     }));
 }
 
-function sanitizeSpeciesSource(
+export function sanitizeSpeciesSource(
   value: string,
 ): "gbif" | "manual" | "specieslink" | "catalog" {
   const validSources = ["gbif", "manual", "specieslink", "catalog"];

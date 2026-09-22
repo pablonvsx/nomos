@@ -80,6 +80,7 @@ import {
   activateDriveBackup,
   GoogleAccountRequiredError,
 } from "@/core/drive-sync/project-drive-service";
+import { backupAllPendingPoints, backupPoint } from "@/core/drive-sync/backup-service";
 import {
   useProtocolRegistry,
   useCapabilityBus,
@@ -151,6 +152,11 @@ export default function UnifiedProjectDetailsScreen() {
   // Drive backup activation states (Fase 5)
   const [driveConnectionModalVisible, setDriveConnectionModalVisible] = useState(false);
   const [isActivatingDriveBackup, setIsActivatingDriveBackup] = useState(false);
+  const [pendingDriveIntent, setPendingDriveIntent] = useState<(() => void) | null>(null);
+
+  // Drive backup upload states (Fase 6)
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [backingUpPointId, setBackingUpPointId] = useState<number | null>(null);
   const bottomPadding = useBottomContentPadding(64);
 
   // resetKey includes editDialogVisible: this screen never unmounts while
@@ -652,6 +658,7 @@ export default function UnifiedProjectDetailsScreen() {
     if (!project) return;
 
     if (!getCurrentGoogleAccount()) {
+      setPendingDriveIntent(() => handleActivateDriveBackup);
       setDriveConnectionModalVisible(true);
       return;
     }
@@ -663,6 +670,7 @@ export default function UnifiedProjectDetailsScreen() {
       loadProjectData();
     } catch (error) {
       if (error instanceof GoogleAccountRequiredError) {
+        setPendingDriveIntent(() => handleActivateDriveBackup);
         setDriveConnectionModalVisible(true);
         return;
       }
@@ -673,6 +681,75 @@ export default function UnifiedProjectDetailsScreen() {
       );
     } finally {
       setIsActivatingDriveBackup(false);
+    }
+  };
+
+  const handleBackupAllPoints = async () => {
+    if (!project) return;
+
+    if (!getCurrentGoogleAccount()) {
+      setPendingDriveIntent(() => handleBackupAllPoints);
+      setDriveConnectionModalVisible(true);
+      return;
+    }
+
+    setIsBackingUp(true);
+    try {
+      const summary = await backupAllPendingPoints(project.id);
+      const failedText =
+        summary.failed.length > 0
+          ? "\n" + summary.failed.map((f) => `${f.pointLabel}: ${f.reason}`).join("\n")
+          : "";
+      alert(
+        t("common.success"),
+        t("driveBackup.backupSummary", {
+          backedUp: summary.backedUp.toString(),
+          failed: summary.failed.length.toString(),
+        }) + failedText,
+      );
+      loadProjectData();
+    } catch (error) {
+      console.error("Error backing up points:", error);
+      alert(
+        t("common.error"),
+        error instanceof Error ? error.message : t("driveBackup.errorBackingUpPoint"),
+      );
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
+  const handleBackupSinglePoint = async (pointId: number) => {
+    if (!getCurrentGoogleAccount()) {
+      setPendingDriveIntent(() => () => handleBackupSinglePoint(pointId));
+      setDriveConnectionModalVisible(true);
+      return;
+    }
+
+    setBackingUpPointId(pointId);
+    try {
+      const result = await backupPoint(pointId.toString());
+      if (result.success) {
+        alert(
+          t("common.success"),
+          result.mediaFailures && result.mediaFailures.length > 0
+            ? t("driveBackup.backupPointSuccessWithMediaWarning", {
+                count: result.mediaFailures.length.toString(),
+              })
+            : t("driveBackup.backupPointSuccess"),
+        );
+        loadProjectData();
+      } else {
+        alert(t("common.error"), result.error ?? t("driveBackup.errorBackingUpPoint"));
+      }
+    } catch (error) {
+      console.error("Error backing up point:", error);
+      alert(
+        t("common.error"),
+        error instanceof Error ? error.message : t("driveBackup.errorBackingUpPoint"),
+      );
+    } finally {
+      setBackingUpPointId(null);
     }
   };
 
@@ -710,6 +787,15 @@ export default function UnifiedProjectDetailsScreen() {
                 {item.lat.toFixed(6)}, {item.lon.toFixed(6)}
               </Text>
             </View>
+            {project?.collaboration_role === "owner" && item.approval_status === "approved" && (
+              <IconButton
+                icon={item.drive_synced_at ? "cloud-check" : "cloud-outline"}
+                size={22}
+                loading={backingUpPointId === item.id}
+                disabled={backingUpPointId !== null}
+                onPress={() => handleBackupSinglePoint(item.id)}
+              />
+            )}
             <IconButton icon="chevron-right" size={24} style={{ marginRight: -8 }} />
           </View>
         </Card.Content>
@@ -1084,6 +1170,18 @@ export default function UnifiedProjectDetailsScreen() {
                 },
               ]
             : []),
+          ...(project.collaboration_role === "owner"
+            ? [
+                {
+                  icon: "cloud-upload",
+                  label: t("driveBackup.backupAction"),
+                  onPress: isBackingUp ? () => {} : handleBackupAllPoints,
+                  color: paperTheme.dark
+                    ? paperTheme.colors.onSurface
+                    : paperTheme.colors.primary,
+                },
+              ]
+            : []),
         ]}
         onStateChange={({ open }) => setFabOpen(open)}
         theme={{
@@ -1131,13 +1229,17 @@ export default function UnifiedProjectDetailsScreen() {
         />
       )}
 
-      {/* Google Connection Modal (Fase 5) - triggered when activating Drive backup without a connected account */}
+      {/* Google Connection Modal (Fase 5/6) - triggered when a Drive action needs an account that isn't connected yet */}
       <GoogleConnectionModal
         visible={driveConnectionModalVisible}
-        onDismiss={() => setDriveConnectionModalVisible(false)}
+        onDismiss={() => {
+          setDriveConnectionModalVisible(false);
+          setPendingDriveIntent(null);
+        }}
         onConnected={() => {
           setDriveConnectionModalVisible(false);
-          handleActivateDriveBackup();
+          pendingDriveIntent?.();
+          setPendingDriveIntent(null);
         }}
       />
 

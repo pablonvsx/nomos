@@ -1133,6 +1133,29 @@
   "driveBackup": {
     "activateAction": "Ativar Backup no Drive",
     "activatedSuccess": "Backup no Drive ativado com sucesso.",
-    "errorActivating": "Não foi possível ativar o backup no Drive."
+    "errorActivating": "Não foi possível ativar o backup no Drive.",
+    "backupAction": "Fazer Backup",
+    "backupSummary": "{{backedUp}} ponto(s) salvo(s), {{failed}} falharam.",
+    "backupPointAction": "Fazer backup deste ponto",
+    "backupPointSuccess": "Ponto salvo no Drive com sucesso.",
+    "backupPointSuccessWithMediaWarning": "Ponto salvo no Drive, mas {{count}} arquivo(s) de mídia não puderam ser enviados.",
+    "errorBackingUpPoint": "Não foi possível fazer o backup do ponto."
+  },
+  "driveRestore": {
+    "restoreAction": "Restaurar Meus Projetos do Drive",
+    "modalTitle": "Restaurar Projetos do Drive",
+    "noProjectsFound": "Nenhum projeto novo encontrado no Drive.",
+    "loadingProjects": "Buscando seus projetos no Drive...",
+    "chooseRestoreMode": "Como você quer restaurar este projeto?",
+    "dataOnly": "Somente dados",
+    "dataAndMedia": "Dados e mídia",
+    "restoring": "Restaurando...",
+    "restoreSummary": "{{imported}} ponto(s) importado(s), {{mediaDownloaded}} com mídia baixada.",
+    "mediaFailedWarning": "{{count}} arquivo(s) de mídia não puderam ser baixados.",
+    "ownerEmailWarning": "O e-mail do dono registrado neste projeto é diferente da conta conectada neste dispositivo.",
+    "errorRestoring": "Não foi possível restaurar o projeto.",
+    "errorAlreadyExists": "Este projeto já existe neste dispositivo.",
+    "errorIncompleteManifest": "O arquivo de manifesto deste projeto está incompleto ou corrompido.",
+    "errorProtocolNotFound": "Protocolo personalizado deste projeto não encontrado no Drive."
   }
 }

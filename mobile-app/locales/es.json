@@ -1130,6 +1130,29 @@
   "driveBackup": {
     "activateAction": "Activar Copia de Seguridad en Drive",
     "activatedSuccess": "Copia de seguridad en Drive activada con éxito.",
-    "errorActivating": "No se pudo activar la copia de seguridad en Drive."
+    "errorActivating": "No se pudo activar la copia de seguridad en Drive.",
+    "backupAction": "Hacer Copia de Seguridad",
+    "backupSummary": "{{backedUp}} punto(s) guardado(s), {{failed}} fallaron.",
+    "backupPointAction": "Hacer copia de seguridad de este punto",
+    "backupPointSuccess": "Punto guardado en Drive con éxito.",
+    "backupPointSuccessWithMediaWarning": "Punto guardado en Drive, pero {{count}} archivo(s) multimedia no pudieron enviarse.",
+    "errorBackingUpPoint": "No se pudo hacer la copia de seguridad del punto."
+  },
+  "driveRestore": {
+    "restoreAction": "Restaurar Mis Proyectos desde Drive",
+    "modalTitle": "Restaurar Proyectos desde Drive",
+    "noProjectsFound": "No se encontraron proyectos nuevos en Drive.",
+    "loadingProjects": "Buscando sus proyectos en Drive...",
+    "chooseRestoreMode": "¿Cómo desea restaurar este proyecto?",
+    "dataOnly": "Solo datos",
+    "dataAndMedia": "Datos y multimedia",
+    "restoring": "Restaurando...",
+    "restoreSummary": "{{imported}} punto(s) importado(s), {{mediaDownloaded}} con multimedia descargada.",
+    "mediaFailedWarning": "{{count}} archivo(s) multimedia no pudieron descargarse.",
+    "ownerEmailWarning": "El correo del dueño registrado en este proyecto es diferente de la cuenta conectada en este dispositivo.",
+    "errorRestoring": "No se pudo restaurar el proyecto.",
+    "errorAlreadyExists": "Este proyecto ya existe en este dispositivo.",
+    "errorIncompleteManifest": "El archivo de manifiesto de este proyecto está incompleto o corrupto.",
+    "errorProtocolNotFound": "El protocolo personalizado de este proyecto no se encontró en Drive."
   }
 }

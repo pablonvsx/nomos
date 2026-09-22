@@ -207,6 +207,23 @@ export async function setProjectAsOwner(
 }
 
 /**
+ * Lists the drive_folder_id of every local project already linked to a
+ * Drive folder (Fase 7 restore - used to filter out projects that don't
+ * need to be offered again).
+ */
+export async function getAllDriveFolderIds(): Promise<string[]> {
+  try {
+    const rows = await db.getAllAsync<{ drive_folder_id: string }>(
+      "SELECT drive_folder_id FROM projects WHERE drive_folder_id IS NOT NULL",
+    );
+    return rows.map((r) => r.drive_folder_id);
+  } catch (error) {
+    console.error("Error fetching drive folder ids:", error);
+    return [];
+  }
+}
+
+/**
  * Deletes a project and all its associated data.
  */
 export async function deleteProject(projectId: number): Promise<boolean> {

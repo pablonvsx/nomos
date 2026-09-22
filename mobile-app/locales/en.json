@@ -1133,6 +1133,29 @@
   "driveBackup": {
     "activateAction": "Activate Drive Backup",
     "activatedSuccess": "Drive backup activated successfully.",
-    "errorActivating": "Could not activate Drive backup."
+    "errorActivating": "Could not activate Drive backup.",
+    "backupAction": "Back Up",
+    "backupSummary": "{{backedUp}} point(s) saved, {{failed}} failed.",
+    "backupPointAction": "Back up this point",
+    "backupPointSuccess": "Point saved to Drive successfully.",
+    "backupPointSuccessWithMediaWarning": "Point saved to Drive, but {{count}} media file(s) could not be uploaded.",
+    "errorBackingUpPoint": "Could not back up the point."
+  },
+  "driveRestore": {
+    "restoreAction": "Restore My Projects from Drive",
+    "modalTitle": "Restore Projects from Drive",
+    "noProjectsFound": "No new projects found on Drive.",
+    "loadingProjects": "Looking up your projects on Drive...",
+    "chooseRestoreMode": "How would you like to restore this project?",
+    "dataOnly": "Data only",
+    "dataAndMedia": "Data and media",
+    "restoring": "Restoring...",
+    "restoreSummary": "{{imported}} point(s) imported, {{mediaDownloaded}} with media downloaded.",
+    "mediaFailedWarning": "{{count}} media file(s) could not be downloaded.",
+    "ownerEmailWarning": "The owner email recorded for this project differs from the account connected on this device.",
+    "errorRestoring": "Could not restore the project.",
+    "errorAlreadyExists": "This project already exists on this device.",
+    "errorIncompleteManifest": "This project's manifest file is incomplete or corrupted.",
+    "errorProtocolNotFound": "This project's custom protocol was not found on Drive."
   }
 }

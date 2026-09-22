@@ -35,6 +35,10 @@ import {
   InvalidPackageError,
   UnsupportedPackageVersionError,
 } from "@/core/project-sharing/project-config-package";
+import { getCurrentGoogleAccount } from "@/core/google-auth/google-auth-service";
+import { GoogleConnectionModal } from "@/components/google-account/GoogleConnectionModal";
+import { RestoreProjectsModal } from "@/components/drive-sync/RestoreProjectsModal";
+import type { RestoreResult } from "@/core/drive-sync/restore-service";
 
 export default function ProjectsScreen() {
   const router = useRouter();
@@ -57,6 +61,9 @@ export default function ProjectsScreen() {
   const [protocolNames, setProtocolNames] = useState<Record<string, string>>(
     {},
   );
+  const [driveConnectionModalVisible, setDriveConnectionModalVisible] = useState(false);
+  const [pendingDriveIntent, setPendingDriveIntent] = useState<(() => void) | null>(null);
+  const [restoreProjectsModalVisible, setRestoreProjectsModalVisible] = useState(false);
   const [protocolThemes, setProtocolThemes] = useState<Record<string, string>>(
     {},
   );
@@ -226,6 +233,37 @@ export default function ProjectsScreen() {
         alert(t("common.error"), t("projectsList.errorImportingProject"));
       }
     }
+  };
+
+  const handleRestoreFromDrive = () => {
+    if (!getCurrentGoogleAccount()) {
+      setPendingDriveIntent(() => handleRestoreFromDrive);
+      setDriveConnectionModalVisible(true);
+      return;
+    }
+    setRestoreProjectsModalVisible(true);
+  };
+
+  const handleProjectRestored = (result: RestoreResult) => {
+    setRestoreProjectsModalVisible(false);
+    loadData();
+
+    if (result.ownerEmailWarning) {
+      alert(t("common.info"), t("driveRestore.ownerEmailWarning"));
+    }
+
+    const summary =
+      t("driveRestore.restoreSummary", {
+        imported: result.imported.toString(),
+        mediaDownloaded: result.mediaDownloaded.toString(),
+      }) +
+      (result.mediaFailed > 0
+        ? "\n" + t("driveRestore.mediaFailedWarning", { count: result.mediaFailed.toString() })
+        : "");
+
+    alert(t("common.success"), summary, () =>
+      router.push(`/project-details/${result.projectId}` as any),
+    );
   };
 
   const handleImportProtocol = async () => {
@@ -614,6 +652,14 @@ export default function ProjectsScreen() {
                     ? paperTheme.colors.onSurface
                     : paperTheme.colors.primary,
                 },
+                {
+                  icon: "cloud-download",
+                  label: t("driveRestore.restoreAction"),
+                  onPress: handleRestoreFromDrive,
+                  color: paperTheme.dark
+                    ? paperTheme.colors.onSurface
+                    : paperTheme.colors.primary,
+                },
               ]
             : [
                 {
@@ -650,6 +696,27 @@ export default function ProjectsScreen() {
         style={{
           height: insets.bottom,
         }}
+      />
+
+      {/* Google Connection Modal (Fase 7) - triggered when restoring from Drive without a connected account */}
+      <GoogleConnectionModal
+        visible={driveConnectionModalVisible}
+        onDismiss={() => {
+          setDriveConnectionModalVisible(false);
+          setPendingDriveIntent(null);
+        }}
+        onConnected={() => {
+          setDriveConnectionModalVisible(false);
+          pendingDriveIntent?.();
+          setPendingDriveIntent(null);
+        }}
+      />
+
+      {/* Restore Projects Modal (Fase 7) */}
+      <RestoreProjectsModal
+        visible={restoreProjectsModalVisible}
+        onDismiss={() => setRestoreProjectsModalVisible(false)}
+        onRestored={handleProjectRestored}
       />
     </View>
   );

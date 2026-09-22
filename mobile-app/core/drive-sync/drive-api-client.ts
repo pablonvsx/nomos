@@ -1,3 +1,4 @@
+import { File } from 'expo-file-system';
 import { getDriveAccessToken } from '@/core/google-auth/google-auth-service';
 
 const DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
@@ -65,6 +66,31 @@ export async function uploadJsonFile(name: string, parentId: string, content: un
   return response.json();
 }
 
+export async function uploadBinaryFile(
+  name: string,
+  parentId: string,
+  localUri: string,
+  mimeType: string,
+): Promise<DriveFile> {
+  const headers = await authHeaders();
+  // Uses the app's established expo-file-system File API (same one used
+  // everywhere else since Fase 0), not the legacy readAsStringAsync
+  // functional API - same result, consistent with the rest of the code.
+  const base64Content = await new File(localUri).base64();
+  const metadata = { name, parents: [parentId], mimeType };
+  const boundary = 'nomos-' + Math.random().toString(36).slice(2);
+  const body =
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+    `--${boundary}\r\nContent-Type: ${mimeType}\r\nContent-Transfer-Encoding: base64\r\n\r\n${base64Content}\r\n--${boundary}--`;
+  const response = await fetch(`${DRIVE_UPLOAD_BASE}/files?uploadType=multipart&fields=id,name,mimeType`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body,
+  });
+  if (!response.ok) await parseDriveError(response);
+  return response.json();
+}
+
 export async function updateJsonFile(fileId: string, content: unknown): Promise<DriveFile> {
   const headers = await authHeaders();
   const response = await fetch(`${DRIVE_UPLOAD_BASE}/files/${fileId}?uploadType=media&fields=id,name,mimeType,modifiedTime`, {
@@ -90,4 +116,16 @@ export async function listChildren(parentId: string): Promise<DriveFile[]> {
   if (!response.ok) await parseDriveError(response);
   const data = await response.json();
   return data.files ?? [];
+}
+
+export async function downloadBinaryFile(fileId: string, destinationUri: string): Promise<void> {
+  const headers = await authHeaders();
+  // Uses the app's established expo-file-system File API (same one used
+  // for uploads since Fase 6), not the legacy downloadAsync functional
+  // API - File.downloadFileAsync accepts custom headers too, so Bearer
+  // auth works the same way.
+  await File.downloadFileAsync(`${DRIVE_API_BASE}/files/${fileId}?alt=media`, new File(destinationUri), {
+    headers,
+    idempotent: true,
+  });
 }

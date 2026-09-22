@@ -32,7 +32,7 @@ export class ProjectMismatchError extends Error {
   }
 }
 
-const IMPORTED_MEDIA_DIR = "imported_points_media";
+export const IMPORTED_MEDIA_DIR = "imported_points_media";
 const PENDING_DUPLICATES_DIR = "pending_duplicates";
 
 function assertValidPointsPackageShape(pkg: unknown): asserts pkg is PointsPackage {

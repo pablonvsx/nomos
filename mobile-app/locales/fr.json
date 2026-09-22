@@ -1133,6 +1133,29 @@
   "driveBackup": {
     "activateAction": "Activer la Sauvegarde sur Drive",
     "activatedSuccess": "Sauvegarde sur Drive activée avec succès.",
-    "errorActivating": "Impossible d'activer la sauvegarde sur Drive."
+    "errorActivating": "Impossible d'activer la sauvegarde sur Drive.",
+    "backupAction": "Sauvegarder",
+    "backupSummary": "{{backedUp}} point(s) sauvegardé(s), {{failed}} échoué(s).",
+    "backupPointAction": "Sauvegarder ce point",
+    "backupPointSuccess": "Point sauvegardé sur Drive avec succès.",
+    "backupPointSuccessWithMediaWarning": "Point sauvegardé sur Drive, mais {{count}} fichier(s) média n'ont pas pu être envoyés.",
+    "errorBackingUpPoint": "Impossible de sauvegarder le point."
+  },
+  "driveRestore": {
+    "restoreAction": "Restaurer Mes Projets depuis Drive",
+    "modalTitle": "Restaurer des Projets depuis Drive",
+    "noProjectsFound": "Aucun nouveau projet trouvé sur Drive.",
+    "loadingProjects": "Recherche de vos projets sur Drive...",
+    "chooseRestoreMode": "Comment souhaitez-vous restaurer ce projet ?",
+    "dataOnly": "Données uniquement",
+    "dataAndMedia": "Données et médias",
+    "restoring": "Restauration...",
+    "restoreSummary": "{{imported}} point(s) importé(s), {{mediaDownloaded}} avec média téléchargé.",
+    "mediaFailedWarning": "{{count}} fichier(s) média n'ont pas pu être téléchargés.",
+    "ownerEmailWarning": "L'e-mail du propriétaire enregistré pour ce projet diffère du compte connecté sur cet appareil.",
+    "errorRestoring": "Impossible de restaurer le projet.",
+    "errorAlreadyExists": "Ce projet existe déjà sur cet appareil.",
+    "errorIncompleteManifest": "Le fichier manifeste de ce projet est incomplet ou corrompu.",
+    "errorProtocolNotFound": "Le protocole personnalisé de ce projet n'a pas été trouvé sur Drive."
   }
 }

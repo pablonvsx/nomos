@@ -9,7 +9,7 @@ import {
   getPointsWithRawModulesByProject,
   updatePoint,
 } from "@/db/queries/points";
-import { parsePhotoUris } from "@/db/mappers/json-utils";
+import { parsePhotoUris, parseAudioNotes } from "@/db/mappers/json-utils";
 import type { Point, PointModule } from "@/types/database";
 
 export const POINTS_PACKAGE_FORMAT_VERSION = 1;
@@ -53,18 +53,6 @@ export class CollectorCodeRequiredError extends Error {
   constructor() {
     super("A local collector code must be set before exporting points.");
     this.name = "CollectorCodeRequiredError";
-  }
-}
-
-function parseAudioNotes(
-  raw: string | null,
-): Array<{ uri: string; duration: number; timestamp: number }> {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
   }
 }
 

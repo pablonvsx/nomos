@@ -25,6 +25,7 @@ export interface CreatePointInput {
   approval_status?: "pending" | "approved" | "rejected" | null;
   created_by?: string | null;          // collector code
   rejection_reason?: string | null;    // set when approval_status = 'rejected' (Fase 3)
+  drive_synced_at?: string | null;     // timestamp of the last successful Drive backup (Fase 6)
 }
 
 export type UpdatePointInput = Partial<Omit<CreatePointInput, "project_id" | "protocol_id" | "uuid">>;
@@ -162,6 +163,22 @@ export async function getRejectedPointsByProject(projectId: number): Promise<Poi
 }
 
 /**
+ * Lists approved points for a project that haven't been backed up to
+ * Drive yet (Fase 6 backup). Used by backupAllPendingPoints.
+ */
+export async function getApprovedUnsyncedPointsByProject(projectId: number): Promise<Point[]> {
+  try {
+    return await db.getAllAsync<Point>(
+      "SELECT * FROM points WHERE project_id = ? AND approval_status = 'approved' AND drive_synced_at IS NULL ORDER BY point_number ASC",
+      [projectId],
+    );
+  } catch (error) {
+    console.error("Error listing approved unsynced points:", error);
+    return [];
+  }
+}
+
+/**
  * Approves or rejects a point. Rejecting requires a reason; approving
  * always clears any previous rejection reason.
  */
@@ -196,6 +213,7 @@ export async function updatePoint(
     if (updates.approval_status !== undefined) { fields.push("approval_status = ?"); values.push(updates.approval_status ?? null); }
     if (updates.created_by !== undefined) { fields.push("created_by = ?"); values.push(updates.created_by ?? null); }
     if (updates.rejection_reason !== undefined) { fields.push("rejection_reason = ?"); values.push(updates.rejection_reason ?? null); }
+    if (updates.drive_synced_at !== undefined) { fields.push("drive_synced_at = ?"); values.push(updates.drive_synced_at ?? null); }
 
     values.push(pointId);
     await db.runAsync(
