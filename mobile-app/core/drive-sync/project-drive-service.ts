@@ -10,11 +10,15 @@ import {
 import { getCurrentGoogleAccount } from "@/core/google-auth/google-auth-service";
 import { getAllDriveFolderIds, getProjectById, setProjectAsOwner } from "@/db/queries/projects";
 import { buildProjectConfigPackage } from "@/core/project-sharing/project-config-package";
+import { UnsupportedPackageVersionError } from "@/core/project-sharing/package-errors";
 
 const NOMOS_ROOT_FOLDER_NAME = "Nomos";
 const DRIVE_ROOT_PARENT_ID = "root";
 
+export const MANIFEST_FORMAT_VERSION = 1;
+
 export interface ProjectManifest {
+  format_version: 1;
   project_uuid: string;
   project_name: string;
   protocol_id: string;
@@ -53,7 +57,13 @@ async function ensureNomosRootFolder(): Promise<string> {
 export async function getManifest(driveFolderId: string): Promise<ProjectManifest> {
   const file = await findChildByName(driveFolderId, "manifest.json");
   if (!file) throw new Error("manifest.json não encontrado na pasta do projeto.");
-  return readJsonFile<ProjectManifest>(file.id);
+  const manifest = await readJsonFile<ProjectManifest>(file.id);
+  // format_version must be checked before trusting any other field (14.6),
+  // same discipline already applied to both packages.
+  if (manifest.format_version !== MANIFEST_FORMAT_VERSION) {
+    throw new UnsupportedPackageVersionError();
+  }
+  return manifest;
 }
 
 /**
@@ -76,6 +86,9 @@ export async function updateManifest(
   }
   if (current.owner_email && updated.owner_email !== current.owner_email) {
     throw new Error("Recusado: a escrita perderia/mudaria o owner_email do manifest.");
+  }
+  if (updated.format_version !== current.format_version) {
+    throw new Error("Recusado: a escrita perderia/mudaria o format_version do manifest.");
   }
 
   const file = await findChildByName(driveFolderId, "manifest.json");
@@ -128,6 +141,7 @@ export async function activateDriveBackup(projectId: number): Promise<void> {
   }
 
   const manifest: ProjectManifest = {
+    format_version: MANIFEST_FORMAT_VERSION,
     project_uuid: pkg.project_uuid,
     project_name: pkg.project_name,
     protocol_id: pkg.protocol_id,

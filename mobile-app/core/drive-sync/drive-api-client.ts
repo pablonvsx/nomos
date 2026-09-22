@@ -102,6 +102,25 @@ export async function updateJsonFile(fileId: string, content: unknown): Promise<
   return response.json();
 }
 
+export async function updateBinaryFile(
+  fileId: string,
+  localUri: string,
+  mimeType: string,
+): Promise<DriveFile> {
+  const headers = await authHeaders();
+  // Simple media update (like updateJsonFile), not multipart - no need for
+  // the base64 + Content-Transfer-Encoding dance uploadBinaryFile uses,
+  // since a plain PATCH body can carry raw bytes directly.
+  const bytes = await new File(localUri).bytes();
+  const response = await fetch(`${DRIVE_UPLOAD_BASE}/files/${fileId}?uploadType=media&fields=id,name,mimeType,modifiedTime`, {
+    method: 'PATCH',
+    headers: { ...headers, 'Content-Type': mimeType },
+    body: bytes,
+  });
+  if (!response.ok) await parseDriveError(response);
+  return response.json();
+}
+
 export async function readJsonFile<T = unknown>(fileId: string): Promise<T> {
   const headers = await authHeaders();
   const response = await fetch(`${DRIVE_API_BASE}/files/${fileId}?alt=media`, { headers });

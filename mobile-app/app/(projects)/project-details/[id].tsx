@@ -81,6 +81,7 @@ import {
   GoogleAccountRequiredError,
 } from "@/core/drive-sync/project-drive-service";
 import { backupAllPendingPoints, backupPoint } from "@/core/drive-sync/backup-service";
+import { syncActiveVegetationClassificationToDrive } from "@/core/drive-sync/catalog-sync-service";
 import {
   useProtocolRegistry,
   useCapabilityBus,
@@ -792,7 +793,7 @@ export default function UnifiedProjectDetailsScreen() {
                 icon={item.drive_synced_at ? "cloud-check" : "cloud-outline"}
                 size={22}
                 loading={backingUpPointId === item.id}
-                disabled={backingUpPointId !== null}
+                disabled={backingUpPointId !== null || Boolean(item.drive_synced_at)}
                 onPress={() => handleBackupSinglePoint(item.id)}
               />
             )}
@@ -932,9 +933,21 @@ export default function UnifiedProjectDetailsScreen() {
                     setVegClassificationType("standard");
                     // Save the selection
                     if (project) {
-                      setActiveVegetationClassification(project.id, null, "standard").catch(err => {
-                        console.error("Error saving vegetation classification type:", err);
-                      });
+                      const projectId = project.id;
+                      setActiveVegetationClassification(projectId, null, "standard")
+                        .then(() => {
+                          // Best-effort, non-blocking push to Drive (audit
+                          // finding IMPORTANTE 3) - fetches the project
+                          // fresh instead of reusing component state, same
+                          // pattern as every other catalog-sync call site
+                          // (audit finding MENOR 4).
+                          getProjectById(projectId)
+                            .then((freshProject) => freshProject && syncActiveVegetationClassificationToDrive(freshProject, "standard"))
+                            .catch(() => {});
+                        })
+                        .catch(err => {
+                          console.error("Error saving vegetation classification type:", err);
+                        });
                     }
                   }}
                   icon={vegClassificationType === "standard" ? "check" : undefined}

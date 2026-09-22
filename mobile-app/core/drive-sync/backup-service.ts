@@ -1,5 +1,12 @@
 import { File } from "expo-file-system";
-import { ensureFolder, uploadBinaryFile, uploadJsonFile } from "@/core/drive-sync/drive-api-client";
+import {
+  ensureFolder,
+  findChildByName,
+  updateBinaryFile,
+  updateJsonFile,
+  uploadBinaryFile,
+  uploadJsonFile,
+} from "@/core/drive-sync/drive-api-client";
 import {
   ensurePointUuid,
   getApprovedUnsyncedPointsByProject,
@@ -32,6 +39,24 @@ function extensionFromUri(uri: string, fallback: string): string {
   return match && match.length <= 5 ? match : fallback;
 }
 
+// Read-before-write (same discipline as updateManifest, 14.1): a re-backup
+// of an already-synced point must never create a second Drive file with
+// the same name - Drive allows duplicate names, so "just upload again"
+// silently corrupts the folder instead of failing loudly.
+async function putBinaryFile(
+  filename: string,
+  mediaFolderId: string,
+  localUri: string,
+  mimeType: string,
+): Promise<void> {
+  const existing = await findChildByName(mediaFolderId, filename);
+  if (existing) {
+    await updateBinaryFile(existing.id, localUri, mimeType);
+  } else {
+    await uploadBinaryFile(filename, mediaFolderId, localUri, mimeType);
+  }
+}
+
 async function uploadPhoto(
   uri: string,
   index: number,
@@ -43,7 +68,7 @@ async function uploadPhoto(
   }
   const filename = `photo_${index + 1}.${extensionFromUri(uri, "jpg")}`;
   try {
-    await uploadBinaryFile(filename, mediaFolderId, uri, "image/jpeg");
+    await putBinaryFile(filename, mediaFolderId, uri, "image/jpeg");
     return { filename };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -62,7 +87,7 @@ async function uploadAudioNote(
   }
   const filename = `audio_note_${index + 1}.${extensionFromUri(note.uri, "m4a")}`;
   try {
-    await uploadBinaryFile(filename, mediaFolderId, note.uri, "audio/m4a");
+    await putBinaryFile(filename, mediaFolderId, note.uri, "audio/m4a");
     return { entry: { filename, duration: note.duration, timestamp: note.timestamp } };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -164,10 +189,16 @@ export async function backupPoint(pointId: string): Promise<BackupResult> {
 
   // Uploading the point's data is the one step that still fails the whole
   // point - unlike media, the scientific data must arrive intact for the
-  // point to count as backed up.
+  // point to count as backed up. Read-before-write: a re-backup (e.g. the
+  // point's data changed after approval, or a retry) updates the existing
+  // Drive file instead of creating a duplicate.
   let uploaded;
   try {
-    uploaded = await uploadJsonFile(`${pointUuid}.json`, approvedFolderId, entry);
+    const pointFilename = `${pointUuid}.json`;
+    const existing = await findChildByName(approvedFolderId, pointFilename);
+    uploaded = existing
+      ? await updateJsonFile(existing.id, entry)
+      : await uploadJsonFile(pointFilename, approvedFolderId, entry);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return { success: false, error: message };

@@ -527,6 +527,34 @@ describe("applyProjectConfigPackage — import behavior", () => {
     expect(species).toHaveLength(2);
     expect(species.map((s) => s.uuid).sort()).toEqual(["species-uuid-1", "species-uuid-2"]);
   });
+
+  it("rejects a package whose package_role_for_importer isn't 'collaborator', touching no db function (audit finding MENOR 4)", async () => {
+    const pkg = samplePackage({
+      package_role_for_importer: "owner" as unknown as "collaborator",
+    });
+
+    await expect(applyProjectConfigPackage(pkg)).rejects.toBeInstanceOf(InvalidPackageError);
+    expect(allMockFunctions().some((fn) => fn.mock.calls.length > 0)).toBe(false);
+  });
+
+  it("rejects a package missing package_role_for_importer entirely, touching no db function (audit finding MENOR 4)", async () => {
+    const { package_role_for_importer: _unused, ...withoutRole } = samplePackage();
+
+    await expect(applyProjectConfigPackage(withoutRole)).rejects.toBeInstanceOf(InvalidPackageError);
+    expect(allMockFunctions().some((fn) => fn.mock.calls.length > 0)).toBe(false);
+  });
+
+  it("refuses to reimport a config package onto a local project that is already the owner instance, without touching its species/vegetation classes (audit finding MENOR 5)", async () => {
+    const ownerProject = seedOfficialProject({
+      project_uuid: "shared-project-uuid",
+      collaboration_role: "owner",
+    });
+    const pkg = samplePackage({ project_uuid: ownerProject.project_uuid! });
+
+    await expect(applyProjectConfigPackage(pkg)).rejects.toBeInstanceOf(InvalidPackageError);
+    expect(species).toHaveLength(0);
+    expect(vegClassifications).toHaveLength(0);
+  });
 });
 
 describe("exportProjectConfigPackage", () => {

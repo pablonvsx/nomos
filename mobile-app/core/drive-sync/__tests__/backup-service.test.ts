@@ -15,26 +15,49 @@ import { FakeFile, resetFakeFs, fsState } from "../../project-sharing/__tests__/
 jest.mock("expo-file-system", () => ({ File: FakeFile }));
 
 const ensureFolderMock = jest.fn(async (name: string, parentId: string) => `${parentId}/${name}`);
+
+// Fake Drive tree, keyed by "<parentId>::<name>" - lets findChildByName see
+// files created by uploadJsonFile/uploadBinaryFile in this same test, the
+// same way the real Drive folder would for a re-backup.
+let driveFilesByParentAndName = new Map<string, { id: string; name: string; mimeType: string }>();
+
 const uploadBinaryFileMock = jest.fn(
-  async (name: string, parentId: string, localUri: string, mimeType: string) => ({
-    id: `media-${name}`,
-    name,
-    mimeType,
-  }),
+  async (name: string, parentId: string, localUri: string, mimeType: string) => {
+    const file = { id: `media-${name}`, name, mimeType };
+    driveFilesByParentAndName.set(`${parentId}::${name}`, file);
+    return file;
+  },
 );
-const uploadJsonFileMock = jest.fn(async (name: string, parentId: string, content: unknown) => ({
-  id: `json-${name}`,
-  name,
+const uploadJsonFileMock = jest.fn(async (name: string, parentId: string, content: unknown) => {
+  const file = { id: `json-${name}`, name, mimeType: "application/json" };
+  driveFilesByParentAndName.set(`${parentId}::${name}`, file);
+  return { ...file, modifiedTime: "2026-01-01T00:00:00.000Z" };
+});
+const findChildByNameMock = jest.fn(async (parentId: string, name: string) =>
+  driveFilesByParentAndName.get(`${parentId}::${name}`) ?? null,
+);
+const updateJsonFileMock = jest.fn(async (fileId: string, content: unknown) => ({
+  id: fileId,
+  name: "updated.json",
   mimeType: "application/json",
-  modifiedTime: "2026-01-01T00:00:00.000Z",
+  modifiedTime: "2026-01-02T00:00:00.000Z",
+}));
+const updateBinaryFileMock = jest.fn(async (fileId: string, localUri: string, mimeType: string) => ({
+  id: fileId,
+  name: "updated",
+  mimeType,
 }));
 
 jest.mock("@/core/drive-sync/drive-api-client", () => ({
   ensureFolder: (name: string, parentId: string) => ensureFolderMock(name, parentId),
+  findChildByName: (parentId: string, name: string) => findChildByNameMock(parentId, name),
   uploadBinaryFile: (name: string, parentId: string, localUri: string, mimeType: string) =>
     uploadBinaryFileMock(name, parentId, localUri, mimeType),
   uploadJsonFile: (name: string, parentId: string, content: unknown) =>
     uploadJsonFileMock(name, parentId, content),
+  updateJsonFile: (fileId: string, content: unknown) => updateJsonFileMock(fileId, content),
+  updateBinaryFile: (fileId: string, localUri: string, mimeType: string) =>
+    updateBinaryFileMock(fileId, localUri, mimeType),
 }));
 
 interface FakePointRow {
@@ -70,6 +93,7 @@ let projects: FakeProjectRow[] = [];
 function resetFakeState() {
   points = [];
   projects = [];
+  driveFilesByParentAndName = new Map();
 }
 
 function seedProject(overrides: Partial<FakeProjectRow> = {}): FakeProjectRow {
@@ -150,17 +174,30 @@ beforeEach(() => {
   jest.clearAllMocks();
   ensureFolderMock.mockImplementation(async (name: string, parentId: string) => `${parentId}/${name}`);
   uploadBinaryFileMock.mockImplementation(
-    async (name: string, parentId: string, localUri: string, mimeType: string) => ({
-      id: `media-${name}`,
-      name,
-      mimeType,
-    }),
+    async (name: string, parentId: string, localUri: string, mimeType: string) => {
+      const file = { id: `media-${name}`, name, mimeType };
+      driveFilesByParentAndName.set(`${parentId}::${name}`, file);
+      return file;
+    },
   );
-  uploadJsonFileMock.mockImplementation(async (name: string, parentId: string, content: unknown) => ({
-    id: `json-${name}`,
-    name,
+  uploadJsonFileMock.mockImplementation(async (name: string, parentId: string, content: unknown) => {
+    const file = { id: `json-${name}`, name, mimeType: "application/json" };
+    driveFilesByParentAndName.set(`${parentId}::${name}`, file);
+    return { ...file, modifiedTime: "2026-01-01T00:00:00.000Z" };
+  });
+  findChildByNameMock.mockImplementation(async (parentId: string, name: string) =>
+    driveFilesByParentAndName.get(`${parentId}::${name}`) ?? null,
+  );
+  updateJsonFileMock.mockImplementation(async (fileId: string, content: unknown) => ({
+    id: fileId,
+    name: "updated.json",
     mimeType: "application/json",
-    modifiedTime: "2026-01-01T00:00:00.000Z",
+    modifiedTime: "2026-01-02T00:00:00.000Z",
+  }));
+  updateBinaryFileMock.mockImplementation(async (fileId: string, localUri: string, mimeType: string) => ({
+    id: fileId,
+    name: "updated",
+    mimeType,
   }));
 });
 
@@ -327,5 +364,50 @@ describe("backupAllPendingPoints", () => {
 
     expect(getApprovedUnsyncedPointsByProjectMock).toHaveBeenCalledWith(project.id);
     expect(uploadJsonFileMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("backupPoint - idempotent re-backup (audit finding CRÍTICO 1)", () => {
+  it("backing up the same point twice updates the existing Drive file instead of creating a duplicate", async () => {
+    const project = seedProject();
+    const point = seedPoint(project.id);
+
+    await backupPoint(point.id.toString());
+    const result = await backupPoint(point.id.toString());
+
+    expect(result.success).toBe(true);
+    expect(uploadJsonFileMock).toHaveBeenCalledTimes(1); // only the first call created the file
+    expect(updateJsonFileMock).toHaveBeenCalledTimes(1); // the second call updated it in place
+    expect(updateJsonFileMock).toHaveBeenCalledWith(
+      `json-point-uuid-${point.id}.json`,
+      expect.anything(),
+    );
+    // Still exactly one file under that name in the simulated Drive folder.
+    const matchingEntries = [...driveFilesByParentAndName.keys()].filter((key) =>
+      key.endsWith(`::point-uuid-${point.id}.json`),
+    );
+    expect(matchingEntries).toHaveLength(1);
+  });
+
+  it("backing up the same photo twice updates the existing Drive file instead of creating a duplicate", async () => {
+    fsState.set("file:///capture/photo1.jpg", { isDir: false, content: "bytes" });
+    const project = seedProject();
+    const point = seedPoint(project.id, {
+      photos: JSON.stringify([{ uri: "file:///capture/photo1.jpg", timestamp: 1 }]),
+    });
+
+    await backupPoint(point.id.toString());
+    // Second backup (e.g. a retry, or the point's data changed and it was
+    // re-approved) with the same photo still attached.
+    point.drive_synced_at = null;
+    await backupPoint(point.id.toString());
+
+    expect(uploadBinaryFileMock).toHaveBeenCalledTimes(1);
+    expect(updateBinaryFileMock).toHaveBeenCalledTimes(1);
+    expect(updateBinaryFileMock).toHaveBeenCalledWith(
+      "media-photo_1.jpg",
+      "file:///capture/photo1.jpg",
+      "image/jpeg",
+    );
   });
 });

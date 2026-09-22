@@ -4,7 +4,10 @@
 > description of the collaboration feature, including the old multi-member
 > Drive model and the first draft of the single-owner export/import model.
 > This is the version to build against. Once implemented and tested, this
-> content becomes the basis for docs/12_BACKUP_AND_COLLABORATION.md. (FAQ turns to 13_FAQ)
+> content becomes the basis for
+> docs/arquitetura-nomos/12_BACKUP_AND_COLLABORATION.md — note this means
+> renumbering the existing 12_DUVIDAS_FREQUENTES.md (FAQ) to
+> 13_DUVIDAS_FREQUENTES.md to make room.
 
 ## 1. Core principle
 
@@ -212,7 +215,9 @@ This is the **only** remaining scenario where the app reads from Drive
 proactively. Framed clearly as "your own backup," not "shared projects":
 
 - In "Meu Nomos", a section (or action) "Restaurar meus projetos do Drive",
-  visible only when a Google account is connected. Lists the signed-in
+  always visible (following the same 10.1 pattern as every other owner
+  action: tapping it without a connected account opens the connection modal
+  in place, rather than the action itself being hidden). Lists the signed-in
   account's own Nomos project folders in Drive
   (`listOwnNomosProjectFolders`) that don't already have a local project
   linked to them.
@@ -439,6 +444,10 @@ clear, specific message ("Este arquivo foi criado por uma versão mais nova
 do Nomos" or similar) if the value isn't a version this build understands —
 never fall through to reading fields optimistically and produce a confusing
 downstream error instead.
+
+`manifest.json` (section 8/9) carries the same `format_version: 1` field and
+follows the identical rule — the entire restore flow (section 9) depends on
+this file's shape, so it gets no less protection than the two packages.
 
 ### 14.7 A fix is not done until there is proof, not a description of one
 

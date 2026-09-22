@@ -189,6 +189,11 @@ function assertValidPackageShape(
       "Arquivo inválido: active_vegetation_classification ausente.",
     );
   }
+  // Section 3.1: this package always makes the importer a collaborator -
+  // never trust anything else that might show up here.
+  if (candidate.package_role_for_importer !== "collaborator") {
+    throw new InvalidPackageError("Este pacote não pode ser importado desta forma.");
+  }
 }
 
 export async function applyProjectConfigPackage(
@@ -201,6 +206,11 @@ export async function applyProjectConfigPackage(
   let created: boolean;
 
   if (existingProject) {
+    if (existingProject.collaboration_role === "owner") {
+      throw new InvalidPackageError(
+        "Este projeto já é seu neste dispositivo e não pode ser reimportado como cópia de colaborador.",
+      );
+    }
     projectId = existingProject.id;
     created = false;
   } else {
@@ -230,7 +240,7 @@ export async function applyProjectConfigPackage(
       pkg.protocol_source,
       pkg.project_uuid,
       pkg.owner_email,
-      "collaborator",
+      pkg.package_role_for_importer,
     );
     if (!newProjectId) {
       throw new Error("Failed to create local project while importing configuration package");

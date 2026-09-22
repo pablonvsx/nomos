@@ -251,6 +251,9 @@ export default function ProjectsScreen() {
     if (result.ownerEmailWarning) {
       alert(t("common.info"), t("driveRestore.ownerEmailWarning"));
     }
+    if (result.activeClassificationWarning) {
+      alert(t("common.info"), t("driveRestore.activeClassificationWarning"));
+    }
 
     const summary =
       t("driveRestore.restoreSummary", {
@@ -259,6 +262,9 @@ export default function ProjectsScreen() {
       }) +
       (result.mediaFailed > 0
         ? "\n" + t("driveRestore.mediaFailedWarning", { count: result.mediaFailed.toString() })
+        : "") +
+      (result.duplicatesSkipped > 0
+        ? "\n" + t("driveRestore.duplicatesSkippedWarning", { count: result.duplicatesSkipped.toString() })
         : "");
 
     alert(t("common.success"), summary, () =>

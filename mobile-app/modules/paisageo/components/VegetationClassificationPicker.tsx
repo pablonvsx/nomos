@@ -18,7 +18,10 @@ import {
   getVegetationClassificationsByProject,
   setActiveVegetationClassification,
   getActiveVegetationClassificationConfig,
+  ensureVegetationClassificationUuid,
 } from "@/db/queries/vegetation-classifications";
+import { getProjectById } from "@/db/queries/projects";
+import { syncActiveVegetationClassificationToDrive } from "@/core/drive-sync/catalog-sync-service";
 import { VegetationClassification } from "@/types/database";
 import { useI18n } from "@/contexts/i18n-context";
 
@@ -75,7 +78,17 @@ export default function VegetationClassificationPicker({
     setSaving(true);
     try {
       await setActiveVegetationClassification(projectId, selectedClassificationId, "custom");
-      
+
+      // Best-effort, non-blocking push to Drive (audit finding IMPORTANTE
+      // 3) - never awaited, never blocks the local selection.
+      ensureVegetationClassificationUuid(selectedClassificationId)
+        .then((uuid) =>
+          getProjectById(projectId).then(
+            (project) => project && syncActiveVegetationClassificationToDrive(project, "custom", uuid),
+          ),
+        )
+        .catch(() => {});
+
       if (onConfigChange) {
         onConfigChange();
       }

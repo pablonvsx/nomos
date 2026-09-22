@@ -373,7 +373,7 @@ describe("restoreOwnProjectFromDrive - active vegetation classification resoluti
       classes: [{ id: "class_1", name: "Cerrado" }],
     });
 
-    await restoreOwnProjectFromDrive("folder-1", { includeMedia: false });
+    const result = await restoreOwnProjectFromDrive("folder-1", { includeMedia: false });
 
     expect(setActiveVegetationClassificationMock).toHaveBeenCalledWith(
       expect.any(Number),
@@ -386,14 +386,34 @@ describe("restoreOwnProjectFromDrive - active vegetation classification resoluti
       null,
       "standard",
     );
+    expect(result.activeClassificationWarning).toBe(false);
   });
 
   it("sets 'standard' when the manifest says so", async () => {
     getManifestMock.mockResolvedValue(baseManifest({ active_vegetation_classification: { type: "standard" } }));
 
-    await restoreOwnProjectFromDrive("folder-1", { includeMedia: false });
+    const result = await restoreOwnProjectFromDrive("folder-1", { includeMedia: false });
 
     expect(setActiveVegetationClassificationMock).toHaveBeenCalledWith(expect.any(Number), null, "standard");
+    expect(result.activeClassificationWarning).toBe(false);
+  });
+
+  it("reports activeClassificationWarning instead of silently resolving to 'standard' when the manifest's custom uuid isn't among the downloaded classifications (audit finding IMPORTANTE 1)", async () => {
+    getManifestMock.mockResolvedValue(
+      baseManifest({
+        active_vegetation_classification: {
+          type: "custom",
+          custom_classification_uuid: "veg-uuid-missing",
+        },
+      }),
+    );
+    // No vegetation-classes folder/file seeded at all - the referenced uuid
+    // is nowhere to be found among what was downloaded.
+
+    const result = await restoreOwnProjectFromDrive("folder-1", { includeMedia: false });
+
+    expect(result.activeClassificationWarning).toBe(true);
+    expect(setActiveVegetationClassificationMock).not.toHaveBeenCalled();
   });
 });
 
@@ -444,6 +464,31 @@ describe("restoreOwnProjectFromDrive - points and media", () => {
     expect(downloadBinaryFileMock).not.toHaveBeenCalled();
     expect(result.imported).toBe(1);
     expect(result.mediaDownloaded).toBe(0);
+  });
+
+  it("a stray duplicate <point_uuid>.json in Drive (e.g. from before backupPoint was idempotent) is only imported once (audit finding CRÍTICO 1)", async () => {
+    getManifestMock.mockResolvedValue(baseManifest());
+    addFolder("folder-1", "approved-id", "approved");
+    // Two distinct Drive files, same point_uuid inside - the exact
+    // corruption a pre-fix repeated single-point backup could produce.
+    addJsonFile(
+      "approved-id",
+      "point1-file-id-a",
+      "point-uuid-1-copy-a.json",
+      samplePointEntry({ point_uuid: "point-uuid-1" }),
+    );
+    addJsonFile(
+      "approved-id",
+      "point1-file-id-b",
+      "point-uuid-1-copy-b.json",
+      samplePointEntry({ point_uuid: "point-uuid-1" }),
+    );
+
+    const result = await restoreOwnProjectFromDrive("folder-1", { includeMedia: false });
+
+    expect(result.imported).toBe(1);
+    expect(createPointMock).toHaveBeenCalledTimes(1);
+    expect(result.duplicatesSkipped).toBe(1);
   });
 });
 

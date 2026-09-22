@@ -1101,7 +1101,7 @@
     "title": "Duplicate Points",
     "replace": "Replace",
     "discard": "Discard",
-    "summary": "{{replaced}} replaced, {{discarded}} discarded."
+    "summary": "{{imported}} new imported, {{replaced}} replaced, {{discarded}} discarded."
   },
   "pointApproval": {
     "pendingApprovalsTitle": "Pending Approvals",
@@ -1152,10 +1152,14 @@
     "restoring": "Restoring...",
     "restoreSummary": "{{imported}} point(s) imported, {{mediaDownloaded}} with media downloaded.",
     "mediaFailedWarning": "{{count}} media file(s) could not be downloaded.",
+    "duplicatesSkippedWarning": "{{count}} duplicate point(s) on Drive were skipped.",
     "ownerEmailWarning": "The owner email recorded for this project differs from the account connected on this device.",
+    "activeClassificationWarning": "The active vegetation classification could not be recovered; check the Project Settings.",
     "errorRestoring": "Could not restore the project.",
+    "errorRestoringWithDetail": "Could not restore the project. Technical detail: {{detail}}",
     "errorAlreadyExists": "This project already exists on this device.",
     "errorIncompleteManifest": "This project's manifest file is incomplete or corrupted.",
-    "errorProtocolNotFound": "This project's custom protocol was not found on Drive."
+    "errorProtocolNotFound": "This project's custom protocol was not found on Drive.",
+    "errorUnsupportedFormatVersion": "This project was created by a newer version of Nomos and can't be restored on this device."
   }
 }

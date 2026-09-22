@@ -17,6 +17,7 @@ import {
   getManifest,
 } from "@/core/drive-sync/project-drive-service";
 import { restoreOwnProjectFromDrive, type RestoreResult } from "@/core/drive-sync/restore-service";
+import { describeRestoreError } from "@/core/drive-sync/restore-error-messages";
 import type { DriveFile } from "@/core/drive-sync/drive-api-client";
 import { useI18n } from "@/contexts/i18n-context";
 import { BUTTON_RADIUS } from "@/constants/shape";
@@ -89,8 +90,17 @@ export const RestoreProjectsModal: React.FC<RestoreProjectsModalProps> = ({
       onRestored(result);
     } catch (err) {
       console.error("Error restoring project from Drive:", err);
-      setError(err instanceof Error ? err.message : t("driveRestore.errorRestoring"));
-      setSelected(null);
+      // Never dismiss the choice dialog on failure - it's the only place
+      // this message is shown, and the person needs to actually see it
+      // (audit finding CRÍTICO 2). Unmapped errors keep their technical
+      // detail instead of being replaced by a generic sentence (audit
+      // finding IMPORTANTE 2).
+      const { key, technicalDetail } = describeRestoreError(err);
+      setError(
+        technicalDetail
+          ? t("driveRestore.errorRestoringWithDetail", { detail: technicalDetail })
+          : t(key),
+      );
     } finally {
       setIsRestoring(false);
     }

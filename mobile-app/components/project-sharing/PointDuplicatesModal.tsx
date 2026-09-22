@@ -63,6 +63,7 @@ export const PointDuplicatesModal: React.FC<PointDuplicatesModalProps> = ({
               style={{ color: theme.colors.onSurfaceVariant, textAlign: "justify" }}
             >
               {t("pointDuplicates.summary", {
+                imported: result.imported.toString(),
                 replaced: replaced.toString(),
                 discarded: discarded.toString(),
               })}

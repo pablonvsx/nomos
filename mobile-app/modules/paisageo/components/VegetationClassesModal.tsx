@@ -21,6 +21,8 @@ import {
   createVegetationClassification,
   updateVegetationClassification,
 } from "@/db/queries/vegetation-classifications";
+import { getProjectById } from "@/db/queries/projects";
+import { syncVegetationClassesToDrive } from "@/core/drive-sync/catalog-sync-service";
 import { useI18n } from "@/contexts/i18n-context";
 import { useAlertDialog } from "@/hooks/use-dialog";
 
@@ -164,6 +166,15 @@ export default function VegetationClassesModal({
           classesData
         );
         result = classificationId ? { id: classificationId } : null;
+
+        if (classificationId) {
+          // Best-effort, non-blocking push to Drive (audit finding
+          // IMPORTANTE 3) - only a newly created classification needs
+          // this; editing an existing one is out of scope for now.
+          getProjectById(projectId)
+            .then((project) => project && syncVegetationClassesToDrive(project))
+            .catch(() => {});
+        }
       }
 
       if (result && onSave) {

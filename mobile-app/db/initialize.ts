@@ -225,6 +225,13 @@ export async function initDatabase() {
     await db.execAsync(
       "CREATE INDEX IF NOT EXISTS idx_points_uuid ON points(uuid)",
     );
+    // Guards against a point being duplicated under the same uuid within a
+    // project (e.g. a Drive backup retry producing two point files that
+    // both get restored) - partial index so multiple points without a uuid
+    // yet are still allowed (audit finding CRÍTICO 1).
+    await db.execAsync(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_points_project_uuid_unique ON points(project_id, uuid) WHERE uuid IS NOT NULL",
+    );
 
     // Point Modules Table (one record per module per point)
     await db.execAsync(`

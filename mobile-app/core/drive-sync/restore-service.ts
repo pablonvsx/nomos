@@ -41,6 +41,15 @@ export interface RestoreResult {
   mediaFailed: number;
   /** Non-blocking signal (section 14.3): the manifest's owner_email differs from the currently connected account. */
   ownerEmailWarning: boolean;
+  /** True when the manifest pointed to a custom classification whose file
+   * wasn't found among the downloaded ones - the project was restored as
+   * 'standard' instead, and the owner should double check (audit finding
+   * IMPORTANTE 1). Never silently ignored. */
+  activeClassificationWarning: boolean;
+  /** Approved point files skipped because their point_uuid was already
+   * processed earlier in this same restore (stray Drive duplicate, e.g.
+   * from before backupPoint became idempotent). */
+  duplicatesSkipped: number;
 }
 
 export async function restoreOwnProjectFromDrive(
@@ -154,12 +163,18 @@ export async function restoreOwnProjectFromDrive(
 
   // Resolve the active vegetation classification to the LOCAL id - this is
   // the exact class of bug the previous attempt shipped (falling back to
-  // 'standard' silently instead of resolving the uuid).
+  // 'standard' silently instead of resolving the uuid). If the manifest
+  // points at a custom uuid that isn't among the downloaded classifications
+  // (audit finding IMPORTANTE 1 - the write side can fail to push it),
+  // this is now an explicit, reported warning instead of a silent no-op.
+  let activeClassificationWarning = false;
   if (manifest.active_vegetation_classification.type === "custom") {
     const targetUuid = manifest.active_vegetation_classification.custom_classification_uuid;
     const localId = targetUuid ? localVegetationIdByUuid.get(targetUuid) : undefined;
     if (localId) {
       await setActiveVegetationClassification(newProjectId, localId, "custom");
+    } else {
+      activeClassificationWarning = true;
     }
   } else {
     await setActiveVegetationClassification(newProjectId, null, "standard");
@@ -169,6 +184,7 @@ export async function restoreOwnProjectFromDrive(
   let imported = 0;
   let mediaDownloaded = 0;
   let mediaFailed = 0;
+  let duplicatesSkipped = 0;
 
   const approvedFolder = await findChildByName(driveFolderId, "approved");
   if (approvedFolder) {
@@ -181,8 +197,19 @@ export async function restoreOwnProjectFromDrive(
       mediaRootFolder = await findChildByName(approvedFolder.id, "media");
     }
 
+    // Defensive dedupe: a stray duplicate `<uuid>.json` in Drive (e.g. from
+    // before backupPoint became idempotent) must not produce two local
+    // points with the same uuid - points.uuid is now unique per project.
+    const seenPointUuids = new Set<string>();
+
     for (const file of approvedFiles) {
       const entry = await readJsonFile<PointPackageEntry>(file.id);
+
+      if (seenPointUuids.has(entry.point_uuid)) {
+        duplicatesSkipped += 1;
+        continue;
+      }
+      seenPointUuids.add(entry.point_uuid);
 
       let photoUris: string[] = [];
       let audioEntries: Array<{ uri: string; duration: number; timestamp: number }> = [];
@@ -217,7 +244,15 @@ export async function restoreOwnProjectFromDrive(
     }
   }
 
-  return { projectId: newProjectId, imported, mediaDownloaded, mediaFailed, ownerEmailWarning };
+  return {
+    projectId: newProjectId,
+    imported,
+    mediaDownloaded,
+    mediaFailed,
+    ownerEmailWarning,
+    activeClassificationWarning,
+    duplicatesSkipped,
+  };
 }
 
 async function downloadPointMedia(

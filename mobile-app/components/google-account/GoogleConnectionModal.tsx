@@ -11,8 +11,9 @@ interface GoogleConnectionModalProps {
   onDismiss: () => void;
   /** Called once the account connects successfully, so a caller can resume
    * whatever action needed a connected account in the first place (section
-   * 10.1) - no caller uses this yet in this phase, but the modal is ready
-   * for it. */
+   * 10.1) - used by projects.tsx and project-details/[id].tsx to
+   * automatically retry the pending Drive action (activate backup, back up,
+   * restore) once the account is connected. */
   onConnected?: (account: GoogleAccount) => void;
 }
 

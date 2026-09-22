@@ -39,6 +39,8 @@ import {
   projectSpeciesExists,
   getProjectSpeciesById,
 } from "@/db/queries/project-species";
+import { getProjectById } from "@/db/queries/projects";
+import { syncSpeciesCatalogToDrive } from "@/core/drive-sync/catalog-sync-service";
 import { useI18n } from "@/contexts/i18n-context";
 import { useAlertDialog } from "@/hooks/use-dialog";
 import { BUTTON_RADIUS } from "@/constants/shape";
@@ -330,10 +332,18 @@ export default function SpeciesInput({
           })),
         });
 
-        if (catalogSpeciesId && catalogSpecies.length > 0) {
-          const created = await getProjectSpeciesById(catalogSpeciesId);
-          if (created) {
-            setCatalogSpecies((prev) => [...prev, created]);
+        if (catalogSpeciesId) {
+          // Best-effort, non-blocking push to Drive (audit finding
+          // IMPORTANTE 3) - never awaited, never blocks saving the point.
+          getProjectById(projectId)
+            .then((project) => project && syncSpeciesCatalogToDrive(project))
+            .catch(() => {});
+
+          if (catalogSpecies.length > 0) {
+            const created = await getProjectSpeciesById(catalogSpeciesId);
+            if (created) {
+              setCatalogSpecies((prev) => [...prev, created]);
+            }
           }
         }
       }

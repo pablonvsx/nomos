@@ -1101,7 +1101,7 @@
     "title": "Points en Double",
     "replace": "Remplacer",
     "discard": "Ignorer",
-    "summary": "{{replaced}} remplacé(s), {{discarded}} ignoré(s)."
+    "summary": "{{imported}} nouveau(x) importé(s), {{replaced}} remplacé(s), {{discarded}} ignoré(s)."
   },
   "pointApproval": {
     "pendingApprovalsTitle": "Approbations en Attente",
@@ -1152,10 +1152,14 @@
     "restoring": "Restauration...",
     "restoreSummary": "{{imported}} point(s) importé(s), {{mediaDownloaded}} avec média téléchargé.",
     "mediaFailedWarning": "{{count}} fichier(s) média n'ont pas pu être téléchargés.",
+    "duplicatesSkippedWarning": "{{count}} point(s) en double sur Drive ont été ignorés.",
     "ownerEmailWarning": "L'e-mail du propriétaire enregistré pour ce projet diffère du compte connecté sur cet appareil.",
+    "activeClassificationWarning": "La classification de végétation active n'a pas pu être récupérée ; vérifiez dans les paramètres du projet.",
     "errorRestoring": "Impossible de restaurer le projet.",
+    "errorRestoringWithDetail": "Impossible de restaurer le projet. Détail technique : {{detail}}",
     "errorAlreadyExists": "Ce projet existe déjà sur cet appareil.",
     "errorIncompleteManifest": "Le fichier manifeste de ce projet est incomplet ou corrompu.",
-    "errorProtocolNotFound": "Le protocole personnalisé de ce projet n'a pas été trouvé sur Drive."
+    "errorProtocolNotFound": "Le protocole personnalisé de ce projet n'a pas été trouvé sur Drive.",
+    "errorUnsupportedFormatVersion": "Ce projet a été créé par une version plus récente de Nomos et ne peut pas être restauré sur cet appareil."
   }
 }

@@ -69,11 +69,13 @@ jest.mock("@/core/drive-sync/drive-api-client", () => ({
 
 import {
   activateDriveBackup,
+  getManifest,
   updateManifest,
   GoogleAccountRequiredError,
   InvalidCollaborationRoleError,
   type ProjectManifest,
 } from "../project-drive-service";
+import { UnsupportedPackageVersionError } from "@/core/project-sharing/package-errors";
 
 const CONNECTED_ACCOUNT = { email: "owner@example.com", name: "Owner" };
 
@@ -219,8 +221,47 @@ describe("activateDriveBackup - happy path", () => {
   });
 });
 
+describe("getManifest", () => {
+  beforeEach(() => {
+    findChildByNameMock.mockResolvedValue({
+      id: "manifest-file-id",
+      name: "manifest.json",
+      mimeType: "application/json",
+    });
+  });
+
+  it("rejects a manifest without format_version (e.g. one written before this check existed), before trusting any other field", async () => {
+    readJsonFileMock.mockResolvedValue({
+      project_uuid: "manifest-uuid",
+      project_name: "Projeto",
+      protocol_id: "nomos-paisageo-v1",
+      protocol_source: "official",
+      owner_email: "owner@example.com",
+      active_vegetation_classification: { type: "standard" },
+      // format_version intentionally absent.
+    });
+
+    await expect(getManifest("folder-1")).rejects.toBeInstanceOf(UnsupportedPackageVersionError);
+  });
+
+  it("accepts a manifest with the current format_version", async () => {
+    readJsonFileMock.mockResolvedValue({
+      format_version: 1,
+      project_uuid: "manifest-uuid",
+      project_name: "Projeto",
+      protocol_id: "nomos-paisageo-v1",
+      protocol_source: "official",
+      owner_email: "owner@example.com",
+      active_vegetation_classification: { type: "standard" },
+    });
+
+    await expect(getManifest("folder-1")).resolves.toMatchObject({ project_uuid: "manifest-uuid" });
+  });
+});
+
 describe("updateManifest", () => {
   const currentManifest: ProjectManifest = {
+    format_version: 1,
     project_uuid: "manifest-uuid",
     project_name: "Projeto",
     protocol_id: "nomos-paisageo-v1",
@@ -246,6 +287,7 @@ describe("updateManifest", () => {
     // caller that rebuilds the object from local state instead of
     // spreading `current`, silently losing owner_email.
     const naiveUpdater = (): ProjectManifest => ({
+      format_version: currentManifest.format_version,
       project_uuid: currentManifest.project_uuid,
       project_name: "Novo Nome",
       protocol_id: currentManifest.protocol_id,
@@ -255,6 +297,16 @@ describe("updateManifest", () => {
     });
 
     await expect(updateManifest("folder-1", naiveUpdater)).rejects.toThrow();
+    expect(updateJsonFileMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses an updater that would change format_version, without writing", async () => {
+    await expect(
+      updateManifest("folder-1", (current) => ({
+        ...current,
+        format_version: 2 as unknown as 1,
+      })),
+    ).rejects.toThrow();
     expect(updateJsonFileMock).not.toHaveBeenCalled();
   });
 
