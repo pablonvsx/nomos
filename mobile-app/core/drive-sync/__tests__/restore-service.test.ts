@@ -6,7 +6,7 @@
 // every critical behavior below has its failure/corruption scenario
 // simulated explicitly, not just the happy path (section 14.7).
 
-import { FakeFile, FakeDirectory, FakePaths, resetFakeFs } from "../../project-sharing/__tests__/fixtures/fake-environment";
+import { FakeFile, FakeDirectory, FakePaths, resetFakeFs, fsState } from "../../project-sharing/__tests__/fixtures/fake-environment";
 import type { DriveFile } from "../drive-api-client";
 
 jest.mock("expo-file-system", () => ({
@@ -137,7 +137,40 @@ const createCustomProtocolWithUuidMock = jest.fn(
     return row.id;
   },
 );
+// The local custom protocol the restored project uses: one section with a
+// photo_input and an audio_notes_input field (media that lives in module data).
+const getCustomProtocolByIdMock = jest.fn(async (id: number) =>
+  customProtocols.some((p) => p.id === id)
+    ? {
+        id,
+        name: "Fauna Survey",
+        theme: "fauna",
+        schema: {
+          sections: [
+            {
+              id: "section_1",
+              title: "Seção 1",
+              fields: [
+                { key: "fotos", type: "photo_input", label: "Fotos" },
+                { key: "gravacoes", type: "audio_notes_input", label: "Gravações" },
+                {
+                  key: "grupo",
+                  type: "repeatable_group",
+                  label: "Grupo",
+                  itemFields: [
+                    { key: "foto_item", type: "photo_input", label: "Foto do item" },
+                    { key: "audio_item", type: "audio_notes_input", label: "Audio do item" },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      }
+    : null,
+);
 jest.mock("@/db/queries/custom-protocols", () => ({
+  getCustomProtocolById: (id: number) => getCustomProtocolByIdMock(id),
   getCustomProtocolByUuid: (uuid: string) => getCustomProtocolByUuidMock(uuid),
   createCustomProtocolWithUuid: (name: string, schema: unknown, theme: string, uuid: string) =>
     createCustomProtocolWithUuidMock(name, schema, theme, uuid),
@@ -182,7 +215,12 @@ const setProjectAsOwnerMock = jest.fn(
     return true;
   },
 );
+const deleteProjectMock = jest.fn(async (projectId: number) => {
+  projects = projects.filter((p) => p.id !== projectId);
+  return true;
+});
 jest.mock("@/db/queries/projects", () => ({
+  deleteProject: (projectId: number) => deleteProjectMock(projectId),
   createProject: (...args: [string, string, string, "official" | "custom", string, string]) =>
     createProjectMock(...args),
   getProjectByUuid: (uuid: string) => getProjectByUuidMock(uuid),
@@ -232,7 +270,9 @@ jest.mock("@/db/queries/points", () => ({
   createPoint: (input: unknown) => createPointMock(input),
 }));
 
-import { restoreOwnProjectFromDrive } from "../restore-service";
+import { restoreOwnProjectFromDrive, MediaRestoreError } from "../restore-service";
+
+const restore = (driveFolderId: string) => restoreOwnProjectFromDrive(driveFolderId);
 
 const CONNECTED_ACCOUNT = { email: "owner@example.com", name: "Owner" };
 
@@ -274,14 +314,16 @@ beforeEach(() => {
   );
   listChildrenMock.mockImplementation(async (parentId: string) => childrenByParent.get(parentId) ?? []);
   readJsonFileMock.mockImplementation(async (fileId: string) => contentByFileId.get(fileId));
-  downloadBinaryFileMock.mockImplementation(async () => undefined);
+  downloadBinaryFileMock.mockImplementation(async (_fileId: string, destinationUri: string) => {
+    fsState.set(destinationUri, { isDir: false, content: "downloaded-bytes" });
+  });
 });
 
 describe("restoreOwnProjectFromDrive - identity preservation", () => {
   it("preserves the manifest's exact project_uuid on the local project - direct test of the previous attempt's worst bug", async () => {
     getManifestMock.mockResolvedValue(baseManifest({ project_uuid: "very-specific-uuid-42" }));
 
-    const result = await restoreOwnProjectFromDrive("folder-1", { includeMedia: false });
+    const result = await restore("folder-1");
 
     const created = projects.find((p) => p.id === result.projectId)!;
     expect(created.project_uuid).toBe("very-specific-uuid-42");
@@ -292,14 +334,14 @@ describe("restoreOwnProjectFromDrive - manifest validation", () => {
   it("fails with a clear error and creates nothing when project_uuid is missing", async () => {
     getManifestMock.mockResolvedValue(baseManifest({ project_uuid: "" }));
 
-    await expect(restoreOwnProjectFromDrive("folder-1", { includeMedia: false })).rejects.toThrow();
+    await expect(restore("folder-1")).rejects.toThrow();
     expect(createProjectMock).not.toHaveBeenCalled();
   });
 
   it("fails with a clear error and creates nothing when owner_email is missing", async () => {
     getManifestMock.mockResolvedValue(baseManifest({ owner_email: "" }));
 
-    await expect(restoreOwnProjectFromDrive("folder-1", { includeMedia: false })).rejects.toThrow();
+    await expect(restore("folder-1")).rejects.toThrow();
     expect(createProjectMock).not.toHaveBeenCalled();
   });
 });
@@ -321,7 +363,7 @@ describe("restoreOwnProjectFromDrive - duplicate refusal", () => {
     nextProjectId = 2;
     getManifestMock.mockResolvedValue(baseManifest({ project_uuid: "already-here" }));
 
-    await expect(restoreOwnProjectFromDrive("folder-1", { includeMedia: false })).rejects.toThrow();
+    await expect(restore("folder-1")).rejects.toThrow();
     expect(createProjectMock).not.toHaveBeenCalled();
   });
 });
@@ -338,7 +380,7 @@ describe("restoreOwnProjectFromDrive - custom protocol", () => {
       schema: { sections: [] },
     });
 
-    const result = await restoreOwnProjectFromDrive("folder-1", { includeMedia: false });
+    const result = await restore("folder-1");
 
     expect(createCustomProtocolWithUuidMock).toHaveBeenCalledWith(
       "Fauna Survey",
@@ -354,7 +396,7 @@ describe("restoreOwnProjectFromDrive - custom protocol", () => {
     getManifestMock.mockResolvedValue(baseManifest({ protocol_source: "custom" }));
     // No protocol-package.json registered in the fake Drive tree.
 
-    await expect(restoreOwnProjectFromDrive("folder-1", { includeMedia: false })).rejects.toThrow();
+    await expect(restore("folder-1")).rejects.toThrow();
     expect(createProjectMock).not.toHaveBeenCalled();
   });
 });
@@ -373,7 +415,7 @@ describe("restoreOwnProjectFromDrive - active vegetation classification resoluti
       classes: [{ id: "class_1", name: "Cerrado" }],
     });
 
-    const result = await restoreOwnProjectFromDrive("folder-1", { includeMedia: false });
+    const result = await restore("folder-1");
 
     expect(setActiveVegetationClassificationMock).toHaveBeenCalledWith(
       expect.any(Number),
@@ -392,7 +434,7 @@ describe("restoreOwnProjectFromDrive - active vegetation classification resoluti
   it("sets 'standard' when the manifest says so", async () => {
     getManifestMock.mockResolvedValue(baseManifest({ active_vegetation_classification: { type: "standard" } }));
 
-    const result = await restoreOwnProjectFromDrive("folder-1", { includeMedia: false });
+    const result = await restore("folder-1");
 
     expect(setActiveVegetationClassificationMock).toHaveBeenCalledWith(expect.any(Number), null, "standard");
     expect(result.activeClassificationWarning).toBe(false);
@@ -410,43 +452,35 @@ describe("restoreOwnProjectFromDrive - active vegetation classification resoluti
     // No vegetation-classes folder/file seeded at all - the referenced uuid
     // is nowhere to be found among what was downloaded.
 
-    const result = await restoreOwnProjectFromDrive("folder-1", { includeMedia: false });
+    const result = await restore("folder-1");
 
     expect(result.activeClassificationWarning).toBe(true);
     expect(setActiveVegetationClassificationMock).not.toHaveBeenCalled();
   });
 });
 
-describe("restoreOwnProjectFromDrive - points and media", () => {
-  it("a failed photo download among several does not abort the restore - the point is still created, and later points still process", async () => {
-    getManifestMock.mockResolvedValue(baseManifest());
-    addFolder("folder-1", "approved-id", "approved");
-    addJsonFile(
-      "approved-id",
-      "point1-file-id",
-      "point-uuid-1.json",
-      samplePointEntry({ point_uuid: "point-uuid-1", photos: ["photo_1.jpg", "photo_2.jpg"] }),
-    );
-    addJsonFile("approved-id", "point2-file-id", "point-uuid-2.json", samplePointEntry({ point_uuid: "point-uuid-2" }));
-    addFolder("approved-id", "media-root-id", "media");
-    addFolder("media-root-id", "point1-media-id", "point-uuid-1");
-    childrenByParent.set("point1-media-id", [
-      { id: "drive-photo-1", name: "photo_1.jpg", mimeType: "image/jpeg" },
-      { id: "drive-photo-2", name: "photo_2.jpg", mimeType: "image/jpeg" },
-    ]);
-    downloadBinaryFileMock.mockImplementation(async (fileId: string) => {
-      if (fileId === "drive-photo-1") throw new Error("network error");
+function addPointMedia(pointUuid: string, driveFileNames: string[]) {
+  if (!childByParentAndName.has("approved-id::media")) addFolder("approved-id", "media-root-id", "media");
+  addFolder("media-root-id", `${pointUuid}-media-id`, pointUuid);
+  childrenByParent.set(
+    `${pointUuid}-media-id`,
+    driveFileNames.map((name) => ({ id: `drive-${pointUuid}-${name}`, name, mimeType: "application/octet-stream" })),
+  );
+  for (const name of driveFileNames) {
+    childByParentAndName.set(`${pointUuid}-media-id::${name}`, {
+      id: `drive-${pointUuid}-${name}`,
+      name,
+      mimeType: "application/octet-stream",
     });
+  }
+}
 
-    const result = await restoreOwnProjectFromDrive("folder-1", { includeMedia: true });
+function importedMediaKeys(): string[] {
+  return [...fsState.keys()].filter((key) => key.includes("/imported_points_media"));
+}
 
-    expect(result.imported).toBe(2); // both points still created
-    expect(result.mediaFailed).toBe(1);
-    expect(result.mediaDownloaded).toBe(1);
-    expect(createPointMock).toHaveBeenCalledTimes(2);
-  });
-
-  it("includeMedia: false never calls downloadBinaryFile, even when points have photos/audio", async () => {
+describe("restoreOwnProjectFromDrive - points and media (always a full restore)", () => {
+  it("always downloads photos and audio, saves persisted paths that still exist after the restore returned, and marks the point as already backed up", async () => {
     getManifestMock.mockResolvedValue(baseManifest());
     addFolder("folder-1", "approved-id", "approved");
     addJsonFile(
@@ -457,13 +491,206 @@ describe("restoreOwnProjectFromDrive - points and media", () => {
         photos: ["photo_1.jpg"],
         audio_notes: [{ filename: "audio_note_1.m4a", duration: 5, timestamp: 1 }],
       }),
+      "2026-03-04T05:06:07.000Z",
     );
+    addPointMedia("point-uuid-1", ["photo_1.jpg", "audio_note_1.m4a"]);
 
-    const result = await restoreOwnProjectFromDrive("folder-1", { includeMedia: false });
+    const result = await restore("folder-1");
 
-    expect(downloadBinaryFileMock).not.toHaveBeenCalled();
-    expect(result.imported).toBe(1);
-    expect(result.mediaDownloaded).toBe(0);
+    expect(downloadBinaryFileMock).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({ imported: 1, mediaDownloaded: 2 });
+    const created = createPointMock.mock.calls[0][0] as any;
+    const [photo] = JSON.parse(created.photos) as Array<{ uri: string }>;
+    const [audio] = JSON.parse(created.audio_notes) as Array<{ uri: string }>;
+    expect(photo.uri).toContain("/imported_points_media/point-uuid-1/photo_1.jpg");
+    expect(new FakeFile(photo.uri).exists).toBe(true);
+    expect(new FakeFile(audio.uri).exists).toBe(true);
+    // Already on Drive, so it must not be offered for a new backup.
+    expect(created.drive_synced_at).toBe("2026-03-04T05:06:07.000Z");
+  });
+
+  it("a failed download aborts the whole restore and undoes it: project deleted, downloaded files removed", async () => {
+    getManifestMock.mockResolvedValue(baseManifest());
+    addFolder("folder-1", "approved-id", "approved");
+    addJsonFile(
+      "approved-id",
+      "point1-file-id",
+      "point-uuid-1.json",
+      samplePointEntry({ point_uuid: "point-uuid-1", photos: ["photo_1.jpg", "photo_2.jpg"] }),
+    );
+    addJsonFile("approved-id", "point2-file-id", "point-uuid-2.json", samplePointEntry({ point_uuid: "point-uuid-2" }));
+    addPointMedia("point-uuid-1", ["photo_1.jpg", "photo_2.jpg"]);
+    downloadBinaryFileMock.mockImplementation(async (fileId: string, destinationUri: string) => {
+      if (fileId === "drive-point-uuid-1-photo_2.jpg") throw new Error("network error");
+      fsState.set(destinationUri, { isDir: false, content: "downloaded-bytes" });
+    });
+
+    await expect(restore("folder-1")).rejects.toBeInstanceOf(MediaRestoreError);
+
+    expect(deleteProjectMock).toHaveBeenCalledWith(1);
+    expect(projects).toHaveLength(0);
+    expect(importedMediaKeys()).toEqual([]); // photo_1.jpg, already downloaded, was cleaned up too
+  });
+
+  it("aborts and undoes when a point lists media but the point's media folder is missing in Drive", async () => {
+    getManifestMock.mockResolvedValue(baseManifest());
+    addFolder("folder-1", "approved-id", "approved");
+    addJsonFile(
+      "approved-id",
+      "point1-file-id",
+      "point-uuid-1.json",
+      samplePointEntry({ photos: ["photo_1.jpg"] }),
+    );
+    // No approved/media folder at all.
+
+    await expect(restore("folder-1")).rejects.toBeInstanceOf(MediaRestoreError);
+
+    expect(deleteProjectMock).toHaveBeenCalledTimes(1);
+    expect(projects).toHaveLength(0);
+    expect(createPointMock).not.toHaveBeenCalled();
+  });
+
+  it("aborts and undoes when a listed file is not in the point's Drive media folder", async () => {
+    getManifestMock.mockResolvedValue(baseManifest());
+    addFolder("folder-1", "approved-id", "approved");
+    addJsonFile(
+      "approved-id",
+      "point1-file-id",
+      "point-uuid-1.json",
+      samplePointEntry({ photos: ["photo_1.jpg", "photo_2.jpg"] }),
+    );
+    addPointMedia("point-uuid-1", ["photo_1.jpg"]); // photo_2.jpg never made it to Drive
+
+    await expect(restore("folder-1")).rejects.toBeInstanceOf(MediaRestoreError);
+
+    expect(projects).toHaveLength(0);
+    expect(importedMediaKeys()).toEqual([]);
+  });
+
+  it("any non-media failure after the project was created also undoes the half-restored project", async () => {
+    getManifestMock.mockResolvedValue(baseManifest());
+    addFolder("folder-1", "approved-id", "approved");
+    addJsonFile("approved-id", "point1-file-id", "point-uuid-1.json", samplePointEntry());
+    createPointMock.mockRejectedValueOnce(new Error("disk full"));
+
+    await expect(restore("folder-1")).rejects.toThrow("disk full");
+
+    expect(projects).toHaveLength(0);
+  });
+
+  it("custom protocol: module photo/audio are downloaded and the saved data_json points at persisted local files", async () => {
+    getManifestMock.mockResolvedValue(baseManifest({ protocol_source: "custom", protocol_id: "placeholder" }));
+    addJsonFile("folder-1", "protocol-file-id", "protocol-package.json", {
+      uuid: "protocol-uuid-1",
+      name: "Fauna Survey",
+      theme: "fauna",
+      schema: { sections: [] },
+    });
+    addFolder("folder-1", "approved-id", "approved");
+    addJsonFile(
+      "approved-id",
+      "point1-file-id",
+      "point-uuid-1.json",
+      samplePointEntry({
+        modules: {
+          section_1: JSON.stringify({
+            fotos: JSON.stringify([{ uri: "package-media:modules/section_1_1.jpg", timestamp: 1 }]),
+            gravacoes: JSON.stringify([
+              { uri: "package-media:modules/section_1_2.m4a", duration: 3, timestamp: 2 },
+            ]),
+          }),
+        },
+      }),
+    );
+    addPointMedia("point-uuid-1", ["modules__section_1_1.jpg", "modules__section_1_2.m4a"]);
+
+    const result = await restore("folder-1");
+
+    expect(result.mediaDownloaded).toBe(2);
+    const created = createPointMock.mock.calls[0][0] as any;
+    const moduleJson = created.modules.section_1 as string;
+    expect(moduleJson).not.toContain("package-media:");
+    const data = JSON.parse(moduleJson);
+    const [photo] = JSON.parse(data.fotos) as Array<{ uri: string }>;
+    const [audio] = JSON.parse(data.gravacoes) as Array<{ uri: string }>;
+    expect(photo.uri).toContain("/imported_points_media/point-uuid-1/modules/section_1_1.jpg");
+    expect(new FakeFile(photo.uri).exists).toBe(true);
+    expect(new FakeFile(audio.uri).exists).toBe(true);
+  });
+
+  function groupPointEntry() {
+    return samplePointEntry({
+      modules: {
+        section_1: JSON.stringify({
+          grupo: [
+            {
+              foto_item: JSON.stringify([{ uri: "package-media:modules/section_1_grupo_0_foto_item_1.jpg", timestamp: 1 }]),
+              audio_item: JSON.stringify([
+                { uri: "package-media:modules/section_1_grupo_0_audio_item_2.m4a", duration: 3, timestamp: 2 },
+              ]),
+              nome: "item 0",
+            },
+            {
+              foto_item: JSON.stringify([{ uri: "package-media:modules/section_1_grupo_1_foto_item_3.jpg", timestamp: 3 }]),
+              audio_item: "[]",
+              nome: "item 1",
+            },
+          ],
+        }),
+      },
+    });
+  }
+
+  function setUpCustomGroupRestore(driveFileNames: string[]) {
+    getManifestMock.mockResolvedValue(baseManifest({ protocol_source: "custom", protocol_id: "placeholder" }));
+    addJsonFile("folder-1", "protocol-file-id", "protocol-package.json", {
+      uuid: "protocol-uuid-1",
+      name: "Fauna Survey",
+      theme: "fauna",
+      schema: { sections: [] },
+    });
+    addFolder("folder-1", "approved-id", "approved");
+    addJsonFile("approved-id", "point1-file-id", "point-uuid-1.json", groupPointEntry());
+    addPointMedia("point-uuid-1", driveFileNames);
+  }
+
+  it("custom protocol: media inside repeatable_group items is downloaded and the saved data_json points at persisted local files", async () => {
+    setUpCustomGroupRestore([
+      "modules__section_1_grupo_0_foto_item_1.jpg",
+      "modules__section_1_grupo_0_audio_item_2.m4a",
+      "modules__section_1_grupo_1_foto_item_3.jpg",
+    ]);
+
+    const result = await restore("folder-1");
+
+    expect(result.mediaDownloaded).toBe(3);
+    const created = createPointMock.mock.calls[0][0] as any;
+    const moduleJson = created.modules.section_1 as string;
+    expect(moduleJson).not.toContain("package-media:");
+    const data = JSON.parse(moduleJson);
+    expect(data.grupo).toHaveLength(2);
+    const [photo0] = JSON.parse(data.grupo[0].foto_item) as Array<{ uri: string }>;
+    const [audio0] = JSON.parse(data.grupo[0].audio_item) as Array<{ uri: string }>;
+    const [photo1] = JSON.parse(data.grupo[1].foto_item) as Array<{ uri: string }>;
+    for (const { uri } of [photo0, audio0, photo1]) {
+      expect(uri).toContain("/imported_points_media/point-uuid-1/modules/");
+      expect(new FakeFile(uri).exists).toBe(true);
+    }
+  });
+
+  it("a missing group media file in Drive aborts and undoes the whole restore", async () => {
+    setUpCustomGroupRestore([
+      "modules__section_1_grupo_0_foto_item_1.jpg",
+      // modules__section_1_grupo_0_audio_item_2.m4a never made it to Drive
+      "modules__section_1_grupo_1_foto_item_3.jpg",
+    ]);
+
+    await expect(restore("folder-1")).rejects.toBeInstanceOf(MediaRestoreError);
+
+    expect(deleteProjectMock).toHaveBeenCalledTimes(1);
+    expect(projects).toHaveLength(0);
+    expect(createPointMock).not.toHaveBeenCalled();
+    expect(importedMediaKeys()).toEqual([]); // the group files already downloaded were removed too
   });
 
   it("a stray duplicate <point_uuid>.json in Drive (e.g. from before backupPoint was idempotent) is only imported once (audit finding CRÍTICO 1)", async () => {
@@ -484,7 +711,7 @@ describe("restoreOwnProjectFromDrive - points and media", () => {
       samplePointEntry({ point_uuid: "point-uuid-1" }),
     );
 
-    const result = await restoreOwnProjectFromDrive("folder-1", { includeMedia: false });
+    const result = await restore("folder-1");
 
     expect(result.imported).toBe(1);
     expect(createPointMock).toHaveBeenCalledTimes(1);
@@ -497,7 +724,7 @@ describe("restoreOwnProjectFromDrive - owner_email non-blocking warning", () => 
     getCurrentGoogleAccountMock.mockReturnValue({ email: "someone-else@example.com", name: "Someone" });
     getManifestMock.mockResolvedValue(baseManifest({ owner_email: "owner@example.com" }));
 
-    const result = await restoreOwnProjectFromDrive("folder-1", { includeMedia: false });
+    const result = await restore("folder-1");
 
     expect(result.ownerEmailWarning).toBe(true);
     expect(result.projectId).toBeTruthy(); // never blocked
@@ -506,7 +733,7 @@ describe("restoreOwnProjectFromDrive - owner_email non-blocking warning", () => 
   it("does not warn when the connected account matches the manifest's owner_email", async () => {
     getManifestMock.mockResolvedValue(baseManifest({ owner_email: "owner@example.com" }));
 
-    const result = await restoreOwnProjectFromDrive("folder-1", { includeMedia: false });
+    const result = await restore("folder-1");
 
     expect(result.ownerEmailWarning).toBe(false);
   });

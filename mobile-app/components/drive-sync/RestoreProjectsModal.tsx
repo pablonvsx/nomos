@@ -81,12 +81,12 @@ export const RestoreProjectsModal: React.FC<RestoreProjectsModalProps> = ({
     })();
   }, [visible]);
 
-  const handleRestore = async (includeMedia: boolean) => {
+  const handleRestore = async () => {
     if (!selected) return;
     setIsRestoring(true);
     setError(null);
     try {
-      const result = await restoreOwnProjectFromDrive(selected.folder.id, { includeMedia });
+      const result = await restoreOwnProjectFromDrive(selected.folder.id);
       onRestored(result);
     } catch (err) {
       console.error("Error restoring project from Drive:", err);
@@ -157,7 +157,9 @@ export const RestoreProjectsModal: React.FC<RestoreProjectsModalProps> = ({
       <Dialog visible={selected !== null} onDismiss={() => (isRestoring ? null : setSelected(null))}>
         <Dialog.Title>{selected?.projectName}</Dialog.Title>
         <Dialog.Content>
-          <Text variant="bodyMedium">{t("driveRestore.chooseRestoreMode")}</Text>
+          <Text variant="bodyMedium" style={{ textAlign: "justify" }}>
+            {t("driveRestore.confirmRestore")}
+          </Text>
           {error && (
             <Text variant="bodySmall" style={{ color: theme.colors.error, marginTop: 8 }}>
               {error}
@@ -167,21 +169,20 @@ export const RestoreProjectsModal: React.FC<RestoreProjectsModalProps> = ({
         <Dialog.Actions>
           <Button
             mode="outlined"
-            onPress={() => handleRestore(false)}
-            loading={isRestoring}
+            onPress={() => setSelected(null)}
             disabled={isRestoring}
             style={{ borderRadius: BUTTON_RADIUS }}
           >
-            {t("driveRestore.dataOnly")}
+            {t("common.cancel")}
           </Button>
           <Button
             mode="contained"
-            onPress={() => handleRestore(true)}
+            onPress={handleRestore}
             loading={isRestoring}
             disabled={isRestoring}
             style={{ borderRadius: BUTTON_RADIUS }}
           >
-            {t("driveRestore.dataAndMedia")}
+            {t("driveRestore.restoreButton")}
           </Button>
         </Dialog.Actions>
       </Dialog>

@@ -10,6 +10,12 @@ import {
   updatePoint,
 } from "@/db/queries/points";
 import { parsePhotoUris, parseAudioNotes } from "@/db/mappers/json-utils";
+import {
+  PACKAGE_MEDIA_PREFIX,
+  buildModuleMediaRelativePath,
+  getModuleMediaFields,
+  mapModuleMediaUris,
+} from "@/core/project-sharing/module-media";
 import type { Point, PointModule } from "@/types/database";
 
 export const POINTS_PACKAGE_FORMAT_VERSION = 1;
@@ -56,6 +62,12 @@ export class CollectorCodeRequiredError extends Error {
   }
 }
 
+/** What the exporter could not put into the zip; never silently dropped. */
+export interface ExportPointsReport {
+  /** Source URIs of media files that were missing or failed to copy. */
+  skippedMedia: string[];
+}
+
 function extensionFromUri(uri: string, fallback: string): string {
   const match = uri.split(".").pop();
   return match && match.length <= 5 ? match : fallback;
@@ -64,7 +76,7 @@ function extensionFromUri(uri: string, fallback: string): string {
 async function buildAndSharePointsPackage(
   projectId: number,
   points: Array<Point & { rawModules: PointModule[] }>,
-): Promise<void> {
+): Promise<ExportPointsReport> {
   const collectorCode = await getLocalCollectorCode();
   if (!collectorCode) {
     throw new CollectorCodeRequiredError();
@@ -75,6 +87,8 @@ async function buildAndSharePointsPackage(
     throw new Error(`Project ${projectId} not found`);
   }
   const projectUuid = await ensureProjectUuid(projectId);
+  const moduleMediaFields = await getModuleMediaFields(project.protocol_id, project.protocol_source);
+  const skippedMedia: string[] = [];
 
   const stagingDir = new Directory(Paths.cache, `points_export_${Date.now()}`);
   if (stagingDir.exists) await stagingDir.delete();
@@ -92,21 +106,35 @@ async function buildAndSharePointsPackage(
         await updatePoint(point.id, { created_by: collectorCode });
       }
 
+      // The point's media directory is only created once a file is actually
+      // copied into it, so no empty directories end up in the zip.
       const mediaDir = new Directory(stagingDir, `media/${pointUuid}`);
-      await mediaDir.create({ intermediates: true });
+      const copyIntoMediaDir = async (
+        sourceUri: string,
+        relativePath: string,
+      ): Promise<boolean> => {
+        const srcFile = new File(sourceUri);
+        if (!srcFile.exists) {
+          skippedMedia.push(sourceUri);
+          return false;
+        }
+        try {
+          const destFile = new File(mediaDir, relativePath);
+          const destParent = new Directory(destFile.uri.split("/").slice(0, -1).join("/"));
+          await destParent.create({ intermediates: true, idempotent: true });
+          await srcFile.copy(destFile);
+          return true;
+        } catch {
+          skippedMedia.push(sourceUri);
+          return false;
+        }
+      };
 
       const photoFilenames: string[] = [];
       const photoUris = parsePhotoUris(point.photos);
       for (let i = 0; i < photoUris.length; i++) {
-        const srcFile = new File(photoUris[i]);
-        if (!srcFile.exists) continue; // source media may no longer exist on disk, skip silently
         const filename = `photo_${i + 1}.${extensionFromUri(photoUris[i], "jpg")}`;
-        try {
-          await srcFile.copy(new File(mediaDir, filename));
-          photoFilenames.push(filename);
-        } catch {
-          // Copy failed for some other reason - skip this file, never abort the export.
-        }
+        if (await copyIntoMediaDir(photoUris[i], filename)) photoFilenames.push(filename);
       }
 
       const audioFilenames: PointPackageAudioNote[] = [];
@@ -114,25 +142,34 @@ async function buildAndSharePointsPackage(
       for (let i = 0; i < audioNotes.length; i++) {
         const note = audioNotes[i];
         if (!note?.uri) continue;
-        const srcFile = new File(note.uri);
-        if (!srcFile.exists) continue;
         const filename = `audio_note_${i + 1}.${extensionFromUri(note.uri, "m4a")}`;
-        try {
-          await srcFile.copy(new File(mediaDir, filename));
+        if (await copyIntoMediaDir(note.uri, filename)) {
           audioFilenames.push({
             filename,
             duration: note.duration,
             timestamp: note.timestamp,
           });
-        } catch {
-          // Skip, same as photos above.
         }
       }
 
+      // Custom protocols keep photo_input / audio_notes_input media inside the
+      // module data_json. Copy those files into the zip too and replace the
+      // sender's device URIs with package-relative markers.
+      let moduleMediaCounter = 0;
       const modules: Record<string, string> = {};
       let schemaVersion = "1.0";
       for (const mod of point.rawModules) {
-        modules[mod.module_id] = mod.data_json;
+        const mediaFieldsOfModule = moduleMediaFields.filter((f) => f.moduleId === mod.module_id);
+        modules[mod.module_id] =
+          mediaFieldsOfModule.length === 0
+            ? mod.data_json
+            : await mapModuleMediaUris(mod.data_json, mediaFieldsOfModule, async (uri, location) => {
+                moduleMediaCounter += 1;
+                const relativePath = buildModuleMediaRelativePath(location, moduleMediaCounter, uri);
+                return (await copyIntoMediaDir(uri, relativePath))
+                  ? `${PACKAGE_MEDIA_PREFIX}${relativePath}`
+                  : null;
+              });
         schemaVersion = mod.schema_version;
       }
 
@@ -177,13 +214,15 @@ async function buildAndSharePointsPackage(
     if (await Sharing.isAvailableAsync()) {
       await Sharing.shareAsync(zipFile.uri, { mimeType: "application/zip" });
     }
+
+    return { skippedMedia };
   } finally {
     if (stagingDir.exists) await stagingDir.delete();
   }
 }
 
-export async function exportPointsPackage(pointIds: string[]): Promise<void> {
-  if (pointIds.length === 0) return;
+export async function exportPointsPackage(pointIds: string[]): Promise<ExportPointsReport> {
+  if (pointIds.length === 0) return { skippedMedia: [] };
 
   const idSet = new Set(pointIds);
   // All exported points belong to the same project - resolve it from any one of them.
@@ -194,13 +233,13 @@ export async function exportPointsPackage(pointIds: string[]): Promise<void> {
   const projectId = firstPoint.point.project_id;
 
   const points = await getPointsWithRawModulesByProject(projectId);
-  await buildAndSharePointsPackage(
+  return buildAndSharePointsPackage(
     projectId,
     points.filter((p) => idSet.has(p.id.toString())),
   );
 }
 
-export async function exportAllPointsPackage(projectId: number): Promise<void> {
+export async function exportAllPointsPackage(projectId: number): Promise<ExportPointsReport> {
   const points = await getPointsWithRawModulesByProject(projectId);
-  await buildAndSharePointsPackage(projectId, points);
+  return buildAndSharePointsPackage(projectId, points);
 }

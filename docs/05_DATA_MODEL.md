@@ -127,7 +127,11 @@ The fields marked "provisional" in the source code's own comment (`photos`, `aud
 never part of any collaboration flow — it only becomes `'pending'` when
 inserted by a points-package import, then `'approved'`/`'rejected'` via
 the local approval queue (see
-[12_BACKUP_COLLABORATION.md](12_BACKUP_COLLABORATION.md)). The partial
+[12_BACKUP_COLLABORATION.md](12_BACKUP_COLLABORATION.md)). The project's general point list, map and CSV/GeoJSON/media exports only
+include `NULL` or `'approved'` points (`VISIBLE_POINT_CONDITION`);
+`'pending'` points live only in the approval queue and `'rejected'` ones
+only in the rejected area. `drive_synced_at` is set by the Drive backup and
+also when a point is restored from Drive (it is already there). The partial
 unique index on `(project_id, uuid)` allows any number of points without
 a `uuid` yet (plain local collection never sets one at creation time —
 it's generated lazily, on first export/backup, by `ensurePointUuid`),

@@ -30,6 +30,14 @@ export interface CreatePointInput {
 
 export type UpdatePointInput = Partial<Omit<CreatePointInput, "project_id" | "protocol_id" | "uuid">>;
 
+/**
+ * SQL condition for the project's general point list/map/exports: only
+ * points collected directly (NULL) or already approved. Pending points live
+ * only in the approval queue and rejected ones only in the rejected area
+ * (section 6 of COLLAB_MODEL_REFERENCE.md).
+ */
+export const VISIBLE_POINT_CONDITION = "(approval_status IS NULL OR approval_status = 'approved')";
+
 // ──────────────────────────────────────────────
 // Database functions
 // ──────────────────────────────────────────────
@@ -49,8 +57,9 @@ export async function createPoint(input: CreatePointInput): Promise<number | nul
       `INSERT INTO points
          (project_id, protocol_id, point_number, lat, lon, altitude,
           generated_name, photos, audio_notes, additional_notes, point_size,
-          created_at, updated_at, uuid, approval_status, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          created_at, updated_at, uuid, approval_status, created_by,
+          drive_synced_at, rejection_reason)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         input.project_id,
         input.protocol_id,
@@ -68,6 +77,8 @@ export async function createPoint(input: CreatePointInput): Promise<number | nul
         input.uuid ?? null,
         input.approval_status ?? null,
         input.created_by ?? null,
+        input.drive_synced_at ?? null,
+        input.rejection_reason ?? null,
       ],
     );
 
@@ -122,7 +133,7 @@ export async function getPoint(
 export async function getPointsByProject(projectId: number): Promise<Point[]> {
   try {
     return await db.getAllAsync<Point>(
-      "SELECT * FROM points WHERE project_id = ? ORDER BY point_number ASC",
+      `SELECT * FROM points WHERE project_id = ? AND ${VISIBLE_POINT_CONDITION} ORDER BY point_number ASC`,
       [projectId],
     );
   } catch (error) {
@@ -287,7 +298,7 @@ export async function deletePoint(pointId: number): Promise<boolean> {
 export async function countPointsByProject(projectId: number): Promise<number> {
   try {
     const row = await db.getFirstAsync<{ count: number }>(
-      "SELECT COUNT(*) as count FROM points WHERE project_id = ?",
+      `SELECT COUNT(*) as count FROM points WHERE project_id = ? AND ${VISIBLE_POINT_CONDITION}`,
       [projectId],
     );
     return row?.count ?? 0;
@@ -303,7 +314,7 @@ export async function getPointsWithModulesByProject(
 ): Promise<PointWithModules[]> {
   try {
     const points = await db.getAllAsync<Point>(
-      "SELECT * FROM points WHERE project_id = ? ORDER BY point_number ASC",
+      `SELECT * FROM points WHERE project_id = ? AND ${VISIBLE_POINT_CONDITION} ORDER BY point_number ASC`,
       [projectId],
     );
     if (!points.length) return [];
@@ -405,7 +416,7 @@ export async function classifyProjectPoints(projectId: number): Promise<boolean>
   try {
     const points = await db.getAllAsync<{ id: number; generated_name: string | null }>(
       `SELECT id, generated_name FROM points
-       WHERE project_id = ? ORDER BY point_number ASC, id ASC`,
+       WHERE project_id = ? AND ${VISIBLE_POINT_CONDITION} ORDER BY point_number ASC, id ASC`,
       [projectId],
     );
 

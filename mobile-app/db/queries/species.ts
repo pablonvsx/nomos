@@ -343,13 +343,17 @@ export async function getSpeciesOccurrence(
     const occurrenceResult = await db.getFirstAsync<{ occurrence_count: number }>(
       `SELECT COUNT(DISTINCT point_id) as occurrence_count
        FROM species
-       WHERE id = ? AND project_id = ?`,
-      [speciesId, projectId],
+       WHERE id = ? AND project_id = ?
+         AND point_id IN (
+           SELECT id FROM points
+           WHERE project_id = ? AND (approval_status IS NULL OR approval_status = 'approved')
+         )`,
+      [speciesId, projectId, projectId],
     );
 
     // Get total points in the project
     const totalResult = await db.getFirstAsync<{ total_count: number }>(
-      "SELECT COUNT(DISTINCT id) as total_count FROM points WHERE project_id = ?",
+      "SELECT COUNT(DISTINCT id) as total_count FROM points WHERE project_id = ? AND (approval_status IS NULL OR approval_status = 'approved')",
       [projectId],
     );
 

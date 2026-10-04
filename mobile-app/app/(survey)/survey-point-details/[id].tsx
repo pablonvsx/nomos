@@ -57,6 +57,7 @@ import {
   exportPointsPackage,
   CollectorCodeRequiredError,
 } from "@/core/project-sharing/export-points";
+import { getProjectActionVisibility } from "@/core/project-sharing/action-visibility";
 import { CollectorCodeModal } from "@/components/local-identity/CollectorCodeModal";
 
 const screenWidth = Dimensions.get("window").width;
@@ -235,6 +236,8 @@ export default function UnifiedSurveyPointViewScreen() {
   const [point, setPoint] = useState<Point | null>(null);
   const [pointModules, setPointModules] = useState<PointModule[]>([]);
   const [project, setProject] = useState<Project | null>(null);
+  // Which collaboration actions this project's role may see (section 10.0 table).
+  const visibility = getProjectActionVisibility(project?.collaboration_role);
   const [customProtocol, setCustomProtocol] = useState<CustomProtocol | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fabOpen, setFabOpen] = useState(false);
@@ -413,8 +416,15 @@ export default function UnifiedSurveyPointViewScreen() {
   const handleExportSinglePoint = async () => {
     if (!point) return;
     try {
-      await exportPointsPackage([point.id.toString()]);
-      alert(t("common.success"), t("surveyView.pointSentToOwner"));
+      const report = await exportPointsPackage([point.id.toString()]);
+      if (report.skippedMedia.length > 0) {
+        alert(
+          t("common.info"),
+          t("surveyView.mediaSkippedWarning", { count: report.skippedMedia.length.toString() }),
+        );
+      } else {
+        alert(t("common.success"), t("surveyView.pointSentToOwner"));
+      }
     } catch (error) {
       if (error instanceof CollectorCodeRequiredError) {
         setCollectorCodeModalVisible(true);
@@ -950,12 +960,16 @@ export default function UnifiedSurveyPointViewScreen() {
             onPress: handleDelete,
             color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
           },
-          {
-            icon: "send",
-            label: t("surveyView.sendToOwner"),
-            onPress: handleExportSinglePoint,
-            color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
-          },
+          ...(visibility.exportPointsToOwner
+            ? [
+                {
+                  icon: "send",
+                  label: t("surveyView.sendToOwner"),
+                  onPress: handleExportSinglePoint,
+                  color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
+                },
+              ]
+            : []),
         ]}
         onStateChange={({ open }) => setFabOpen(open)}
         theme={{

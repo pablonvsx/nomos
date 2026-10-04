@@ -1,17 +1,22 @@
 import React, { useCallback, useState } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 import { Text, Card, Button, ActivityIndicator, useTheme as usePaperTheme } from "react-native-paper";
-import { useLocalSearchParams, useFocusEffect, Stack } from "expo-router";
+import { useLocalSearchParams, useFocusEffect, useRouter, Stack } from "expo-router";
 import { useAlertDialog } from "@/hooks/use-dialog";
 import { useI18n } from "@/contexts/i18n-context";
 import { useBottomContentPadding } from "@/hooks/use-bottom-content-padding";
 import { getRejectedPointsByProject } from "@/db/queries/points";
 import { deletePointPermanently } from "@/core/points/delete-point-media";
 import { BUTTON_RADIUS } from "@/constants/shape";
+import { useMapData } from "@/contexts/map-data-context";
+import { getProjectById } from "@/db/queries/projects";
+import { getProjectActionVisibility } from "@/core/project-sharing/action-visibility";
 import type { Point } from "@/types/database";
 
 export default function ProjectRejectedScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const { clearMapData } = useMapData();
   const paperTheme = usePaperTheme();
   const { t } = useI18n();
   const { alert, confirm } = useAlertDialog();
@@ -24,6 +29,13 @@ export default function ProjectRejectedScreen() {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
+      // Owner-only area (section 10.0): never show it for a collaborator copy,
+      // even if the route is reached directly.
+      const project = await getProjectById(parseInt(id));
+      if (!getProjectActionVisibility(project?.collaboration_role).rejectedPoints) {
+        router.back();
+        return;
+      }
       const rows = await getRejectedPointsByProject(parseInt(id));
       setPoints(rows);
     } finally {

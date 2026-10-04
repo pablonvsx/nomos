@@ -39,6 +39,8 @@ import { getCurrentGoogleAccount } from "@/core/google-auth/google-auth-service"
 import { GoogleConnectionModal } from "@/components/google-account/GoogleConnectionModal";
 import { RestoreProjectsModal } from "@/components/drive-sync/RestoreProjectsModal";
 import type { RestoreResult } from "@/core/drive-sync/restore-service";
+import { refreshAfterImport } from "@/core/project-sharing/refresh-after-import";
+import { validateImportedProtocol } from "@/modules/custom/protocol-validation";
 
 export default function ProjectsScreen() {
   const router = useRouter();
@@ -215,7 +217,9 @@ export default function ProjectsScreen() {
       if (!result) return;
 
       const { projectId, created } = result;
-      loadData();
+      // Refetch before telling the user it worked: the picker does not change
+      // focus, so nothing else would refresh the list.
+      await refreshAfterImport({ clearMapData: () => {}, reload: loadData });
       alert(
         t("common.success"),
         created
@@ -260,9 +264,6 @@ export default function ProjectsScreen() {
         imported: result.imported.toString(),
         mediaDownloaded: result.mediaDownloaded.toString(),
       }) +
-      (result.mediaFailed > 0
-        ? "\n" + t("driveRestore.mediaFailedWarning", { count: result.mediaFailed.toString() })
-        : "") +
       (result.duplicatesSkipped > 0
         ? "\n" + t("driveRestore.duplicatesSkippedWarning", { count: result.duplicatesSkipped.toString() })
         : "");
@@ -286,12 +287,10 @@ export default function ProjectsScreen() {
         const content = await response.text();
         const importedData = JSON.parse(content);
 
-        if (
-          !importedData.name ||
-          !importedData.schema ||
-          !importedData.schema.sections
-        ) {
-          alert(t("common.error"), t("protocol.invalidProtocolFile"));
+        // Invalid file shape, or a repeatable group nested inside another one.
+        const validation = validateImportedProtocol(importedData);
+        if (!validation.ok) {
+          alert(t("common.error"), t(validation.error.key, validation.error.params));
           return;
         }
 

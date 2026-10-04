@@ -53,6 +53,15 @@ const TEST_PROTOCOL: CustomProtocol = {
           { key: "tags", type: "tags_input", label: "Tags" },
           { key: "fotos", type: "photo_input", label: "Fotos" },
           { key: "gravacoes", type: "audio_notes_input", label: "Gravações" },
+          {
+            key: "grupo",
+            type: "repeatable_group",
+            label: "Grupo",
+            itemFields: [
+              { key: "foto_item", type: "photo_input", label: "Foto do item" },
+              { key: "audio_item", type: "audio_notes_input", label: "Audio do item" },
+            ],
+          },
         ],
       },
     ],
@@ -152,5 +161,28 @@ describe("customExporter.extractMedia", () => {
     expect(media.photos).toEqual([]);
     expect(media.audioNotes).toEqual([]);
     expect(media.notes).toEqual([]);
+  });
+
+  it("includes photos and audio notes of repeatable_group items, next to the top-level ones", async () => {
+    const point = makePoint({
+      section_1: {
+        fotos: JSON.stringify([{ uri: "file:///top.jpg", timestamp: 1 }]),
+        grupo: [
+          {
+            foto_item: JSON.stringify([{ uri: "file:///g0.jpg", timestamp: 2 }]),
+            audio_item: JSON.stringify([{ uri: "file:///g0.m4a", duration: 4, timestamp: 3 }]),
+          },
+          {
+            foto_item: JSON.stringify([{ uri: "file:///g1.jpg", timestamp: 5 }]),
+            audio_item: JSON.stringify([]),
+          },
+        ],
+      },
+    });
+
+    const media = await customExporter.extractMedia(point, PROJECT);
+
+    expect(media.photos).toEqual(["file:///top.jpg", "file:///g0.jpg", "file:///g1.jpg"]);
+    expect(media.audioNotes).toEqual([{ uri: "file:///g0.m4a", duration: 4, timestamp: 3 }]);
   });
 });

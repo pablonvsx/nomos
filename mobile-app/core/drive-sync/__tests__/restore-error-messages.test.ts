@@ -1,5 +1,6 @@
 import { describeRestoreError } from "../restore-error-messages";
 import { UnsupportedPackageVersionError } from "@/core/project-sharing/package-errors";
+import { MediaRestoreError } from "../restore-errors";
 
 describe("describeRestoreError", () => {
   it("maps 'project already exists locally' to its specific key, without a technical detail", () => {
@@ -37,6 +38,12 @@ describe("describeRestoreError", () => {
     expect(describeRestoreError("some string thrown directly")).toEqual({
       key: "driveRestore.errorRestoring",
       technicalDetail: "some string thrown directly",
+    });
+  });
+
+  it("maps MediaRestoreError (instanceof) to its specific key and does not leak the technical detail into the generic fallback", () => {
+    expect(describeRestoreError(new MediaRestoreError("Foto photo_1.jpg do ponto abc não pôde ser baixada."))).toEqual({
+      key: "driveRestore.errorMediaDownload",
     });
   });
 });

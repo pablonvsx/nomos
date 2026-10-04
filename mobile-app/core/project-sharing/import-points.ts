@@ -8,6 +8,13 @@ import {
   InvalidPackageError,
   UnsupportedPackageVersionError,
 } from "@/core/project-sharing/package-errors";
+import {
+  MODULE_MEDIA_SUBDIR,
+  PACKAGE_MEDIA_PREFIX,
+  getModuleMediaFields,
+  mapModuleMediaUris,
+  type ModuleMediaField,
+} from "@/core/project-sharing/module-media";
 import type { PointPackageEntry, PointsPackage } from "@/core/project-sharing/export-points";
 import { POINTS_PACKAGE_FORMAT_VERSION } from "@/core/project-sharing/export-points";
 
@@ -16,12 +23,16 @@ export interface PendingDuplicate {
   existingPointId: number;
   /** Directory (under Paths.document) holding this point's extracted media, pending resolution. */
   stagedMediaDir: string;
+  /** photo_input / audio_notes_input fields of the project's protocol, needed to restore module media on "replace". */
+  moduleMediaFields: ModuleMediaField[];
 }
 
 export interface ImportPointsResult {
   imported: number;
   duplicates: PendingDuplicate[];
   ownerEmailWarning: boolean;
+  /** Media files points.json references that were not found inside the zip. */
+  missingMedia: number;
 }
 
 /** Thrown when a points package doesn't belong to the target project. */
@@ -61,36 +72,110 @@ function assertValidPointsPackageShape(pkg: unknown): asserts pkg is PointsPacka
   }
 }
 
+interface CopiedPointMedia {
+  /** Files directly under media/<uuid>/ (the point's own photos and audio). */
+  pointFileUris: string[];
+  /** Files under media/<uuid>/modules/, keyed by their package-relative path ("modules/<name>"). */
+  moduleFileUris: Map<string, string>;
+}
+
 /**
  * Copies every media file for a point from the (temporary) extraction
  * directory into a persistent directory under Paths.document - never leave
  * a point's photos/audio referencing the extraction dir, which gets deleted
  * once import finishes (see the "photos not rendering" bug this replaces).
- * Returns the destination file URIs, one per copied file.
+ * Returns the destination file URIs, split between the point's own media and
+ * the media referenced from module data.
  */
 async function copyMediaToPersistentDir(
   extractDir: Directory,
   pointUuid: string,
   destSubdir: string,
-): Promise<string[]> {
+): Promise<CopiedPointMedia> {
   const sourceMediaDir = new Directory(extractDir, `media/${pointUuid}`);
   const destDir = new Directory(Paths.document, `${destSubdir}/${pointUuid}`);
   if (destDir.exists) await destDir.delete();
   await destDir.create({ intermediates: true });
 
+  const copied: CopiedPointMedia = { pointFileUris: [], moduleFileUris: new Map() };
   if (!sourceMediaDir.exists) {
-    return [];
+    return copied;
   }
 
-  const destUris: string[] = [];
   for (const entry of sourceMediaDir.list()) {
-    if (!(entry instanceof File)) continue;
-    const destFile = new File(destDir, entry.name);
-    await entry.copy(destFile);
-    destUris.push(destFile.uri);
+    if (entry instanceof File) {
+      const destFile = new File(destDir, entry.name);
+      await entry.copy(destFile);
+      copied.pointFileUris.push(destFile.uri);
+    } else if (entry instanceof Directory && entry.name === MODULE_MEDIA_SUBDIR) {
+      const destModulesDir = new Directory(destDir, MODULE_MEDIA_SUBDIR);
+      await destModulesDir.create({ intermediates: true, idempotent: true });
+      for (const moduleEntry of entry.list()) {
+        if (!(moduleEntry instanceof File)) continue;
+        const destFile = new File(destModulesDir, moduleEntry.name);
+        await moduleEntry.copy(destFile);
+        copied.moduleFileUris.set(`${MODULE_MEDIA_SUBDIR}/${moduleEntry.name}`, destFile.uri);
+      }
+    }
   }
 
-  return destUris;
+  return copied;
+}
+
+/**
+ * Builds the point's photo and audio lists from what points.json claims,
+ * keeping only entries whose file really arrived. Anything claimed but
+ * absent is counted instead of being saved as a path that points nowhere.
+ */
+function resolvePointMedia(
+  entry: PointPackageEntry,
+  pointFileUris: string[],
+): {
+  photoUris: string[];
+  audioNotes: Array<{ uri: string; duration: number; timestamp: number }>;
+  missing: number;
+} {
+  let missing = 0;
+  const photoUris: string[] = [];
+  for (const filename of entry.photos) {
+    const uri = pointFileUris.find((candidate) => candidate.endsWith(`/${filename}`));
+    if (uri) photoUris.push(uri);
+    else missing += 1;
+  }
+  const audioNotes: Array<{ uri: string; duration: number; timestamp: number }> = [];
+  for (const note of entry.audio_notes) {
+    const uri = pointFileUris.find((candidate) => candidate.endsWith(`/${note.filename}`));
+    if (uri) audioNotes.push({ uri, duration: note.duration, timestamp: note.timestamp });
+    else missing += 1;
+  }
+  return { photoUris, audioNotes, missing };
+}
+
+/**
+ * Replaces the package-media markers inside module data_json with the
+ * persisted local URIs. A marker with no matching extracted file is dropped
+ * (and counted) rather than saved as a path that points nowhere.
+ */
+async function restoreModuleMedia(
+  modules: Record<string, string>,
+  fields: ModuleMediaField[],
+  moduleFileUris: Map<string, string>,
+): Promise<{ modules: Record<string, string>; missing: number }> {
+  let missing = 0;
+  const restored: Record<string, string> = {};
+  for (const [moduleId, dataJson] of Object.entries(modules)) {
+    const fieldsOfModule = fields.filter((f) => f.moduleId === moduleId);
+    restored[moduleId] =
+      fieldsOfModule.length === 0
+        ? dataJson
+        : await mapModuleMediaUris(dataJson, fieldsOfModule, (uri) => {
+            if (!uri.startsWith(PACKAGE_MEDIA_PREFIX)) return uri;
+            const localUri = moduleFileUris.get(uri.slice(PACKAGE_MEDIA_PREFIX.length));
+            if (!localUri) missing += 1;
+            return localUri ?? null;
+          });
+  }
+  return { modules: restored, missing };
 }
 
 export async function importPointsPackage(
@@ -162,26 +247,24 @@ export async function importPointsPackage(
       pkg.owner_email && connectedEmail && pkg.owner_email !== connectedEmail,
     );
 
+    const moduleMediaFields = await getModuleMediaFields(
+      targetProject.protocol_id,
+      targetProject.protocol_source,
+    );
+
     let imported = 0;
+    let missingMedia = 0;
     const duplicates: PendingDuplicate[] = [];
 
     for (const entry of pkg.points) {
       const existing = await getPointByProjectAndUuid(targetProjectId, entry.point_uuid);
 
       if (!existing) {
-        const copiedUris = await copyMediaToPersistentDir(
-          extractDir,
-          entry.point_uuid,
-          IMPORTED_MEDIA_DIR,
-        );
-        const audioNotes = entry.audio_notes.map((note) => ({
-          uri: copiedUris.find((uri) => uri.endsWith(note.filename)) ?? "",
-          duration: note.duration,
-          timestamp: note.timestamp,
-        }));
-        const photoUris = copiedUris.filter(
-          (uri) => !entry.audio_notes.some((n) => uri.endsWith(n.filename)),
-        );
+        const copied = await copyMediaToPersistentDir(extractDir, entry.point_uuid, IMPORTED_MEDIA_DIR);
+        const { photoUris, audioNotes, missing } = resolvePointMedia(entry, copied.pointFileUris);
+        missingMedia += missing;
+        const restored = await restoreModuleMedia(entry.modules, moduleMediaFields, copied.moduleFileUris);
+        missingMedia += restored.missing;
 
         await createPoint({
           project_id: targetProjectId,
@@ -195,7 +278,7 @@ export async function importPointsPackage(
           additional_notes: entry.additional_notes ? JSON.stringify(entry.additional_notes) : null,
           point_size: entry.point_size ?? null,
           schema_version: entry.schema_version,
-          modules: entry.modules,
+          modules: restored.modules,
           uuid: entry.point_uuid,
           approval_status: "pending",
           created_by: entry.created_by,
@@ -208,11 +291,12 @@ export async function importPointsPackage(
           incoming: entry,
           existingPointId: existing.id,
           stagedMediaDir: stagedDir.uri,
+          moduleMediaFields,
         });
       }
     }
 
-    return { imported, duplicates, ownerEmailWarning };
+    return { imported, duplicates, ownerEmailWarning, missingMedia };
   } finally {
     if (extractDir.exists) await extractDir.delete();
     if (cacheZip.exists) await cacheZip.delete();
@@ -237,41 +321,44 @@ export async function resolvePointDuplicate(
   if (permanentDir.exists) await permanentDir.delete();
   await permanentDir.create({ intermediates: true });
 
-  const photoUris: string[] = [];
-  const audioEntries: Array<{ uri: string; duration: number; timestamp: number }> = [];
+  const entry = duplicate.incoming;
+  const pointFileUris: string[] = [];
+  const moduleFileUris = new Map<string, string>();
 
   if (stagedDir.exists) {
-    for (const entry of stagedDir.list()) {
-      if (!(entry instanceof File)) continue;
-      const destFile = new File(permanentDir, entry.name);
-      await entry.move(destFile);
-
-      const matchingAudio = duplicate.incoming.audio_notes.find((n) => n.filename === entry.name);
-      if (matchingAudio) {
-        audioEntries.push({
-          uri: destFile.uri,
-          duration: matchingAudio.duration,
-          timestamp: matchingAudio.timestamp,
-        });
-      } else {
-        photoUris.push(destFile.uri);
+    for (const staged of stagedDir.list()) {
+      if (staged instanceof File) {
+        const destFile = new File(permanentDir, staged.name);
+        await staged.move(destFile);
+        pointFileUris.push(destFile.uri);
+      } else if (staged instanceof Directory && staged.name === MODULE_MEDIA_SUBDIR) {
+        const destModulesDir = new Directory(permanentDir, MODULE_MEDIA_SUBDIR);
+        await destModulesDir.create({ intermediates: true, idempotent: true });
+        for (const moduleEntry of staged.list()) {
+          if (!(moduleEntry instanceof File)) continue;
+          const destFile = new File(destModulesDir, moduleEntry.name);
+          await moduleEntry.move(destFile);
+          moduleFileUris.set(`${MODULE_MEDIA_SUBDIR}/${moduleEntry.name}`, destFile.uri);
+        }
       }
     }
     await stagedDir.delete();
   }
 
-  const entry = duplicate.incoming;
+  const { photoUris, audioNotes } = resolvePointMedia(entry, pointFileUris);
+  const restored = await restoreModuleMedia(entry.modules, duplicate.moduleMediaFields, moduleFileUris);
+
   await updatePoint(duplicate.existingPointId, {
     lat: entry.lat,
     lon: entry.lon,
     altitude: entry.altitude ?? null,
     generated_name: entry.generated_name ?? null,
     photos: JSON.stringify(photoUris.map((uri) => ({ uri, timestamp: Date.now() }))),
-    audio_notes: JSON.stringify(audioEntries),
+    audio_notes: JSON.stringify(audioNotes),
     additional_notes: entry.additional_notes ? JSON.stringify(entry.additional_notes) : null,
     point_size: entry.point_size ?? null,
     schema_version: entry.schema_version,
-    modules: entry.modules,
+    modules: restored.modules,
     created_by: entry.created_by,
     approval_status: "pending",
   });

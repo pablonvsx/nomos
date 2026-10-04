@@ -51,9 +51,33 @@ doesn't match the currently connected account.
 |---|---|---|
 | Built by | `core/project-sharing/project-config-package.ts` (`buildProjectConfigPackage`) | `core/project-sharing/export-points.ts` (`buildAndSharePointsPackage`) |
 | Applied by | same file, `applyProjectConfigPackage` | `core/project-sharing/import-points.ts` (`importPointsPackage`) |
-| Format | single `.json` | `.zip` (`points.json` + `media/<point_uuid>/...`) |
+| Format | single `.json` | `.zip` (`points.json` + `media/<point_uuid>/...`, plus `media/<point_uuid>/modules/...` for custom-protocol module media) |
 | Always produces | a local project with `collaboration_role = 'collaborator'` | new/duplicate points inside an existing local project |
 | Carries | `project_uuid`, `protocol_id`/`protocol_source` (+ the custom protocol's schema, if any), the full species catalog, every vegetation classification, `active_vegetation_classification`, `owner_email` | `project_uuid`, `protocol_id`/`protocol_source`, `collector_code`, `owner_email`, one entry per point |
+
+**Media in the points package.** Photos and audio notes of a point travel
+in two places, because they live in two places locally:
+
+- Point-level media (`points.photos` / `points.audio_notes`) goes to
+  `media/<point_uuid>/photo_N.<ext>` and `audio_note_N.<ext>`;
+  `points.json` lists only the file names.
+- Custom-protocol media (`photo_input` / `audio_notes_input` fields, which
+  are stored inside each module's `data_json`) goes to
+  `media/<point_uuid>/modules/<file>`, and every URI in the exported
+  `data_json` is replaced by a `package-media:modules/<file>` marker, so no
+  device path ever leaves the sender. This covers both top-level fields
+  (`<moduleId>_<n>.<ext>`) and the media sub-fields of every item of a
+  `repeatable_group` (`<moduleId>_<groupId>_<itemIndex>_<fieldKey>_<n>.<ext>`;
+  `<n>` is a running counter per point, so names never collide). A group
+  value is a JSON array of item objects under the group id, and a media
+  sub-field of an item holds JSON text exactly like a top-level one; the
+  item itself is never removed, only its media references are rewritten.
+  Groups are walked one level deep (the builder does not allow a group
+  inside a group). The field list comes from the custom protocol's schema
+  (`getModuleMediaFields`) and the traversal from `mapModuleMediaUris` /
+  `listModuleMediaUris`, both in `core/project-sharing/module-media.ts` and
+  shared by every consumer below; shared-module sections (`moduleRef`)
+  carry no such fields.
 
 Both carry `format_version: 1` and are rejected outright —
 `UnsupportedPackageVersionError`, `core/project-sharing/package-errors.ts`
@@ -77,6 +101,55 @@ wrapping `expo-crypto`), and never regenerated once set — every
 only calls `generateUuid()` if it's still `NULL`. Re-exporting the same
 project twice yields byte-identical identity fields both times.
 
+## Role-based actions
+
+Which collaboration action a project shows is decided by
+`projects.collaboration_role` alone, never by whether a Google account
+happens to be connected. The table lives in one place,
+`getProjectActionVisibility(role)`
+(`core/project-sharing/action-visibility.ts`), and every screen derives
+its buttons and cards from it:
+
+| Action | `NULL` (not shared) | `'collaborator'` | `'owner'` |
+|---|---|---|---|
+| Collect points | yes | yes | yes |
+| Export configuration package | yes | **no** | yes |
+| Turn into owner / activate Drive backup | yes | **no** | n/a |
+| Export point(s) to the owner | no | yes | no |
+| Collector code | n/a | yes | n/a |
+| Back up to Drive | no | no | yes |
+| Pending approvals | no | no | yes |
+| Rejected points | no | no | yes |
+| Import points package | no | no | yes |
+
+`undefined` is treated like `NULL`. Importing a points package is not a
+row of the original design table; it is the owner-side half of the points
+flow, so it follows the owner column.
+
+The consumers are `app/(projects)/project-details/[id].tsx` (FAB actions
+and the approval/rejected cards), `app/(survey)/survey-point-details/[id].tsx`
+("send to owner"), and the two owner-only screens
+(`project-pending-approvals/[id].tsx`, `project-rejected/[id].tsx`), which
+also load the project and navigate back if the role is not `'owner'`, so a
+collaborator copy cannot reach them by route either. The suite
+`core/project-sharing/__tests__/action-visibility.test.ts` checks the
+table for all three roles side by side. It tests the function the screens
+consume, not a rendered screen tree.
+
+Two things in the table are not wired the way a reader might assume. The
+`collectorCode` and `collectPoints` flags exist but no screen reads them:
+the collector-code entry in Settings is global and unconditional (it is the
+home base, section "Collaborator-side actions"). And the role is enforced
+at the screen level, not in the services: only the backup
+(`backup-service.ts`), the activation (`project-drive-service.ts`), the
+catalog sync (`catalog-sync-service.ts`) and re-applying a configuration
+package (`project-config-package.ts`) check the role themselves, whereas
+`exportProjectConfigPackage`, `exportPointsPackage` / `exportAllPointsPackage`,
+`importPointsPackage` and `discardMissingMedia` rely on the screen not
+offering them. "Meu Nomos" also lets any user export a custom protocol as a
+JSON file (name, theme and schema only, no project identity) regardless of
+role; that action is outside the table.
+
 ## Collaborator-side actions
 
 A collaborator collects points locally exactly like any other project —
@@ -87,6 +160,12 @@ both in `core/project-sharing/export-points.ts`:
   owner").
 - `exportAllPointsPackage(projectId)` — every point in the local
   project, same `.zip` shape.
+
+Both resolve to an `ExportPointsReport` (`{ skippedMedia: string[] }`):
+a photo or audio file whose source no longer exists on the device is left
+out of the zip **and** out of `points.json`, never aborts the export, and
+is reported so the screens can warn how many files were left out. Unlike
+the Drive backup below, the zip export does not block on missing media.
 
 Both require a local **collector code**: exactly 4 characters, no
 uniqueness check against other collaborators (there's no shared registry
@@ -120,10 +199,26 @@ the **entire** package, nothing is inserted
   **Descartar** (keep the local point exactly as it is).
 
 Media extracted from the `.zip` is copied into
-`Paths.document/imported_points_media/<point_uuid>/` **before** any
-database write references it — never a path inside the temporary
-extraction directory, which is deleted once import finishes
-(`copyMediaToPersistentDir`).
+`Paths.document/imported_points_media/<point_uuid>/` (module media into its
+`modules/` subdirectory) **before** any database write references it —
+never a path inside the temporary extraction directory, which is deleted
+once import finishes (`copyMediaToPersistentDir`). The `package-media:`
+markers inside module data are then rewritten to those persisted URIs
+(`restoreModuleMedia`), both for new points and for "Substituir" on a
+duplicate (`resolvePointDuplicate`).
+
+The importer does not trust the names in `points.json`: it only keeps
+photo/audio entries whose file really arrived, and counts the rest in
+`ImportPointsResult.missingMedia` instead of saving a path that points
+nowhere; the screen warns when that count is not zero.
+
+After an import finishes (and after each duplicate is resolved) the
+screen refreshes immediately instead of waiting for a navigation:
+`refreshAfterImport` (`core/project-sharing/refresh-after-import.ts`)
+clears the cached map data and awaits the reload of the project's list
+and counters. The same helper runs after importing a configuration
+package in `projects.tsx`. Approving or rejecting a point also clears the
+map cache, since it changes what the general list shows.
 
 ## Local approval queue and rejected points
 
@@ -136,8 +231,28 @@ Two screens, both pure local SQL — no Drive read of any kind:
   deleted.
 - `app/(projects)/project-rejected/[id].tsx` — lists
   `approval_status = 'rejected'`, with a permanent-delete action
-  (`core/points/delete-point-media.ts`, which also removes the point's
-  media files from disk). Rejected points are never auto-purged.
+  (`core/points/delete-point-media.ts`). Deleting a point — here and from
+  the regular point screen — removes every media file it references:
+  the photo/audio columns and the module media of custom protocols,
+  top-level and inside `repeatable_group` items. Only files inside the
+  app's own storage (`Paths.document` / `Paths.cache`, no `..` segments)
+  are deleted; a reference to anything else (a `content://` uri, a gallery
+  picture) is left alone. Rejected points are never auto-purged.
+
+**Visibility rule.** The project's general point list, map, CSV/GeoJSON/
+media exports and landscape-class numbering only ever contain points whose
+`approval_status` is `NULL` (collected directly) or `'approved'`. A
+`'pending'` point lives only in the approval queue and a `'rejected'` one
+only in the rejected area. The condition is the shared constant
+`VISIBLE_POINT_CONDITION` in `db/queries/points.ts`, applied by
+`getPointsByProject`, `getPointsWithModulesByProject`,
+`classifyProjectPoints` and `countPointsByProject`. Three things are
+deliberately **not** filtered: the points-package export
+(`getPointsWithRawModulesByProject` exports every status), duplicate
+detection (`getPointByProjectAndUuid`, section above) and the
+`point_number` bookkeeping in `createPoint`/`deletePoint`, which must see
+every row to keep numbers unique. As a consequence, pending points consume
+numbers, so the visible list can show gaps until they are approved.
 
 ## Backup to Drive
 
@@ -155,17 +270,54 @@ finally calls `setProjectAsOwner`.
 
 **2. Ongoing backup of approved points** — `backupPoint`/
 `backupAllPendingPoints` (`core/drive-sync/backup-service.ts`), driven
-by `drive_synced_at IS NULL`. The point's own data (module fields) is
-**all-or-nothing**: a failed upload fails the whole point and
-`drive_synced_at` stays `NULL`. Media (photos/audio) is **best-effort**
-— a failed photo never blocks the point's scientific data from counting
-as backed up, only shows up in the result's `mediaFailures`. Every write
-in this file is read-before-write (`findChildByName` first): re-backing
-up an already-synced point calls `updateJsonFile`/`updateBinaryFile`
-against the existing Drive file instead of creating a duplicate — this
-is what the app-level UI also enforces by disabling the per-point backup
-action once `drive_synced_at` is set
-(`project-details/[id].tsx`).
+by `drive_synced_at IS NULL`. Media is part of the collection, so a point
+is **all-or-nothing**:
+
+- The point's data and **all** of its media must reach Drive: point-level
+  photos and audio (`photo_N.<ext>`, `audio_note_N.<ext>`) and, for custom
+  protocols, the `photo_input` / `audio_notes_input` files that live inside
+  module data, including those inside `repeatable_group` items. Module
+  files are stored flat in the point's media folder as `modules__<file>`
+  (same names as in the points package), and the uploaded JSON references
+  them with `package-media:modules/<file>` markers — never a device path.
+- If any file is missing locally or fails to upload, the whole point
+  fails: its JSON on Drive is **not** written (an existing Drive JSON is
+  never rewritten with fewer media than the point has), and
+  `drive_synced_at` stays `NULL`. All failures are collected and returned
+  together in `BackupResult.error`.
+- Every write is read-before-write (`findChildByName` first): re-backing
+  up an already-synced point calls `updateJsonFile`/`updateBinaryFile`
+  against the existing Drive file instead of creating a duplicate — this
+  is what the app-level UI also enforces by disabling the per-point backup
+  action once `drive_synced_at` is set (`project-details/[id].tsx`).
+
+### Discarding media that no longer exists on the device
+
+A photo or audio file can disappear from the device (the OS cleared the
+cache, the person deleted it). Because backup is all-or-nothing, that
+point would otherwise never be backed up. `BackupResult.missingMediaCount`
+counts the failed items that are simply gone from the device (as opposed
+to upload failures such as no connection, which are not counted), and each
+`BackupSummary.failed[]` entry carries `pointId` and `missingMediaCount`.
+
+When that count is above zero, `project-details/[id].tsx` offers
+**"Descartar mídias não encontradas"** — after the "back up all" summary,
+or after a single-point backup fails:
+
+1. A destructive confirmation states how many files from how many points
+   no longer exist and that only the references will be removed.
+2. On confirm, `discardMissingMedia(pointId)`
+   (`core/points/discard-missing-media.ts`) runs for each affected point.
+   It removes the entries whose file does not exist from `points.photos`,
+   `points.audio_notes` and, for custom protocols, from the media fields
+   inside module data, group items included (keeping each entry's shape
+   and the module's `schema_version`; a group item whose media was
+   discarded stays, only the reference goes away).
+3. The backup is retried, now carrying only the media that exists.
+
+It only ever removes references: files that exist are never touched, a
+point with nothing missing is not written at all, and `drive_synced_at` is
+left alone (the retried backup sets it). The action cannot be undone.
 
 ## Drive folder structure
 
@@ -177,7 +329,7 @@ graph TD
     Proj --> SpeciesCat["species-catalog/<br/>&lt;species_uuid&gt;.json"]
     Proj --> VegClasses["vegetation-classes/<br/>&lt;classification_uuid&gt;.json"]
     Proj --> Approved["approved/<br/>&lt;point_uuid&gt;.json"]
-    Approved --> Media["approved/media/&lt;point_uuid&gt;/<br/>photo_N.jpg · audio_note_N.m4a"]
+    Approved --> Media["approved/media/&lt;point_uuid&gt;/<br/>photo_N.jpg · audio_note_N.m4a<br/>modules__&lt;file&gt; (custom-protocol module media)"]
 ```
 
 `manifest.json` (`ProjectManifest`, `project-drive-service.ts`) holds
@@ -231,22 +383,41 @@ Drive" lists the signed-in account's own Nomos folders
 local project linked (`getUsedDriveFolderIds`), via
 `components/drive-sync/RestoreProjectsModal.tsx`.
 
-`restoreOwnProjectFromDrive(driveFolderId, { includeMedia })`
+`restoreOwnProjectFromDrive(driveFolderId)`
 (`core/drive-sync/restore-service.ts`) rebuilds the project entirely
 from what's on Drive — no dependency on any local leftover — recreating
 it with `collaboration_role = 'owner'`, every species/classification
 with its uuid preserved verbatim (never regenerated), and every point
 under `approved/` with `approval_status = 'approved'` fixed (pending and
 rejected points are never uploaded in the first place, so there's
-nothing else to pull). "Somente dados" skips media download for speed;
-"Dados e mídia" downloads photos/audio into
-`Paths.document/imported_points_media/<point_uuid>/` — the same
-persistent directory convention `import-points.ts` already uses, never
-a temporary one. A defensive `Set` of seen `point_uuid`s also protects
-against a stray duplicate file in `approved/` producing two local rows
-for the same point (`points` has a partial unique index on
-`(project_id, uuid)` — see [05_DATA_MODEL.md](05_DATA_MODEL.md) — that
-would otherwise reject the second insert outright).
+nothing else to pull).
+
+The restore is **always complete and all-or-nothing**; there is no "data
+only" mode, because media is part of the collection and a point restored
+without it would be re-uploaded without it by the next backup:
+
+- Every photo and audio note a point lists, including custom-protocol
+  module media (`package-media:` markers swapped for local files), is
+  downloaded into `Paths.document/imported_points_media/<point_uuid>/` —
+  the same persistent directory convention `import-points.ts` uses, never
+  a temporary one.
+- A missing media folder, a file absent from Drive, or a failed download
+  raises `MediaRestoreError` (`core/drive-sync/restore-errors.ts`). Any
+  failure after the local project was created — media or otherwise —
+  deletes the partial project (`deleteProject`) and the media already
+  downloaded, then rethrows. The person sees
+  `driveRestore.errorMediaDownload` ("nothing was restored, try again")
+  and can simply retry.
+- Restored points get the Drive file's timestamp as `drive_synced_at`
+  (`createPoint` persists it), so they are not offered for backup again.
+- `RestoreProjectsModal` asks for a single confirmation (Cancel /
+  Restore); it no longer offers two modes.
+
+A defensive `Set` of seen `point_uuid`s also protects against a stray
+duplicate file in `approved/` producing two local rows for the same point
+(`points` has a partial unique index on `(project_id, uuid)` — see
+[05_DATA_MODEL.md](05_DATA_MODEL.md) — that would otherwise reject the
+second insert outright).
 
 `RestoreResult`'s fields, each surfaced to the user in
 `projects.tsx`'s `handleProjectRestored`:
@@ -254,7 +425,7 @@ would otherwise reject the second insert outright).
 | Field | Meaning |
 |---|---|
 | `imported` | Points actually created locally. |
-| `mediaDownloaded` / `mediaFailed` | Per-item counts, never fatal. |
+| `mediaDownloaded` | Number of media files downloaded. A failed download aborts and undoes the restore, so there is no failure count. |
 | `ownerEmailWarning` | The manifest's `owner_email` differs from the connected account — informational only, never blocks. |
 | `activeClassificationWarning` | The manifest pointed at a custom classification whose file wasn't found among the downloaded ones — the project was restored as `'standard'` instead, and the owner is told to double-check, rather than this happening silently. |
 | `duplicatesSkipped` | Stray duplicate point files found and ignored during this restore. |
@@ -313,3 +484,31 @@ never throws, since Settings calls it eagerly on mount.
   with the original technical message appended to a friendly sentence,
   rather than a fully localized explanation — acceptable for diagnosis
   during this pre-device-testing phase, not final UX polish.
+- **A missing local file blocks that point's backup.** With all-or-nothing
+  media, a point whose photo or audio file vanished from the device cannot
+  be backed up until the reference is removed ("Descartar mídias não
+  encontradas"). The zip export of a collaborator does not block; it skips
+  and reports.
+- **Restore needs connectivity for every file.** A single failed download
+  undoes the whole restore; there is no partial or resumable restore.
+- **Older custom-protocol backups lack module media.** Points backed up to
+  Drive before module media was included (top-level fields) or before
+  repeatable-group media was included keep device paths in those JSON
+  fields and have no matching `modules__*` files, so restoring them brings
+  back the data but not that media. Backing the points up again from the
+  original device fixes it. Older points packages are still read as before:
+  only `package-media:` markers are rewritten, plain uris pass through.
+- **Groups are one level deep.** Media is handled for sub-fields of a
+  `repeatable_group`, not of a group nested inside another one. The
+  builder UI does not offer that, and both the protocol builder's save
+  validation (`validateProtocolDraft`) and the protocol-file import
+  (`validateImportedProtocol`, `modules/custom/protocol-validation.ts`)
+  now reject a nested group with `protocol.nestedGroupNotAllowed`. The two
+  other ways a custom protocol schema enters the app — the collaborator
+  configuration package and the Drive restore (`protocol-package.json`) —
+  do not run that check, so media inside a hand-edited nested group coming
+  through those paths would still be ignored.
+- **Test fidelity.** The real-zip suites use a real temporary filesystem
+  and a real zip reader, but not the native `react-native-zip-archive`
+  library; the Drive suites use an in-memory fake Drive. Neither replaces
+  a run on a device against the real Drive.

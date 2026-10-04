@@ -20,6 +20,10 @@ jest.mock("expo-file-system", () => ({
 }));
 jest.mock("react-native-zip-archive", () => ({ zip: zipMock, unzip: unzipMock }));
 
+// export-points / import-points look up custom protocol media fields; these tests use an official
+// protocol, so no custom protocol is ever returned (and expo-sqlite is never loaded).
+jest.mock("@/db/queries/custom-protocols", () => ({ getCustomProtocolById: jest.fn(async () => null) }));
+
 const shareAsyncMock = jest.fn(async (...args: unknown[]) => {});
 const isAvailableAsyncMock = jest.fn(async () => true);
 jest.mock("expo-sharing", () => ({
@@ -113,14 +117,16 @@ describe("exportAllPointsPackage / exportPointsPackage", () => {
     expect(pkg.points).toHaveLength(4);
   });
 
-  it("skips a photo/audio file that no longer exists on disk instead of failing the export", async () => {
+  it("does not fail on a photo/audio file that no longer exists on disk, and reports it as skipped", async () => {
     localCollectorCode = "ABCD";
     const project = seedProject();
     seedPoint(project.id, {
       photos: JSON.stringify([{ uri: "file:///gone/photo.jpg", timestamp: 1 }]),
     });
 
-    await expect(exportAllPointsPackage(project.id)).resolves.toBeUndefined();
+    await expect(exportAllPointsPackage(project.id)).resolves.toEqual({
+      skippedMedia: ["file:///gone/photo.jpg"],
+    });
 
     const pkg = readPackageFromSharedZip();
     expect(pkg.points[0].photos).toEqual([]);

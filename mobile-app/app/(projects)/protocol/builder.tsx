@@ -50,6 +50,7 @@ import {
 } from "@/types/database";
 import OptionsListInput from "@/modules/custom/components/OptionsListInput";
 import { slugifyFieldKey, collectFieldKeys } from "@/modules/custom/slugify-field-key";
+import { validateProtocolDraft } from "@/modules/custom/protocol-validation";
 import {
   getFieldTypeOptions,
   getItemFieldTypeOptions,
@@ -261,33 +262,18 @@ export default function ProtocolBuilderScreen() {
     );
   };
 
+  // The rules live in a pure module (shared with the protocol-file import and
+  // covered by tests); this only shows the first error found.
   const validateProtocol = (): boolean => {
-    if (!protocolName.trim()) {
-      alert(t("common.error"), t("protocol.enterProtocolName"));
+    const error = validateProtocolDraft({
+      name: protocolName,
+      theme: protocolTheme,
+      sections,
+    });
+    if (error) {
+      alert(t("common.error"), t(error.key, error.params));
       return false;
     }
-
-    if (!protocolTheme.trim()) {
-      alert(t("common.error"), t("protocol.enterTheme"));
-      return false;
-    }
-
-    if (sections.length === 0) {
-      alert(t("common.error"), t("protocol.addAtLeastOneSection"));
-      return false;
-    }
-
-    if (sections.some((s) => !s.title.trim())) {
-      alert(t("common.error"), t("protocol.enterSectionTitle"));
-      return false;
-    }
-
-    const hasFields = sections.some((s) => s.fields.length > 0 || !!s.moduleRef);
-    if (!hasFields) {
-      alert(t("common.error"), t("protocol.addAtLeastOneField"));
-      return false;
-    }
-
     return true;
   };
 

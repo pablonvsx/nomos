@@ -13,12 +13,15 @@ interface PointDuplicatesModalProps {
   visible: boolean;
   result: ImportPointsResult;
   onDismiss: () => void;
+  /** Called after each duplicate is resolved, so the caller can refetch what it displays. */
+  onResolved?: () => void;
 }
 
 export const PointDuplicatesModal: React.FC<PointDuplicatesModalProps> = ({
   visible,
   result,
   onDismiss,
+  onResolved,
 }) => {
   const theme = useTheme();
   const { t } = useI18n();
@@ -35,6 +38,7 @@ export const PointDuplicatesModal: React.FC<PointDuplicatesModalProps> = ({
       setPending((prev) => prev.filter((d) => d.incoming.point_uuid !== duplicate.incoming.point_uuid));
       if (action === "replace") setReplaced((n) => n + 1);
       else setDiscarded((n) => n + 1);
+      onResolved?.();
     } finally {
       setBusyUuid(null);
     }

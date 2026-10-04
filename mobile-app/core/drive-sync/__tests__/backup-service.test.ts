@@ -1,14 +1,14 @@
 // backup-service.ts talks to the real Drive REST API (via
 // drive-api-client.ts, mocked here) and to local files (via
 // expo-file-system, faked here with the same fixture used since Fase 2/3).
-// This suite exists specifically to prove the media rule this phase
-// pivoted to mid-planning: a failed/missing photo or audio note must NEVER
-// block the point's scientific data from being backed up - only a failure
-// uploading the point's own JSON still fails the whole point. Every
-// critical behavior below has its failure scenario simulated explicitly,
-// not just the happy path (section 14.7) - there is no real-device
-// validation available for this phase until October, so these tests are
-// the only line of defense.
+// Media is part of the collection: this suite proves a point only counts as
+// backed up when ALL of its photos, audio notes and module media reached
+// Drive (section 8) - any failure leaves the point un-synced and, above all,
+// never rewrites the Drive JSON with fewer media than the point really has.
+// Every critical behavior below has its failure scenario simulated
+// explicitly, not just the happy path (section 14.7) - there is no
+// real-device validation available for this phase, so these tests are the
+// only line of defense.
 
 import { FakeFile, resetFakeFs, fsState } from "../../project-sharing/__tests__/fixtures/fake-environment";
 
@@ -85,6 +85,8 @@ interface FakeProjectRow {
   id: number;
   collaboration_role: "owner" | "collaborator" | null;
   drive_folder_id: string | null;
+  protocol_id: string;
+  protocol_source: "official" | "custom";
 }
 
 let points: FakePointRow[] = [];
@@ -101,6 +103,8 @@ function seedProject(overrides: Partial<FakeProjectRow> = {}): FakeProjectRow {
     id: projects.length + 1,
     collaboration_role: "owner",
     drive_folder_id: "drive-folder-1",
+    protocol_id: "nomos-paisageo-v1",
+    protocol_source: "official",
     ...overrides,
   };
   projects.push(row);
@@ -149,7 +153,16 @@ const ensurePointUuidMock = jest.fn(async (id: number) => {
 });
 const updatePointMock = jest.fn(async (id: number, updates: any) => {
   const row = points.find((p) => p.id === id);
-  if (row && updates.drive_synced_at !== undefined) row.drive_synced_at = updates.drive_synced_at;
+  if (!row) return true;
+  if (updates.drive_synced_at !== undefined) row.drive_synced_at = updates.drive_synced_at;
+  if (updates.photos !== undefined) row.photos = updates.photos;
+  if (updates.audio_notes !== undefined) row.audio_notes = updates.audio_notes;
+  if (updates.modules !== undefined) {
+    for (const [module_id, data_json] of Object.entries(updates.modules as Record<string, string>)) {
+      const mod = row.rawModules.find((m) => m.module_id === module_id);
+      if (mod) mod.data_json = data_json;
+    }
+  }
   return true;
 });
 
@@ -161,12 +174,49 @@ jest.mock("@/db/queries/points", () => ({
   updatePoint: (id: number, updates: unknown) => updatePointMock(id, updates),
 }));
 
+// A custom protocol whose section holds a photo_input and an
+// audio_notes_input field (media that lives in module data, not in the
+// points.photos / points.audio_notes columns).
+jest.mock("@/db/queries/custom-protocols", () => ({
+  getCustomProtocolById: jest.fn(async (id: number) =>
+    id === 7
+      ? {
+          id: 7,
+          name: "Custom",
+          theme: "t",
+          schema: {
+            sections: [
+              {
+                id: "section_1",
+                title: "Seção 1",
+                fields: [
+                  { key: "fotos", type: "photo_input", label: "Fotos" },
+                  { key: "gravacoes", type: "audio_notes_input", label: "Gravações" },
+                  {
+                    key: "grupo",
+                    type: "repeatable_group",
+                    label: "Grupo",
+                    itemFields: [
+                      { key: "foto_item", type: "photo_input", label: "Foto do item" },
+                      { key: "audio_item", type: "audio_notes_input", label: "Audio do item" },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        }
+      : null,
+  ),
+}));
+
 const getProjectByIdMock = jest.fn(async (id: number) => projects.find((p) => p.id === id) ?? null);
 jest.mock("@/db/queries/projects", () => ({
   getProjectById: (id: number) => getProjectByIdMock(id),
 }));
 
 import { backupPoint, backupAllPendingPoints } from "../backup-service";
+import { discardMissingMedia } from "@/core/points/discard-missing-media";
 
 beforeEach(() => {
   resetFakeState();
@@ -201,8 +251,8 @@ beforeEach(() => {
   }));
 });
 
-describe("backupPoint - media failures never block the point's data", () => {
-  it("a photo upload failure is recorded in mediaFailures, but the JSON still uploads and drive_synced_at is still set", async () => {
+describe("backupPoint - media is part of the point: any media failure fails the backup", () => {
+  it("a photo upload failure fails the point: JSON not uploaded, drive_synced_at not set", async () => {
     fsState.set("file:///capture/photo1.jpg", { isDir: false, content: "bytes" });
     const project = seedProject();
     const point = seedPoint(project.id, {
@@ -212,15 +262,14 @@ describe("backupPoint - media failures never block the point's data", () => {
 
     const result = await backupPoint(point.id.toString());
 
-    expect(result.success).toBe(true);
-    expect(result.mediaFailures).toHaveLength(1);
-    expect(uploadJsonFileMock).toHaveBeenCalledTimes(1);
-    const uploadedContent = uploadJsonFileMock.mock.calls[0][2] as { photos: string[] };
-    expect(uploadedContent.photos).toEqual([]);
-    expect(point.drive_synced_at).toBe("2026-01-01T00:00:00.000Z");
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Foto 1");
+    expect(uploadJsonFileMock).not.toHaveBeenCalled();
+    expect(updatePointMock).not.toHaveBeenCalled();
+    expect(point.drive_synced_at).toBeNull();
   });
 
-  it("a photo that no longer exists locally is treated the same as an upload failure - non-fatal", async () => {
+  it("a photo that no longer exists locally fails the point too, without even attempting the upload", async () => {
     // Deliberately not seeded in fsState, so File(uri).exists is false.
     const project = seedProject();
     const point = seedPoint(project.id, {
@@ -229,14 +278,14 @@ describe("backupPoint - media failures never block the point's data", () => {
 
     const result = await backupPoint(point.id.toString());
 
-    expect(result.success).toBe(true);
-    expect(result.mediaFailures).toHaveLength(1);
-    expect(uploadBinaryFileMock).not.toHaveBeenCalled(); // never even attempted
-    expect(uploadJsonFileMock).toHaveBeenCalledTimes(1);
-    expect(point.drive_synced_at).toBeTruthy();
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Foto 1");
+    expect(uploadBinaryFileMock).not.toHaveBeenCalled();
+    expect(uploadJsonFileMock).not.toHaveBeenCalled();
+    expect(point.drive_synced_at).toBeNull();
   });
 
-  it("every media item failing (photo and audio) still results in a successful, data-only backup", async () => {
+  it("reports every failing media item (photo and audio), not just the first", async () => {
     const project = seedProject();
     const point = seedPoint(project.id, {
       photos: JSON.stringify([{ uri: "file:///capture/gone.jpg", timestamp: 1 }]),
@@ -245,18 +294,13 @@ describe("backupPoint - media failures never block the point's data", () => {
 
     const result = await backupPoint(point.id.toString());
 
-    expect(result.success).toBe(true);
-    expect(result.mediaFailures).toHaveLength(2);
-    const uploadedContent = uploadJsonFileMock.mock.calls[0][2] as {
-      photos: string[];
-      audio_notes: unknown[];
-    };
-    expect(uploadedContent.photos).toEqual([]);
-    expect(uploadedContent.audio_notes).toEqual([]);
-    expect(point.drive_synced_at).toBeTruthy();
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Foto 1");
+    expect(result.error).toContain("Áudio 1");
+    expect(uploadJsonFileMock).not.toHaveBeenCalled();
   });
 
-  it("the media folder itself failing to be created does not block the point's data either", async () => {
+  it("the media folder failing to be created fails the point", async () => {
     fsState.set("file:///capture/photo1.jpg", { isDir: false, content: "bytes" });
     const project = seedProject();
     const point = seedPoint(project.id, {
@@ -269,13 +313,78 @@ describe("backupPoint - media failures never block the point's data", () => {
 
     const result = await backupPoint(point.id.toString());
 
-    expect(result.success).toBe(true);
-    // One message about the folder itself, one about the photo that
-    // couldn't be uploaded as a result - both informative, neither fatal.
-    expect(result.mediaFailures).toHaveLength(2);
+    expect(result.success).toBe(false);
     expect(uploadBinaryFileMock).not.toHaveBeenCalled();
-    expect(uploadJsonFileMock).toHaveBeenCalledTimes(1);
-    expect(point.drive_synced_at).toBeTruthy();
+    expect(uploadJsonFileMock).not.toHaveBeenCalled();
+    expect(point.drive_synced_at).toBeNull();
+  });
+
+  it("a media failure on a RE-backup never rewrites the JSON already on Drive with fewer media", async () => {
+    // The point was fully backed up before; its Drive JSON lists the photo.
+    driveFilesByParentAndName.set("drive-folder-1/approved::point-uuid-1.json", {
+      id: "existing-json",
+      name: "point-uuid-1.json",
+      mimeType: "application/json",
+    });
+    const project = seedProject();
+    const point = seedPoint(project.id, {
+      uuid: "point-uuid-1",
+      photos: JSON.stringify([{ uri: "file:///capture/gone.jpg", timestamp: 1 }]), // file vanished locally
+    });
+
+    const result = await backupPoint(point.id.toString());
+
+    expect(result.success).toBe(false);
+    expect(updateJsonFileMock).not.toHaveBeenCalled();
+    expect(uploadJsonFileMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("backupPoint - media inside module data (custom protocols)", () => {
+  function seedCustomPoint(photoUri: string, audioUri: string) {
+    const project = seedProject({ protocol_id: "7", protocol_source: "custom" });
+    return seedPoint(project.id, {
+      rawModules: [
+        {
+          module_id: "section_1",
+          schema_version: "1.0",
+          data_json: JSON.stringify({
+            fotos: JSON.stringify([{ uri: photoUri, timestamp: 1 }]),
+            gravacoes: JSON.stringify([{ uri: audioUri, duration: 3, timestamp: 2 }]),
+          }),
+        },
+      ],
+    });
+  }
+
+  it("uploads module photo/audio to Drive and writes package markers, never device paths, into the uploaded JSON", async () => {
+    fsState.set("file:///capture/m-photo.jpg", { isDir: false, content: "bytes" });
+    fsState.set("file:///capture/m-note.m4a", { isDir: false, content: "bytes" });
+    const point = seedCustomPoint("file:///capture/m-photo.jpg", "file:///capture/m-note.m4a");
+
+    const result = await backupPoint(point.id.toString());
+
+    expect(result.success).toBe(true);
+    const uploadedNames = uploadBinaryFileMock.mock.calls.map((call) => call[0]).sort();
+    expect(uploadedNames).toEqual(["modules__section_1_1.jpg", "modules__section_1_2.m4a"]);
+    const uploaded = uploadJsonFileMock.mock.calls[0][2] as { modules: Record<string, string> };
+    const moduleJson = uploaded.modules["section_1"];
+    expect(moduleJson).not.toContain("file://");
+    expect(moduleJson).toContain("package-media:modules/section_1_1.jpg");
+    expect(moduleJson).toContain("package-media:modules/section_1_2.m4a");
+    expect(point.drive_synced_at).toBe("2026-01-01T00:00:00.000Z");
+  });
+
+  it("a module photo missing locally fails the point and uploads no JSON", async () => {
+    fsState.set("file:///capture/m-note.m4a", { isDir: false, content: "bytes" });
+    const point = seedCustomPoint("file:///capture/gone.jpg", "file:///capture/m-note.m4a");
+
+    const result = await backupPoint(point.id.toString());
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("section_1");
+    expect(uploadJsonFileMock).not.toHaveBeenCalled();
+    expect(point.drive_synced_at).toBeNull();
   });
 });
 
@@ -311,7 +420,6 @@ describe("backupPoint - full success", () => {
     const result = await backupPoint(point.id.toString());
 
     expect(result.success).toBe(true);
-    expect(result.mediaFailures).toBeUndefined();
     const uploadedContent = uploadJsonFileMock.mock.calls[0][2] as {
       photos: string[];
       audio_notes: Array<{ filename: string }>;
@@ -409,5 +517,257 @@ describe("backupPoint - idempotent re-backup (audit finding CRÍTICO 1)", () => 
       "file:///capture/photo1.jpg",
       "image/jpeg",
     );
+  });
+});
+
+describe("backupPoint - media missing from the device is reported separately from upload failures", () => {
+  it("counts photo, audio and module media that no longer exist locally in missingMediaCount", async () => {
+    fsState.set("file:///capture/here.jpg", { isDir: false, content: "bytes" });
+    const project = seedProject({ protocol_id: "7", protocol_source: "custom" });
+    const point = seedPoint(project.id, {
+      photos: JSON.stringify([
+        { uri: "file:///capture/gone.jpg", timestamp: 1 },
+        { uri: "file:///capture/here.jpg", timestamp: 2 },
+      ]),
+      audio_notes: JSON.stringify([{ uri: "file:///capture/gone.m4a", duration: 5, timestamp: 3 }]),
+      rawModules: [
+        {
+          module_id: "section_1",
+          schema_version: "1.0",
+          data_json: JSON.stringify({
+            fotos: JSON.stringify([{ uri: "file:///capture/gone-module.jpg", timestamp: 4 }]),
+            gravacoes: "[]",
+          }),
+        },
+      ],
+    });
+
+    const result = await backupPoint(point.id.toString());
+
+    expect(result.success).toBe(false);
+    expect(result.missingMediaCount).toBe(3);
+  });
+
+  it("a plain upload failure (file exists) is not counted as missing media", async () => {
+    fsState.set("file:///capture/photo1.jpg", { isDir: false, content: "bytes" });
+    const project = seedProject();
+    const point = seedPoint(project.id, {
+      photos: JSON.stringify([{ uri: "file:///capture/photo1.jpg", timestamp: 1 }]),
+    });
+    uploadBinaryFileMock.mockRejectedValueOnce(new Error("network error"));
+
+    const result = await backupPoint(point.id.toString());
+
+    expect(result.success).toBe(false);
+    expect(result.missingMediaCount ?? 0).toBe(0);
+  });
+
+  it("backupAllPendingPoints tells which failed points have missing media", async () => {
+    const project = seedProject();
+    const withMissing = seedPoint(project.id, {
+      photos: JSON.stringify([{ uri: "file:///capture/gone.jpg", timestamp: 1 }]),
+    });
+    seedPoint(project.id); // no media, backs up fine
+
+    const summary = await backupAllPendingPoints(project.id);
+
+    expect(summary.backedUp).toBe(1);
+    expect(summary.failed).toEqual([
+      expect.objectContaining({ pointId: withMissing.id, missingMediaCount: 1 }),
+    ]);
+  });
+});
+
+describe("discardMissingMedia", () => {
+  it("removes only the references whose file is gone, keeps the rest, never touches the files that exist, and does not mark the point as backed up", async () => {
+    fsState.set("file:///capture/here.jpg", { isDir: false, content: "bytes" });
+    fsState.set("file:///capture/here.m4a", { isDir: false, content: "bytes" });
+    const project = seedProject();
+    const point = seedPoint(project.id, {
+      photos: JSON.stringify([
+        { uri: "file:///capture/gone.jpg", timestamp: 1 },
+        { uri: "file:///capture/here.jpg", timestamp: 2 },
+      ]),
+      audio_notes: JSON.stringify([
+        { uri: "file:///capture/here.m4a", duration: 5, timestamp: 3 },
+        { uri: "file:///capture/gone.m4a", duration: 6, timestamp: 4 },
+      ]),
+    });
+
+    const removed = await discardMissingMedia(point.id);
+
+    expect(removed).toBe(2);
+    expect(JSON.parse(point.photos!)).toEqual([{ uri: "file:///capture/here.jpg", timestamp: 2 }]);
+    expect(JSON.parse(point.audio_notes!)).toEqual([
+      { uri: "file:///capture/here.m4a", duration: 5, timestamp: 3 },
+    ]);
+    expect(fsState.has("file:///capture/here.jpg")).toBe(true);
+    expect(fsState.has("file:///capture/here.m4a")).toBe(true);
+    expect(point.drive_synced_at).toBeNull();
+  });
+
+  it("also cleans media stored inside module data (custom protocols), keeping the module's schema version", async () => {
+    fsState.set("file:///capture/here.jpg", { isDir: false, content: "bytes" });
+    const project = seedProject({ protocol_id: "7", protocol_source: "custom" });
+    const point = seedPoint(project.id, {
+      rawModules: [
+        {
+          module_id: "section_1",
+          schema_version: "2.3",
+          data_json: JSON.stringify({
+            fotos: JSON.stringify([
+              { uri: "file:///capture/gone.jpg", timestamp: 1 },
+              { uri: "file:///capture/here.jpg", timestamp: 2 },
+            ]),
+            gravacoes: JSON.stringify([{ uri: "file:///capture/gone.m4a", duration: 3, timestamp: 4 }]),
+          }),
+        },
+      ],
+    });
+
+    const removed = await discardMissingMedia(point.id);
+
+    expect(removed).toBe(2);
+    const data = JSON.parse(point.rawModules[0].data_json);
+    expect(JSON.parse(data.fotos)).toEqual([{ uri: "file:///capture/here.jpg", timestamp: 2 }]);
+    expect(JSON.parse(data.gravacoes)).toEqual([]);
+    expect(updatePointMock).toHaveBeenCalledWith(
+      point.id,
+      expect.objectContaining({ schema_version: "2.3" }),
+    );
+  });
+
+  it("does nothing (and reports 0) when every referenced file still exists", async () => {
+    fsState.set("file:///capture/here.jpg", { isDir: false, content: "bytes" });
+    const project = seedProject();
+    const point = seedPoint(project.id, {
+      photos: JSON.stringify([{ uri: "file:///capture/here.jpg", timestamp: 1 }]),
+    });
+
+    const removed = await discardMissingMedia(point.id);
+
+    expect(removed).toBe(0);
+    expect(updatePointMock).not.toHaveBeenCalled();
+  });
+
+  it("after discarding, the backup that was blocked by the missing media goes through with only the media that exists", async () => {
+    fsState.set("file:///capture/here.jpg", { isDir: false, content: "bytes" });
+    const project = seedProject();
+    const point = seedPoint(project.id, {
+      photos: JSON.stringify([
+        { uri: "file:///capture/gone.jpg", timestamp: 1 },
+        { uri: "file:///capture/here.jpg", timestamp: 2 },
+      ]),
+    });
+    expect((await backupPoint(point.id.toString())).success).toBe(false);
+
+    await discardMissingMedia(point.id);
+    const retry = await backupPoint(point.id.toString());
+
+    expect(retry.success).toBe(true);
+    const uploaded = uploadJsonFileMock.mock.calls[0][2] as { photos: string[] };
+    expect(uploaded.photos).toEqual(["photo_1.jpg"]);
+    expect(point.drive_synced_at).toBeTruthy();
+  });
+});
+
+describe("backup and discard - media inside repeatable_group items (custom protocols)", () => {
+  function seedGroupPoint(items: Array<{ photo: string; audio?: string }>) {
+    const project = seedProject({ protocol_id: "7", protocol_source: "custom" });
+    return seedPoint(project.id, {
+      rawModules: [
+        {
+          module_id: "section_1",
+          schema_version: "2.3",
+          data_json: JSON.stringify({
+            grupo: items.map((item, index) => ({
+              foto_item: JSON.stringify([{ uri: item.photo, timestamp: index }]),
+              audio_item: JSON.stringify(
+                item.audio ? [{ uri: item.audio, duration: 3, timestamp: index }] : [],
+              ),
+              nome: `item ${index}`,
+            })),
+          }),
+        },
+      ],
+    });
+  }
+
+  it("uploads every group item's photo and audio under unique modules__ names and writes only markers into the JSON", async () => {
+    for (const uri of ["i0.jpg", "i0.m4a", "i1.jpg", "i1.m4a"]) {
+      fsState.set(`file:///capture/${uri}`, { isDir: false, content: `bytes-${uri}` });
+    }
+    const point = seedGroupPoint([
+      { photo: "file:///capture/i0.jpg", audio: "file:///capture/i0.m4a" },
+      { photo: "file:///capture/i1.jpg", audio: "file:///capture/i1.m4a" },
+    ]);
+
+    const result = await backupPoint(point.id.toString());
+
+    expect(result.success).toBe(true);
+    const names = uploadBinaryFileMock.mock.calls.map((call) => call[0]);
+    expect(names).toHaveLength(4);
+    expect(new Set(names).size).toBe(4);
+    expect(names.every((n) => n.startsWith("modules__section_1_grupo_"))).toBe(true);
+    const uploaded = uploadJsonFileMock.mock.calls[0][2] as { modules: Record<string, string> };
+    const moduleJson = uploaded.modules["section_1"];
+    expect(moduleJson).not.toContain("file://");
+    expect(moduleJson.match(/package-media:modules\//g)).toHaveLength(4);
+    expect(JSON.parse(moduleJson).grupo.map((i: { nome: string }) => i.nome)).toEqual(["item 0", "item 1"]);
+    expect(point.drive_synced_at).toBeTruthy();
+  });
+
+  it("a group media upload failure fails the whole point: JSON not written, drive_synced_at not set", async () => {
+    fsState.set("file:///capture/i0.jpg", { isDir: false, content: "bytes" });
+    fsState.set("file:///capture/i1.jpg", { isDir: false, content: "bytes" });
+    const point = seedGroupPoint([{ photo: "file:///capture/i0.jpg" }, { photo: "file:///capture/i1.jpg" }]);
+    uploadBinaryFileMock.mockImplementation(async (name: string, parentId: string, _uri: string, mimeType: string) => {
+      if (name.includes("_1_foto_item_")) throw new Error("network error");
+      return { id: `media-${name}`, name, mimeType };
+    });
+
+    const result = await backupPoint(point.id.toString());
+
+    expect(result.success).toBe(false);
+    expect(uploadJsonFileMock).not.toHaveBeenCalled();
+    expect(point.drive_synced_at).toBeNull();
+  });
+
+  it("a group media file missing from the device fails the point and is counted in missingMediaCount", async () => {
+    fsState.set("file:///capture/i0.jpg", { isDir: false, content: "bytes" });
+    const point = seedGroupPoint([
+      { photo: "file:///capture/i0.jpg" },
+      { photo: "file:///capture/gone.jpg", audio: "file:///capture/gone.m4a" },
+    ]);
+
+    const result = await backupPoint(point.id.toString());
+
+    expect(result.success).toBe(false);
+    expect(result.missingMediaCount).toBe(2);
+    expect(uploadJsonFileMock).not.toHaveBeenCalled();
+  });
+
+  it("discardMissingMedia removes only the references to missing group files: the item stays, other media and schema_version are kept", async () => {
+    fsState.set("file:///capture/i0.jpg", { isDir: false, content: "bytes" });
+    const point = seedGroupPoint([
+      { photo: "file:///capture/i0.jpg" },
+      { photo: "file:///capture/gone.jpg", audio: "file:///capture/gone.m4a" },
+    ]);
+
+    const removed = await discardMissingMedia(point.id);
+
+    expect(removed).toBe(2);
+    const data = JSON.parse(point.rawModules[0].data_json);
+    expect(data.grupo).toHaveLength(2);
+    expect(JSON.parse(data.grupo[0].foto_item)).toHaveLength(1);
+    expect(JSON.parse(data.grupo[1].foto_item)).toEqual([]);
+    expect(JSON.parse(data.grupo[1].audio_item)).toEqual([]);
+    expect(data.grupo[1].nome).toBe("item 1");
+    expect(updatePointMock).toHaveBeenCalledWith(point.id, expect.objectContaining({ schema_version: "2.3" }));
+
+    // The backup that was blocked now goes through, carrying only what exists.
+    const retry = await backupPoint(point.id.toString());
+    expect(retry.success).toBe(true);
+    expect(uploadBinaryFileMock).toHaveBeenCalledTimes(1);
   });
 });

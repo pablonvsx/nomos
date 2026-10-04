@@ -110,6 +110,7 @@ The repository moved from **CC BY-NC 4.0** to **GNU GPL v3.0** (`LICENSE` file a
 | `jest` (dev) | ^29.7.0 | Test runner |
 | `ts-jest` (dev) | ^29.4.11 | TypeScript support in Jest |
 | `@types/jest` (dev) | 29.5.14 | Types (pinned without `^`) |
+| `jszip` (dev) | ^3.10.2 | Tests only: builds and opens real `.zip` files so the points-package suites can check what is physically inside the archive (the app itself uses `react-native-zip-archive`) |
 | `eslint` (dev) | ^9.25.0 | Lint |
 | `eslint-config-expo` (dev) | ~10.0.0 | Expo's lint config |
 

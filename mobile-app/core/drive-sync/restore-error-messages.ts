@@ -1,4 +1,5 @@
 import { UnsupportedPackageVersionError } from "@/core/project-sharing/package-errors";
+import { MediaRestoreError } from "@/core/drive-sync/restore-errors";
 
 /**
  * Maps an error thrown by restoreOwnProjectFromDrive to the i18n key that
@@ -28,6 +29,10 @@ export interface RestoreErrorDescription {
 export function describeRestoreError(error: unknown): RestoreErrorDescription {
   if (error instanceof UnsupportedPackageVersionError) {
     return { key: "driveRestore.errorUnsupportedFormatVersion" };
+  }
+
+  if (error instanceof MediaRestoreError) {
+    return { key: "driveRestore.errorMediaDownload" };
   }
 
   const message = error instanceof Error ? error.message : String(error);

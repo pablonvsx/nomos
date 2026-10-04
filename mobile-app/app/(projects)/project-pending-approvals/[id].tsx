@@ -10,16 +10,21 @@ import {
   Dialog,
   TextInput,
 } from "react-native-paper";
-import { useLocalSearchParams, useFocusEffect, Stack } from "expo-router";
+import { useLocalSearchParams, useFocusEffect, useRouter, Stack } from "expo-router";
 import { useAlertDialog } from "@/hooks/use-dialog";
 import { useI18n } from "@/contexts/i18n-context";
 import { useBottomContentPadding } from "@/hooks/use-bottom-content-padding";
 import { getPendingPointsByProject, updatePointApprovalStatus } from "@/db/queries/points";
 import { BUTTON_RADIUS } from "@/constants/shape";
+import { useMapData } from "@/contexts/map-data-context";
+import { getProjectById } from "@/db/queries/projects";
+import { getProjectActionVisibility } from "@/core/project-sharing/action-visibility";
 import type { Point } from "@/types/database";
 
 export default function ProjectPendingApprovalsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const { clearMapData } = useMapData();
   const paperTheme = usePaperTheme();
   const { t } = useI18n();
   const { alert } = useAlertDialog();
@@ -34,6 +39,13 @@ export default function ProjectPendingApprovalsScreen() {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
+      // Owner-only area (section 10.0): never show it for a collaborator copy,
+      // even if the route is reached directly.
+      const project = await getProjectById(parseInt(id));
+      if (!getProjectActionVisibility(project?.collaboration_role).pendingApprovals) {
+        router.back();
+        return;
+      }
       const rows = await getPendingPointsByProject(parseInt(id));
       setPoints(rows);
     } finally {
@@ -51,6 +63,8 @@ export default function ProjectPendingApprovalsScreen() {
     setBusyId(point.id);
     try {
       await updatePointApprovalStatus(point.id, "approved");
+      // Approval changes what the general list/map shows - drop the cached map data.
+      clearMapData(parseInt(id));
       setPoints((prev) => prev.filter((p) => p.id !== point.id));
     } catch (error) {
       console.error("Error approving point:", error);
@@ -70,6 +84,7 @@ export default function ProjectPendingApprovalsScreen() {
     setBusyId(rejectingPoint.id);
     try {
       await updatePointApprovalStatus(rejectingPoint.id, "rejected", rejectionReason.trim());
+      clearMapData(parseInt(id));
       setPoints((prev) => prev.filter((p) => p.id !== rejectingPoint.id));
       setRejectingPoint(null);
     } catch (error) {

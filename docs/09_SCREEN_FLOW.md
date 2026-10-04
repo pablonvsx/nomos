@@ -89,7 +89,15 @@ flowchart TD
     Details -->|"collaborator: export points, no code set yet"| CCode["CollectorCodeModal<br/>(components/local-identity/)"]
     PointDetails["survey-point-details/[id].tsx"] -->|"collaborator: export single point"| CCode
     Details -->|"owner: import points package, duplicates found"| Dup["PointDuplicatesModal<br/>(components/project-sharing/)"]
+    Details -->|"owner: backup blocked by media missing on the device"| Discard["Confirm: Descartar mídias não encontradas<br/>(discardMissingMedia, then backup retried)"]
 ```
+
+Which of these actions a project shows depends on its `collaboration_role`
+(`getProjectActionVisibility`, see the "Role-based actions" section of
+[12_BACKUP_COLLABORATION.md](12_BACKUP_COLLABORATION.md)); the pending and
+rejected screens also redirect back if the role is not `'owner'`. After an
+import finishes, the screen refreshes immediately instead of waiting for a
+navigation.
 
 `GoogleConnectionModal` and `CollectorCodeModal` are each a single shared
 component with one home base in Settings

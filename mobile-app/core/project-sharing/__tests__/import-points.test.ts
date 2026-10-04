@@ -21,6 +21,10 @@ jest.mock("expo-file-system", () => ({
 }));
 jest.mock("react-native-zip-archive", () => ({ zip: zipMock, unzip: unzipMock }));
 
+// export-points / import-points look up custom protocol media fields; these tests use an official
+// protocol, so no custom protocol is ever returned (and expo-sqlite is never loaded).
+jest.mock("@/db/queries/custom-protocols", () => ({ getCustomProtocolById: jest.fn(async () => null) }));
+
 const shareAsyncMock = jest.fn(async (...args: unknown[]) => {});
 jest.mock("expo-sharing", () => ({
   shareAsync: (...args: unknown[]) => shareAsyncMock(...args),

@@ -32,7 +32,7 @@ app/
 ├── (projects)/
 │   ├── projects.tsx            project list; also "Restaurar Meus Projetos do Drive" (owner-only)
 │   ├── project/new.tsx         create project
-│   ├── project-details/[id].tsx        the SINGLE details screen (PAISAGEO and custom); owner-only backup actions
+│   ├── project-details/[id].tsx        the SINGLE details screen (PAISAGEO and custom); collaboration actions shown per role, see 12 "Role-based actions"
 │   ├── project-pending-approvals/[id].tsx  local approval queue for imported points (pure SQL, no Drive)
 │   ├── project-rejected/[id].tsx       rejected points area (permanent delete)
 │   ├── protocol/builder.tsx    the "Personalized" protocol builder
@@ -73,7 +73,8 @@ core/
 │   ├── search-progress.ts          batch-search progress state (UI)
 │   └── species-catalog-sharing.ts  JSON catalog export/import
 ├── points/
-│   └── delete-point-media.ts       permanently deletes a rejected point + its media files
+│   ├── delete-point-media.ts       permanently deletes a point + every media file it references (columns and custom-protocol module/group media), only inside the app's own storage
+│   └── discard-missing-media.ts    removes references to photo/audio files that no longer exist on the device, so a blocked backup can proceed
 ├── utils/
 │   └── uuid.ts                     generateUuid() — the single shared uuid helper, see 12_BACKUP_COLLABORATION.md
 ├── drive-sync/                     backup/restore to Google Drive, see 12_BACKUP_COLLABORATION.md
@@ -81,12 +82,16 @@ core/
 │   ├── project-drive-service.ts    activateDriveBackup, getManifest/updateManifest, listOwnNomosProjectFolders
 │   ├── backup-service.ts           backupPoint, backupAllPendingPoints
 │   ├── catalog-sync-service.ts     best-effort catalog/classification sync after activation
-│   ├── restore-service.ts          restoreOwnProjectFromDrive
+│   ├── restore-service.ts          restoreOwnProjectFromDrive (always full, all-or-nothing)
+│   ├── restore-errors.ts           MediaRestoreError (dependency-free, usable with instanceof)
 │   └── restore-error-messages.ts   describeRestoreError (pure, testable error→i18n-key mapping)
 ├── project-sharing/                the two export/import packages, see 12_BACKUP_COLLABORATION.md
 │   ├── project-config-package.ts   build/apply the configuration package
 │   ├── export-points.ts            build/share the points package (.zip)
 │   ├── import-points.ts            import a points package, duplicate detection
+│   ├── module-media.ts             finds/rewrites custom-protocol media inside module data (top level and repeatable groups); shared by zip, backup, restore, discard, delete and media export
+│   ├── action-visibility.ts        getProjectActionVisibility: the role → action table (single source of truth for the screens)
+│   ├── refresh-after-import.ts     clears the map cache and refetches right after an import
 │   └── package-errors.ts           InvalidPackageError, UnsupportedPackageVersionError (shared by both packages)
 ├── local-identity/
 │   ├── collector-code.ts           local 4-character collector code (AsyncStorage)
@@ -153,6 +158,7 @@ modules/
     │                         including from a CustomSection.moduleRef pointing to the registry above)
     ├── services/export.ts    customExporter (uses buildProtocolExportPlan from core, no EXTRA_POINT_COLUMNS)
     ├── slugify-field-key.ts   slugifyFieldKey/collectFieldKeys (stable column key per field)
+    ├── protocol-validation.ts  pure builder/import rules, incl. rejecting a repeatable_group nested in another
     ├── config/field-types.ts  catalog of field types offered in the builder (CustomFieldType)
     └── components/OptionsListInput.tsx
 ```

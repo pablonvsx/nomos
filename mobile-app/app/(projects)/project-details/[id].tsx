@@ -63,6 +63,8 @@ import VegetationClassificationsManagementModal from "@/modules/paisageo/compone
 import { getProjectSpeciesCatalogByProject } from "@/db/queries/project-species";
 import { getCustomProtocolById } from "@/db/queries/custom-protocols";
 import { exportProjectConfigPackage } from "@/core/project-sharing/project-config-package";
+import { getProjectActionVisibility } from "@/core/project-sharing/action-visibility";
+import { refreshAfterImport } from "@/core/project-sharing/refresh-after-import";
 import {
   exportAllPointsPackage,
   CollectorCodeRequiredError,
@@ -81,6 +83,7 @@ import {
   GoogleAccountRequiredError,
 } from "@/core/drive-sync/project-drive-service";
 import { backupAllPendingPoints, backupPoint } from "@/core/drive-sync/backup-service";
+import { discardMissingMedia } from "@/core/points/discard-missing-media";
 import { syncActiveVegetationClassificationToDrive } from "@/core/drive-sync/catalog-sync-service";
 import {
   useProtocolRegistry,
@@ -115,6 +118,8 @@ export default function UnifiedProjectDetailsScreen() {
 
   // State Management
   const [project, setProject] = useState<Project | null>(null);
+  // Which collaboration actions this project's role may see (section 10.0 table).
+  const visibility = getProjectActionVisibility(project?.collaboration_role);
   const [protocolLabel, setProtocolLabel] = useState<string>("");
   const [surveyPoints, setSurveyPoints] = useState<Point[]>([]);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
@@ -614,8 +619,15 @@ export default function UnifiedProjectDetailsScreen() {
   const handleExportAllPoints = async () => {
     if (!project) return;
     try {
-      await exportAllPointsPackage(project.id);
-      alert(t("common.success"), t("projectView.pointsPackageExported"));
+      const report = await exportAllPointsPackage(project.id);
+      if (report.skippedMedia.length > 0) {
+        alert(
+          t("common.info"),
+          t("projectView.mediaSkippedWarning", { count: report.skippedMedia.length.toString() }),
+        );
+      } else {
+        alert(t("common.success"), t("projectView.pointsPackageExported"));
+      }
     } catch (error) {
       if (error instanceof CollectorCodeRequiredError) {
         setPendingExportIntent(() => handleExportAllPoints);
@@ -633,8 +645,22 @@ export default function UnifiedProjectDetailsScreen() {
       const result = await importPointsPackage(project.id);
       if (!result) return;
 
+      // Refetch immediately: the screen stays focused after the file picker,
+      // so nothing else would trigger a reload of the list and pending count.
+      await refreshAfterImport({
+        clearMapData: () => clearMapData(project.id),
+        reload: loadProjectData,
+      });
+
       if (result.ownerEmailWarning) {
         alert(t("common.info"), t("projectView.pointsImportOwnerEmailWarning"));
+      }
+
+      if (result.missingMedia > 0) {
+        alert(
+          t("common.info"),
+          t("projectView.pointsImportMissingMedia", { count: result.missingMedia.toString() }),
+        );
       }
 
       if (result.duplicates.length > 0) {
@@ -685,6 +711,58 @@ export default function UnifiedProjectDetailsScreen() {
     }
   };
 
+  // Backup is blocked by photos/audio that no longer exist on this device.
+  // Offer to drop those references (never the files that exist) and retry,
+  // after an explicit confirmation since the references are lost for good.
+  const offerDiscardMissingMedia = (
+    failed: Array<{ pointId: number; pointLabel: string; missingMediaCount: number }>,
+  ) => {
+    const withMissing = failed.filter((f) => f.missingMediaCount > 0);
+    if (withMissing.length === 0) return;
+    const total = withMissing.reduce((sum, f) => sum + f.missingMediaCount, 0);
+
+    confirm(
+      t("driveBackup.discardMissingMediaTitle"),
+      t("driveBackup.discardMissingMediaMessage", {
+        count: total.toString(),
+        points: withMissing.length.toString(),
+      }),
+      async () => {
+        setIsBackingUp(true);
+        try {
+          for (const failure of withMissing) {
+            await discardMissingMedia(failure.pointId);
+          }
+          const retry = await backupAllPendingPoints(project!.id);
+          const retryFailedText =
+            retry.failed.length > 0
+              ? "\n" + retry.failed.map((f) => `${f.pointLabel}: ${f.reason}`).join("\n")
+              : "";
+          alert(
+            t("common.success"),
+            t("driveBackup.backupSummary", {
+              backedUp: retry.backedUp.toString(),
+              failed: retry.failed.length.toString(),
+            }) + retryFailedText,
+          );
+          loadProjectData();
+        } catch (error) {
+          console.error("Error discarding missing media:", error);
+          alert(
+            t("common.error"),
+            error instanceof Error ? error.message : t("driveBackup.errorBackingUpPoint"),
+          );
+        } finally {
+          setIsBackingUp(false);
+        }
+      },
+      () => {},
+      t("driveBackup.discardMissingMediaConfirm"),
+      t("common.cancel"),
+      true,
+    );
+  };
+
   const handleBackupAllPoints = async () => {
     if (!project) return;
 
@@ -707,6 +785,7 @@ export default function UnifiedProjectDetailsScreen() {
           backedUp: summary.backedUp.toString(),
           failed: summary.failed.length.toString(),
         }) + failedText,
+        () => offerDiscardMissingMedia(summary.failed),
       );
       loadProjectData();
     } catch (error) {
@@ -731,17 +810,17 @@ export default function UnifiedProjectDetailsScreen() {
     try {
       const result = await backupPoint(pointId.toString());
       if (result.success) {
-        alert(
-          t("common.success"),
-          result.mediaFailures && result.mediaFailures.length > 0
-            ? t("driveBackup.backupPointSuccessWithMediaWarning", {
-                count: result.mediaFailures.length.toString(),
-              })
-            : t("driveBackup.backupPointSuccess"),
-        );
+        alert(t("common.success"), t("driveBackup.backupPointSuccess"));
         loadProjectData();
       } else {
-        alert(t("common.error"), result.error ?? t("driveBackup.errorBackingUpPoint"));
+        alert(
+          t("common.error"),
+          result.error ?? t("driveBackup.errorBackingUpPoint"),
+          () =>
+            offerDiscardMissingMedia([
+              { pointId, pointLabel: "", missingMediaCount: result.missingMediaCount ?? 0 },
+            ]),
+        );
       }
     } catch (error) {
       console.error("Error backing up point:", error);
@@ -788,7 +867,7 @@ export default function UnifiedProjectDetailsScreen() {
                 {item.lat.toFixed(6)}, {item.lon.toFixed(6)}
               </Text>
             </View>
-            {project?.collaboration_role === "owner" && item.approval_status === "approved" && (
+            {visibility.backup && item.approval_status === "approved" && (
               <IconButton
                 icon={item.drive_synced_at ? "cloud-check" : "cloud-outline"}
                 size={22}
@@ -1056,7 +1135,8 @@ export default function UnifiedProjectDetailsScreen() {
           </Card.Content>
         </Card>
 
-        {/* Local approval queue links (Fase 3) */}
+        {/* Local approval queue links (Fase 3) - owner only (section 10.0) */}
+        {visibility.pendingApprovals && (
         <Card
           style={[styles.pointCard, { backgroundColor: paperTheme.colors.surface }]}
           onPress={() => router.push(`/project-pending-approvals/${id}` as any)}
@@ -1071,7 +1151,9 @@ export default function UnifiedProjectDetailsScreen() {
             </View>
           </Card.Content>
         </Card>
+        )}
 
+        {visibility.rejectedPoints && (
         <Card
           style={[styles.pointCard, { backgroundColor: paperTheme.colors.surface }]}
           onPress={() => router.push(`/project-rejected/${id}` as any)}
@@ -1086,6 +1168,7 @@ export default function UnifiedProjectDetailsScreen() {
             </View>
           </Card.Content>
         </Card>
+        )}
       </ScrollView>
 
       <FAB.Group
@@ -1147,31 +1230,43 @@ export default function UnifiedProjectDetailsScreen() {
               ? paperTheme.colors.onSurface
               : paperTheme.colors.primary,
           },
-          {
-            icon: "package-variant",
-            label: t("projectView.exportConfigPackage"),
-            onPress: handleExportConfigPackage,
-            color: paperTheme.dark
-              ? paperTheme.colors.onSurface
-              : paperTheme.colors.primary,
-          },
-          {
-            icon: "database-export",
-            label: t("projectView.exportAllPoints"),
-            onPress: surveyPoints.length === 0 ? () => {} : handleExportAllPoints,
-            color: paperTheme.dark
-              ? paperTheme.colors.onSurface
-              : paperTheme.colors.primary,
-          },
-          {
-            icon: "database-import",
-            label: t("projectView.importPoints"),
-            onPress: handleImportPoints,
-            color: paperTheme.dark
-              ? paperTheme.colors.onSurface
-              : paperTheme.colors.primary,
-          },
-          ...(project.collaboration_role == null
+          ...(visibility.exportConfigPackage
+            ? [
+                {
+                  icon: "package-variant",
+                  label: t("projectView.exportConfigPackage"),
+                  onPress: handleExportConfigPackage,
+                  color: paperTheme.dark
+                    ? paperTheme.colors.onSurface
+                    : paperTheme.colors.primary,
+                },
+              ]
+            : []),
+          ...(visibility.exportPointsToOwner
+            ? [
+                {
+                  icon: "database-export",
+                  label: t("projectView.exportAllPoints"),
+                  onPress: surveyPoints.length === 0 ? () => {} : handleExportAllPoints,
+                  color: paperTheme.dark
+                    ? paperTheme.colors.onSurface
+                    : paperTheme.colors.primary,
+                },
+              ]
+            : []),
+          ...(visibility.importPoints
+            ? [
+                {
+                  icon: "database-import",
+                  label: t("projectView.importPoints"),
+                  onPress: handleImportPoints,
+                  color: paperTheme.dark
+                    ? paperTheme.colors.onSurface
+                    : paperTheme.colors.primary,
+                },
+              ]
+            : []),
+          ...(visibility.activateDriveBackup
             ? [
                 {
                   icon: "backup-restore",
@@ -1183,7 +1278,7 @@ export default function UnifiedProjectDetailsScreen() {
                 },
               ]
             : []),
-          ...(project.collaboration_role === "owner"
+          ...(visibility.backup
             ? [
                 {
                   icon: "cloud-upload",
@@ -1239,6 +1334,12 @@ export default function UnifiedProjectDetailsScreen() {
           visible
           result={duplicatesResult}
           onDismiss={() => setDuplicatesResult(null)}
+          onResolved={() =>
+            refreshAfterImport({
+              clearMapData: () => clearMapData(project.id),
+              reload: loadProjectData,
+            })
+          }
         />
       )}
 
