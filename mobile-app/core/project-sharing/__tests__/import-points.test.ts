@@ -6,7 +6,7 @@ import {
   unzipMock,
   resetFakeFs,
   resetFakeDb,
-  seedProject,
+  seedOwnerProject,
   seedPoint,
   fsState,
   projects,
@@ -119,6 +119,7 @@ jest.mock("@/db/queries/points", () => ({
   }),
 }));
 
+import { ProjectRoleNotAllowedError } from "../action-visibility";
 import { exportAllPointsPackage } from "../export-points";
 import {
   importPointsPackage,
@@ -136,7 +137,17 @@ function pickZip(zipUri: string) {
 }
 
 async function exportAndCaptureZipUri(projectId: number): Promise<string> {
-  await exportAllPointsPackage(projectId);
+  // These tests export and import through the same local project. The sender
+  // side is a collaborator and the receiving side is the owner, so the role
+  // is switched for the export only.
+  const project = projects.find((p) => p.id === projectId)!;
+  const receivingRole = project.collaboration_role;
+  project.collaboration_role = "collaborator";
+  try {
+    await exportAllPointsPackage(projectId);
+  } finally {
+    project.collaboration_role = receivingRole;
+  }
   return shareAsyncMock.mock.calls[shareAsyncMock.mock.calls.length - 1][0] as string;
 }
 
@@ -148,9 +159,22 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+describe("importPointsPackage — role check", () => {
+  it.each([null, "collaborator"] as const)(
+    "refuses a project whose role is %s (only the owner imports points), before the file picker is even opened",
+    async (role) => {
+      const project = seedOwnerProject({ collaboration_role: role });
+
+      await expect(importPointsPackage(project.id)).rejects.toBeInstanceOf(ProjectRoleNotAllowedError);
+      expect(getDocumentAsyncMock).not.toHaveBeenCalled();
+      expect(createPointMock).not.toHaveBeenCalled();
+    },
+  );
+});
+
 describe("importPointsPackage — round trip with media", () => {
   it("persists a point's photo AND audio note to a path that still exists after import returns", async () => {
-    const project = seedProject();
+    const project = seedOwnerProject();
     // Seed real media source files in the fake fs.
     fsState.set("file:///capture/photo1.jpg", { isDir: false, content: "photo-bytes" });
     fsState.set("file:///capture/audio1.m4a", { isDir: false, content: "audio-bytes" });
@@ -190,8 +214,8 @@ describe("importPointsPackage — round trip with media", () => {
 
 describe("importPointsPackage — identity checks", () => {
   it("rejects the whole package when project_uuid doesn't match the target project, inserting nothing", async () => {
-    const sourceProject = seedProject({ name: "Origem" });
-    const targetProject = seedProject({ name: "Destino" });
+    const sourceProject = seedOwnerProject({ name: "Origem" });
+    const targetProject = seedOwnerProject({ name: "Destino" });
     seedPoint(sourceProject.id);
 
     const zipUri = await exportAndCaptureZipUri(sourceProject.id);
@@ -204,7 +228,7 @@ describe("importPointsPackage — identity checks", () => {
   });
 
   it("rejects the whole package when protocol_id/protocol_source differ from the target project", async () => {
-    const project = seedProject({ protocol_id: "nomos-paisageo-v1", protocol_source: "official" });
+    const project = seedOwnerProject({ protocol_id: "nomos-paisageo-v1", protocol_source: "official" });
     seedPoint(project.id);
     const zipUri = await exportAndCaptureZipUri(project.id);
 
@@ -219,7 +243,7 @@ describe("importPointsPackage — identity checks", () => {
   });
 
   it("rejects an unsupported format_version before reading any other field", async () => {
-    const project = seedProject();
+    const project = seedOwnerProject();
     seedPoint(project.id);
     const zipUri = await exportAndCaptureZipUri(project.id);
 
@@ -241,7 +265,7 @@ describe("importPointsPackage — identity checks", () => {
   });
 
   it("warns (non-blocking) when owner_email differs from the connected account, but still imports", async () => {
-    const project = seedProject({ owner_email: "owner@example.com" });
+    const project = seedOwnerProject({ owner_email: "owner@example.com" });
     seedPoint(project.id);
     const zipUri = await exportAndCaptureZipUri(project.id);
     points.length = 0;
@@ -255,7 +279,7 @@ describe("importPointsPackage — identity checks", () => {
   });
 
   it("does not warn when there is no connected account (owner_email check is a no-op stub for now)", async () => {
-    const project = seedProject({ owner_email: "owner@example.com" });
+    const project = seedOwnerProject({ owner_email: "owner@example.com" });
     seedPoint(project.id);
     const zipUri = await exportAndCaptureZipUri(project.id);
     pickZip(zipUri);
@@ -269,7 +293,7 @@ describe("importPointsPackage — duplicate detection", () => {
   it.each(["pending", "approved", "rejected"] as const)(
     "treats a point with an existing point_uuid (approval_status=%s) as a duplicate instead of auto-inserting",
     async (approvalStatus) => {
-      const project = seedProject();
+      const project = seedOwnerProject();
       const point = seedPoint(project.id);
       const zipUri = await exportAndCaptureZipUri(project.id);
       point.approval_status = approvalStatus;
@@ -284,7 +308,7 @@ describe("importPointsPackage — duplicate detection", () => {
   );
 
   it("resolvePointDuplicate('discard') deletes the staged media and leaves the existing point untouched", async () => {
-    const project = seedProject();
+    const project = seedOwnerProject();
     const point = seedPoint(project.id, {
       photos: JSON.stringify([{ uri: "file:///capture/photo1.jpg", timestamp: 1 }]),
     });
@@ -307,7 +331,7 @@ describe("importPointsPackage — duplicate detection", () => {
   });
 
   it("resolvePointDuplicate('replace') updates the point and sets approval_status back to pending", async () => {
-    const project = seedProject();
+    const project = seedOwnerProject();
     const point = seedPoint(project.id, { approval_status: "approved" });
     const zipUri = await exportAndCaptureZipUri(project.id);
 
@@ -327,7 +351,7 @@ describe("importPointsPackage — duplicate detection", () => {
 
 describe("importPointsPackage — unzip safety", () => {
   it("fails with a clear JS error before ever calling unzip when the copied file is empty", async () => {
-    const project = seedProject();
+    const project = seedOwnerProject();
     getDocumentAsyncMock.mockResolvedValue({
       canceled: false,
       assets: [{ uri: "file:///picked/empty.zip" }],
@@ -339,7 +363,7 @@ describe("importPointsPackage — unzip safety", () => {
   });
 
   it("returns null when the picker is canceled", async () => {
-    const project = seedProject();
+    const project = seedOwnerProject();
     getDocumentAsyncMock.mockResolvedValue({ canceled: true });
 
     const result = await importPointsPackage(project.id);

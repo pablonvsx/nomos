@@ -10,6 +10,7 @@ import {
   updatePoint,
 } from "@/db/queries/points";
 import { parsePhotoUris, parseAudioNotes } from "@/db/mappers/json-utils";
+import { assertProjectActionAllowed } from "@/core/project-sharing/action-visibility";
 import {
   PACKAGE_MEDIA_PREFIX,
   buildModuleMediaRelativePath,
@@ -77,15 +78,19 @@ async function buildAndSharePointsPackage(
   projectId: number,
   points: Array<Point & { rawModules: PointModule[] }>,
 ): Promise<ExportPointsReport> {
+  const project = await getProjectById(projectId);
+  if (!project) {
+    throw new Error(`Project ${projectId} not found`);
+  }
+  // Only a collaborator copy sends points to the owner. Checked before the
+  // collector-code prompt so a wrong role is never asked to set a code.
+  assertProjectActionAllowed(project.collaboration_role, "exportPointsToOwner");
+
   const collectorCode = await getLocalCollectorCode();
   if (!collectorCode) {
     throw new CollectorCodeRequiredError();
   }
 
-  const project = await getProjectById(projectId);
-  if (!project) {
-    throw new Error(`Project ${projectId} not found`);
-  }
   const projectUuid = await ensureProjectUuid(projectId);
   const moduleMediaFields = await getModuleMediaFields(project.protocol_id, project.protocol_source);
   const skippedMedia: string[] = [];

@@ -16,7 +16,15 @@ import {
   createDeviceMedia,
   openZip,
 } from "./fixtures/real-fs-environment";
-import { resetFakeDb, seedProject, seedPoint, projects, points, type FakePointRow } from "./fixtures/fake-environment";
+import {
+  resetFakeDb,
+  seedCollaboratorProject,
+  seedOwnerProject,
+  seedPoint,
+  projects,
+  points,
+  type FakePointRow,
+} from "./fixtures/fake-environment";
 
 jest.mock("expo-file-system", () => ({
   File: RealFile,
@@ -180,7 +188,7 @@ function pickZip(zipUri: string) {
 async function exportCustomPoint() {
   const photoUri = createDeviceMedia("module-photo.jpg", PHOTO_BYTES);
   const audioUri = createDeviceMedia("module-note.m4a", AUDIO_BYTES);
-  const sender = seedProject({ protocol_id: "7", protocol_source: "custom", project_uuid: "shared-project" });
+  const sender = seedCollaboratorProject({ protocol_id: "7", protocol_source: "custom", project_uuid: "shared-project" });
   seedPoint(sender.id, {
     uuid: "pt-1",
     rawModules: [
@@ -196,7 +204,7 @@ async function exportCustomPoint() {
   });
   await exportAllPointsPackage(sender.id);
   const zipUri = shareAsyncMock.mock.calls[0][0] as string;
-  const receiver = seedProject({ protocol_id: "7", protocol_source: "custom", project_uuid: "shared-project" });
+  const receiver = seedOwnerProject({ protocol_id: "7", protocol_source: "custom", project_uuid: "shared-project" });
   return { zipUri, receiver };
 }
 
@@ -209,7 +217,7 @@ async function exportCustomPointWithGroups() {
     i1photo: createDeviceMedia("g-i1.jpg", Buffer.from("i1-photo-bytes")),
     i1audio: createDeviceMedia("g-i1.m4a", Buffer.from("i1-audio-bytes")),
   };
-  const sender = seedProject({ protocol_id: "7", protocol_source: "custom", project_uuid: "shared-project" });
+  const sender = seedCollaboratorProject({ protocol_id: "7", protocol_source: "custom", project_uuid: "shared-project" });
   seedPoint(sender.id, {
     uuid: "pt-1",
     rawModules: [
@@ -236,7 +244,7 @@ async function exportCustomPointWithGroups() {
   });
   await exportAllPointsPackage(sender.id);
   const zipUri = shareAsyncMock.mock.calls[0][0] as string;
-  const receiver = seedProject({ protocol_id: "7", protocol_source: "custom", project_uuid: "shared-project" });
+  const receiver = seedOwnerProject({ protocol_id: "7", protocol_source: "custom", project_uuid: "shared-project" });
   return { zipUri, receiver };
 }
 
@@ -286,14 +294,14 @@ describe("points package round trip on a real filesystem", () => {
   it("official protocol: point photo/audio exist at their saved paths AFTER import returned", async () => {
     const photoUri = createDeviceMedia("photo.jpg", PHOTO_BYTES);
     const audioUri = createDeviceMedia("note.m4a", AUDIO_BYTES);
-    const sender = seedProject({ project_uuid: "shared-project" });
+    const sender = seedCollaboratorProject({ project_uuid: "shared-project" });
     seedPoint(sender.id, {
       uuid: "pt-1",
       photos: JSON.stringify([{ uri: photoUri, timestamp: 1 }]),
       audio_notes: JSON.stringify([{ uri: audioUri, duration: 3, timestamp: 2 }]),
     });
     await exportAllPointsPackage(sender.id);
-    const receiver = seedProject({ project_uuid: "shared-project" });
+    const receiver = seedOwnerProject({ project_uuid: "shared-project" });
     pickZip(shareAsyncMock.mock.calls[0][0] as string);
 
     const result = await importPointsPackage(receiver.id);
@@ -389,7 +397,7 @@ describe("points package round trip on a real filesystem", () => {
   });
 
   it("compatibility: an older package whose group items hold plain uris (no markers) imports exactly as before", async () => {
-    const sender = seedProject({ protocol_id: "7", protocol_source: "custom", project_uuid: "shared-project" });
+    const sender = seedCollaboratorProject({ protocol_id: "7", protocol_source: "custom", project_uuid: "shared-project" });
     const legacyData = JSON.stringify({
       grupo: [{ foto_item: JSON.stringify([{ uri: "file:///old-device/photo.jpg", timestamp: 1 }]), nome: "legacy" }],
     });
@@ -406,7 +414,7 @@ describe("points package round trip on a real filesystem", () => {
     zip.file("points.json", JSON.stringify(pkg));
     const legacyZipPath = localPath(zipUri).replace(/\.zip$/, "-legacy.zip");
     fs.writeFileSync(legacyZipPath, await zip.generateAsync({ type: "nodebuffer" }));
-    const receiver = seedProject({ protocol_id: "7", protocol_source: "custom", project_uuid: "shared-project" });
+    const receiver = seedOwnerProject({ protocol_id: "7", protocol_source: "custom", project_uuid: "shared-project" });
     pickZip(`file://${legacyZipPath}`);
 
     const result = await importPointsPackage(receiver.id);

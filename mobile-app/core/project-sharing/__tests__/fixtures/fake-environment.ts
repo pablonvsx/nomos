@@ -159,6 +159,7 @@ export interface FakeProjectRow {
   protocol_source: "official" | "custom";
   project_uuid: string | null;
   owner_email: string | null;
+  collaboration_role: "owner" | "collaborator" | null;
 }
 
 export interface FakePointRow {
@@ -209,10 +210,21 @@ export function seedProject(overrides: Partial<FakeProjectRow> = {}): FakeProjec
     protocol_source: "official",
     project_uuid: null,
     owner_email: null,
+    collaboration_role: null,
     ...overrides,
   };
   projects.push(row);
   return row;
+}
+
+/** A collaborator copy: the only role that may export a points package. */
+export function seedCollaboratorProject(overrides: Partial<FakeProjectRow> = {}): FakeProjectRow {
+  return seedProject({ collaboration_role: "collaborator", ...overrides });
+}
+
+/** The owner instance: the only role that may import a points package. */
+export function seedOwnerProject(overrides: Partial<FakeProjectRow> = {}): FakeProjectRow {
+  return seedProject({ collaboration_role: "owner", ...overrides });
 }
 
 export function seedPoint(projectId: number, overrides: Partial<FakePointRow> = {}): FakePointRow {

@@ -25,6 +25,7 @@ import {
   setVegetationClassificationUuid,
 } from "@/db/queries/vegetation-classifications";
 import { writeAndShare } from "@/core/export/file-writer";
+import { assertProjectActionAllowed } from "@/core/project-sharing/action-visibility";
 import { CustomProtocolSchema, VegetationClass } from "@/types/database";
 import { InvalidPackageError, UnsupportedPackageVersionError } from "@/core/project-sharing/package-errors";
 
@@ -328,6 +329,13 @@ function sanitizeFileNamePart(value: string): string {
 }
 
 export async function exportProjectConfigPackage(projectId: number): Promise<void> {
+  // A collaborator copy never exports a configuration package. Checked here,
+  // not in buildProjectConfigPackage, which activating Drive backup also uses.
+  const project = await getProjectById(projectId);
+  if (project) {
+    assertProjectActionAllowed(project.collaboration_role, "exportConfigPackage");
+  }
+
   const pkg = await buildProjectConfigPackage(projectId);
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5);

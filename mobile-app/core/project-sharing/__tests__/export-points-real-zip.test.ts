@@ -18,7 +18,7 @@ import {
 } from "./fixtures/real-fs-environment";
 import {
   resetFakeDb,
-  seedProject,
+  seedCollaboratorProject,
   seedPoint,
   projects,
   points,
@@ -183,7 +183,7 @@ describe("exportAllPointsPackage - real zip contents", () => {
   it("official protocol: photo and audio from the point columns are physically inside the zip", async () => {
     const photoUri = createDeviceMedia("photo.jpg", PHOTO_BYTES);
     const audioUri = createDeviceMedia("note.m4a", AUDIO_BYTES);
-    const project = seedProject({ protocol_id: "nomos-paisageo-v1", protocol_source: "official" });
+    const project = seedCollaboratorProject({ protocol_id: "nomos-paisageo-v1", protocol_source: "official" });
     seedPoint(project.id, {
       photos: JSON.stringify([{ uri: photoUri, timestamp: 1 }]),
       audio_notes: JSON.stringify([{ uri: audioUri, duration: 3, timestamp: 2 }]),
@@ -203,7 +203,7 @@ describe("exportAllPointsPackage - real zip contents", () => {
   it("custom protocol: photo_input / audio_notes_input media inside module data are physically inside the zip", async () => {
     const photoUri = createDeviceMedia("module-photo.jpg", PHOTO_BYTES);
     const audioUri = createDeviceMedia("module-note.m4a", AUDIO_BYTES);
-    const project = seedProject({ protocol_id: "7", protocol_source: "custom" });
+    const project = seedCollaboratorProject({ protocol_id: "7", protocol_source: "custom" });
     seedPoint(project.id, {
       rawModules: [
         {
@@ -262,7 +262,7 @@ describe("exportAllPointsPackage - real zip contents", () => {
       i1photo: createDeviceMedia("i1.jpg", bytes.i1photo),
       i1audio: createDeviceMedia("i1.m4a", bytes.i1audio),
     };
-    const project = seedProject({ protocol_id: "7", protocol_source: "custom" });
+    const project = seedCollaboratorProject({ protocol_id: "7", protocol_source: "custom" });
     seedPoint(project.id, {
       rawModules: [
         {
@@ -315,7 +315,7 @@ describe("exportAllPointsPackage - real zip contents", () => {
 
   it("a group media file whose source is gone is reported in skippedMedia and its reference is dropped from the item", async () => {
     const goodUri = createDeviceMedia("good.jpg", PHOTO_BYTES);
-    const project = seedProject({ protocol_id: "7", protocol_source: "custom" });
+    const project = seedCollaboratorProject({ protocol_id: "7", protocol_source: "custom" });
     seedPoint(project.id, {
       rawModules: [
         {
@@ -348,7 +348,7 @@ describe("exportAllPointsPackage - real zip contents", () => {
 
   it("a media file whose source is gone is left out of the zip AND out of points.json", async () => {
     const goodUri = createDeviceMedia("good.jpg", PHOTO_BYTES);
-    const project = seedProject({ protocol_id: "nomos-paisageo-v1", protocol_source: "official" });
+    const project = seedCollaboratorProject({ protocol_id: "nomos-paisageo-v1", protocol_source: "official" });
     seedPoint(project.id, {
       photos: JSON.stringify([
         { uri: "file:///does/not/exist.jpg", timestamp: 1 },
@@ -365,7 +365,7 @@ describe("exportAllPointsPackage - real zip contents", () => {
   });
 
   it("reports media that could not be included instead of dropping it silently", async () => {
-    const project = seedProject({ protocol_id: "nomos-paisageo-v1", protocol_source: "official" });
+    const project = seedCollaboratorProject({ protocol_id: "nomos-paisageo-v1", protocol_source: "official" });
     seedPoint(project.id, {
       photos: JSON.stringify([{ uri: "file:///does/not/exist.jpg", timestamp: 1 }]),
     });

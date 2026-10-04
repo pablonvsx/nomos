@@ -2,6 +2,7 @@ import { File } from "expo-file-system";
 import { getPoint, updatePoint } from "@/db/queries/points";
 import { getProjectById } from "@/db/queries/projects";
 import { parseJsonText } from "@/db/mappers/json-utils";
+import { assertProjectActionAllowed } from "@/core/project-sharing/action-visibility";
 import { getModuleMediaFields, mapModuleMediaUris } from "@/core/project-sharing/module-media";
 
 /**
@@ -35,6 +36,12 @@ export async function discardMissingMedia(pointId: number): Promise<number> {
   if (!loaded) return 0;
   const { point, modules } = loaded;
 
+  // Part of the owner's backup flow: only an owner instance may discard media
+  // references. A point whose project is gone has nothing to discard.
+  const project = await getProjectById(point.project_id);
+  if (!project) return 0;
+  assertProjectActionAllowed(project.collaboration_role, "backup");
+
   let removed = 0;
   const updates: {
     photos?: string;
@@ -54,10 +61,7 @@ export async function discardMissingMedia(pointId: number): Promise<number> {
     removed += audioNotes.removed;
   }
 
-  const project = await getProjectById(point.project_id);
-  const moduleMediaFields = project
-    ? await getModuleMediaFields(project.protocol_id, project.protocol_source)
-    : [];
+  const moduleMediaFields = await getModuleMediaFields(project.protocol_id, project.protocol_source);
   for (const mod of modules) {
     const fieldsOfModule = moduleMediaFields.filter((f) => f.moduleId === mod.module_id);
     if (fieldsOfModule.length === 0) continue;

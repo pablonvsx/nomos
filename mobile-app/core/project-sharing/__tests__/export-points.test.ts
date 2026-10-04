@@ -6,7 +6,7 @@ import {
   unzipMock,
   resetFakeFs,
   resetFakeDb,
-  seedProject,
+  seedCollaboratorProject,
   seedPoint,
   fsState,
   projects,
@@ -67,6 +67,7 @@ jest.mock("@/db/queries/points", () => ({
   }),
 }));
 
+import { ProjectRoleNotAllowedError } from "../action-visibility";
 import {
   exportAllPointsPackage,
   exportPointsPackage,
@@ -91,9 +92,26 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+describe("exportAllPointsPackage / exportPointsPackage - role check", () => {
+  it.each([null, "owner"] as const)(
+    "refuses a project whose role is %s (only a collaborator copy sends points), before the collector-code prompt and before sharing anything",
+    async (role) => {
+      const project = seedCollaboratorProject({ collaboration_role: role });
+      const point = seedPoint(project.id);
+      localCollectorCode = null; // would raise CollectorCodeRequiredError if the role check came later
+
+      await expect(exportAllPointsPackage(project.id)).rejects.toBeInstanceOf(ProjectRoleNotAllowedError);
+      await expect(exportPointsPackage([point.id.toString()])).rejects.toBeInstanceOf(
+        ProjectRoleNotAllowedError,
+      );
+      expect(shareAsyncMock).not.toHaveBeenCalled();
+    },
+  );
+});
+
 describe("exportAllPointsPackage / exportPointsPackage", () => {
   it("throws CollectorCodeRequiredError when no collector code is set, and never shares anything", async () => {
-    const project = seedProject();
+    const project = seedCollaboratorProject();
     seedPoint(project.id);
     localCollectorCode = null;
 
@@ -105,7 +123,7 @@ describe("exportAllPointsPackage / exportPointsPackage", () => {
 
   it("includes every point regardless of approval_status", async () => {
     localCollectorCode = "ABCD";
-    const project = seedProject();
+    const project = seedCollaboratorProject();
     seedPoint(project.id, { approval_status: "pending" });
     seedPoint(project.id, { approval_status: "approved" });
     seedPoint(project.id, { approval_status: "rejected" });
@@ -119,7 +137,7 @@ describe("exportAllPointsPackage / exportPointsPackage", () => {
 
   it("does not fail on a photo/audio file that no longer exists on disk, and reports it as skipped", async () => {
     localCollectorCode = "ABCD";
-    const project = seedProject();
+    const project = seedCollaboratorProject();
     seedPoint(project.id, {
       photos: JSON.stringify([{ uri: "file:///gone/photo.jpg", timestamp: 1 }]),
     });
@@ -134,7 +152,7 @@ describe("exportAllPointsPackage / exportPointsPackage", () => {
 
   it("exportPointsPackage only includes the requested point ids", async () => {
     localCollectorCode = "ABCD";
-    const project = seedProject();
+    const project = seedCollaboratorProject();
     const p1 = seedPoint(project.id);
     seedPoint(project.id);
 
@@ -146,7 +164,7 @@ describe("exportAllPointsPackage / exportPointsPackage", () => {
 
   it("stamps created_by from the local collector code once, then reuses it on a later export", async () => {
     localCollectorCode = "WXYZ";
-    const project = seedProject();
+    const project = seedCollaboratorProject();
     const point = seedPoint(project.id);
 
     await exportAllPointsPackage(project.id);

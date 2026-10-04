@@ -217,6 +217,7 @@ jest.mock("@/db/queries/projects", () => ({
 
 import { backupPoint, backupAllPendingPoints } from "../backup-service";
 import { discardMissingMedia } from "@/core/points/discard-missing-media";
+import { ProjectRoleNotAllowedError } from "@/core/project-sharing/action-visibility";
 
 beforeEach(() => {
   resetFakeState();
@@ -576,6 +577,22 @@ describe("backupPoint - media missing from the device is reported separately fro
       expect.objectContaining({ pointId: withMissing.id, missingMediaCount: 1 }),
     ]);
   });
+});
+
+describe("discardMissingMedia - role check", () => {
+  it.each([null, "collaborator"] as const)(
+    "refuses a project whose role is %s (it belongs to the owner's backup flow) without writing anything",
+    async (role) => {
+      const project = seedProject({ collaboration_role: role, drive_folder_id: null });
+      const point = seedPoint(project.id, {
+        photos: JSON.stringify([{ uri: "file:///capture/gone.jpg", timestamp: 1 }]),
+      });
+
+      await expect(discardMissingMedia(point.id)).rejects.toBeInstanceOf(ProjectRoleNotAllowedError);
+      expect(updatePointMock).not.toHaveBeenCalled();
+      expect(JSON.parse(point.photos!)).toHaveLength(1);
+    },
+  );
 });
 
 describe("discardMissingMedia", () => {

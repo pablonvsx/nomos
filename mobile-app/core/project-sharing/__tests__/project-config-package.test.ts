@@ -229,6 +229,7 @@ import {
   ProjectConfigPackage,
   UnsupportedPackageVersionError,
 } from "../project-config-package";
+import { ProjectRoleNotAllowedError } from "../action-visibility";
 
 function seedOfficialProject(overrides: Partial<FakeProject> = {}): FakeProject {
   const row: FakeProject = {
@@ -554,6 +555,22 @@ describe("applyProjectConfigPackage — import behavior", () => {
     await expect(applyProjectConfigPackage(pkg)).rejects.toBeInstanceOf(InvalidPackageError);
     expect(species).toHaveLength(0);
     expect(vegClassifications).toHaveLength(0);
+  });
+});
+
+describe("exportProjectConfigPackage - role check", () => {
+  it("refuses a collaborator copy, before building or sharing anything", async () => {
+    const project = seedOfficialProject({ collaboration_role: "collaborator" });
+
+    await expect(exportProjectConfigPackage(project.id)).rejects.toBeInstanceOf(ProjectRoleNotAllowedError);
+    expect(writeAndShare).not.toHaveBeenCalled();
+  });
+
+  it.each([null, "owner"] as const)("allows a project whose role is %s", async (role) => {
+    const project = seedOfficialProject({ collaboration_role: role });
+
+    await expect(exportProjectConfigPackage(project.id)).resolves.toBeUndefined();
+    expect(writeAndShare).toHaveBeenCalledTimes(1);
   });
 });
 

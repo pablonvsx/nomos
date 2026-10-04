@@ -8,6 +8,7 @@ import {
   InvalidPackageError,
   UnsupportedPackageVersionError,
 } from "@/core/project-sharing/package-errors";
+import { assertProjectActionAllowed } from "@/core/project-sharing/action-visibility";
 import {
   MODULE_MEDIA_SUBDIR,
   PACKAGE_MEDIA_PREFIX,
@@ -181,6 +182,14 @@ async function restoreModuleMedia(
 export async function importPointsPackage(
   targetProjectId: number,
 ): Promise<ImportPointsResult | null> {
+  // Only the owner imports points. Checked first, so a wrong role never gets
+  // as far as opening the file picker.
+  const targetProject = await getProjectById(targetProjectId);
+  if (!targetProject) {
+    throw new Error(`Project ${targetProjectId} not found`);
+  }
+  assertProjectActionAllowed(targetProject.collaboration_role, "importPoints");
+
   const picked = await DocumentPicker.getDocumentAsync({
     type: ["application/zip", "*/*"],
     copyToCacheDirectory: true,
@@ -223,11 +232,6 @@ export async function importPointsPackage(
 
     assertValidPointsPackageShape(parsed);
     const pkg = parsed;
-
-    const targetProject = await getProjectById(targetProjectId);
-    if (!targetProject) {
-      throw new Error(`Project ${targetProjectId} not found`);
-    }
 
     const targetProjectUuid = await ensureProjectUuid(targetProjectId);
     if (pkg.project_uuid !== targetProjectUuid) {

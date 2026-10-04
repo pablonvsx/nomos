@@ -136,19 +136,43 @@ collaborator copy cannot reach them by route either. The suite
 table for all three roles side by side. It tests the function the screens
 consume, not a rendered screen tree.
 
-Two things in the table are not wired the way a reader might assume. The
-`collectorCode` and `collectPoints` flags exist but no screen reads them:
-the collector-code entry in Settings is global and unconditional (it is the
-home base, section "Collaborator-side actions"). And the role is enforced
-at the screen level, not in the services: only the backup
-(`backup-service.ts`), the activation (`project-drive-service.ts`), the
-catalog sync (`catalog-sync-service.ts`) and re-applying a configuration
-package (`project-config-package.ts`) check the role themselves, whereas
-`exportProjectConfigPackage`, `exportPointsPackage` / `exportAllPointsPackage`,
-`importPointsPackage` and `discardMissingMedia` rely on the screen not
-offering them. "Meu Nomos" also lets any user export a custom protocol as a
-JSON file (name, theme and schema only, no project identity) regardless of
-role; that action is outside the table.
+**Collection and collector code are not part of the helper.** Collecting
+points is always available, and the collector-code entry in Settings is
+global to the device (it is the home base, section "Collaborator-side
+actions"), so `getProjectActionVisibility` has no flag for either. The
+"Collect points" and "Collector code" rows above are the original design
+table, not something the helper enforces.
+
+**The services enforce the role too, not only the screens.** Besides the
+checks that already lived in the backup (`backup-service.ts`), the
+activation (`project-drive-service.ts`), the catalog sync
+(`catalog-sync-service.ts`) and re-applying a configuration package
+(`project-config-package.ts`), the remaining entry points now refuse a
+wrong role themselves, with a typed `ProjectRoleNotAllowedError` (carries
+the `action` and the `role`) thrown by `assertProjectActionAllowed`. That
+guard reads the same `getProjectActionVisibility` table, so there is no
+second copy of the rules:
+
+| Service | Table row | Allowed roles |
+|---|---|---|
+| `exportProjectConfigPackage` | `exportConfigPackage` | `NULL`, `'owner'` (not `'collaborator'`) |
+| `exportPointsPackage` / `exportAllPointsPackage` | `exportPointsToOwner` | `'collaborator'` only |
+| `importPointsPackage` | `importPoints` | `'owner'` only |
+| `discardMissingMedia` | `backup` | `'owner'` only |
+
+Each check runs before any side effect: before the file picker opens,
+before the collector-code prompt and before anything is written or shared.
+The screens still hide these actions, so the error only fires if something
+calls a service it should not.
+
+**General app features outside the role model.** Exporting a custom
+protocol as a JSON file ("Meu Nomos", `app/(projects)/projects.tsx`) and
+exporting the species catalog (`components/species/SpeciesManagementModal.tsx`)
+are general features of the app, not collaboration actions, so no role
+applies to them. Neither file carries a project's identity: the protocol
+file holds only the name, theme, description, collection instructions and
+schema, and the catalog file only the species list and the export date — no
+`project_uuid`, no `owner_email`.
 
 ## Collaborator-side actions
 
