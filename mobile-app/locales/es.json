@@ -36,7 +36,11 @@
     "somethingWentWrong": "Algo salió mal",
     "unexpectedError": "Ocurrió un error inesperado. Por favor, inténtalo de nuevo.",
     "tryAgain": "Intentar de Nuevo",
-    "errorDetails": "Detalles del error:"
+    "errorDetails": "Detalles del error:",
+    "exporting": "Exportando...",
+    "importing": "Importando...",
+    "processing": "Procesando...",
+    "slowConnection": "La conexión está lenta o inestable. Inténtalo de nuevo con una conexión mejor."
   },
   "home": {
     "title": "Nomos",
@@ -1117,7 +1121,10 @@
     "deletePermanentlyConfirm": "¿Está seguro de que desea eliminar este punto permanentemente? Esta acción no se puede deshacer y también eliminará las fotos y audios asociados.",
     "errorApproving": "No se pudo aprobar el punto.",
     "errorRejecting": "No se pudo rechazar el punto.",
-    "errorDeleting": "No se pudo eliminar el punto."
+    "errorDeleting": "No se pudo eliminar el punto.",
+    "reviewHint": "Está revisando un punto pendiente. Verifique los datos y apruebe o rechace.",
+    "readOnlyHint": "Punto rechazado. Solo lectura.",
+    "rejectionReasonShown": "Motivo del rechazo: {{reason}}"
   },
   "googleAccount": {
     "sectionTitle": "Cuenta de Google",
@@ -1142,7 +1149,15 @@
     "discardMissingMediaTitle": "Archivos multimedia no encontrados",
     "discardMissingMediaMessage": "{{count}} archivo(s) de foto o audio de {{points}} punto(s) ya no existen en este dispositivo y impiden la copia de seguridad. Descartarlos elimina solo las referencias a ellos en esos puntos y se volverá a intentar la copia. Esta acción no se puede deshacer.",
     "discardMissingMediaConfirm": "Descartar multimedia no encontrada",
-    "errorBackingUpPoint": "No se pudo hacer la copia de seguridad del punto."
+    "errorBackingUpPoint": "No se pudo hacer la copia de seguridad del punto.",
+    "confirmAccountLinkTitle": "Vincular cuenta de Google",
+    "confirmAccountLink": "Este proyecto quedará vinculado a la cuenta {{email}} y esto no se podrá cambiar después.",
+    "useOtherAccount": "Usar otra cuenta",
+    "activating": "Activando la copia de seguridad en Drive...",
+    "backingUp": "Preparando la copia de seguridad...",
+    "sendingPoint": "Enviando punto {{current}} de {{total}}",
+    "backingUpPoint": "Enviando punto a Drive...",
+    "retryingBackup": "Reintentando la copia de seguridad..."
   },
   "driveRestore": {
     "restoreAction": "Restaurar Mis Proyectos desde Drive",

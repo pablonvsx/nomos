@@ -39,6 +39,7 @@ import {
   type ModuleMediaField,
 } from "@/core/project-sharing/module-media";
 import { MediaRestoreError } from "@/core/drive-sync/restore-errors";
+import { isNetworkTimeoutError } from "@/core/net/network-timeout";
 import type { PointPackageEntry } from "@/core/project-sharing/export-points";
 import type { CustomProtocolSchema, VegetationClass } from "@/types/database";
 
@@ -335,6 +336,9 @@ async function downloadPointMedia(
     try {
       await downloadBinaryFile(driveFile.id, destFile.uri);
     } catch (error) {
+      // A timeout is reported as itself (friendly "slow connection" message)
+      // rather than as a generic media failure; the restore is undone either way.
+      if (isNetworkTimeoutError(error)) throw error;
       const message = error instanceof Error ? error.message : String(error);
       throw new MediaRestoreError(
         `O arquivo ${driveName} do ponto ${entry.point_uuid} não pôde ser baixado: ${message}`,

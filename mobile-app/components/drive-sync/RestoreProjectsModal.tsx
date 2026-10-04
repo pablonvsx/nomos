@@ -21,6 +21,9 @@ import { describeRestoreError } from "@/core/drive-sync/restore-error-messages";
 import type { DriveFile } from "@/core/drive-sync/drive-api-client";
 import { useI18n } from "@/contexts/i18n-context";
 import { BUTTON_RADIUS } from "@/constants/shape";
+import { isNetworkTimeoutError } from "@/core/net/network-timeout";
+import { runThenCloseAndShow } from "@/core/ui/close-then-show";
+import { waitForModalClose } from "@/core/ui/wait-for-modal-close";
 
 interface RestorableProject {
   folder: DriveFile;
@@ -30,6 +33,7 @@ interface RestorableProject {
 interface RestoreProjectsModalProps {
   visible: boolean;
   onDismiss: () => void;
+  /** Called once the restore succeeded, AFTER this modal closed itself and its exit animation finished - so the caller can show its summary dialog without it stacking behind this modal. */
   onRestored: (result: RestoreResult) => void;
 }
 
@@ -74,7 +78,13 @@ export const RestoreProjectsModal: React.FC<RestoreProjectsModalProps> = ({
         setProjects(withNames);
       } catch (err) {
         console.error("Error listing Drive project folders:", err);
-        setError(err instanceof Error ? err.message : t("driveRestore.errorRestoring"));
+        setError(
+          isNetworkTimeoutError(err)
+            ? t("common.slowConnection")
+            : err instanceof Error
+              ? err.message
+              : t("driveRestore.errorRestoring"),
+        );
       } finally {
         setIsLoadingList(false);
       }
@@ -82,47 +92,70 @@ export const RestoreProjectsModal: React.FC<RestoreProjectsModalProps> = ({
   }, [visible]);
 
   const handleRestore = async () => {
-    if (!selected) return;
+    if (!selected || isRestoring) return;
     setIsRestoring(true);
     setError(null);
     try {
-      const result = await restoreOwnProjectFromDrive(selected.folder.id);
-      onRestored(result);
+      await runThenCloseAndShow({
+        run: () => restoreOwnProjectFromDrive(selected.folder.id),
+        // Success: close both the choice dialog and the modal, wait for them
+        // to leave the screen, and only then let the caller show its summary
+        // (otherwise it renders behind them - Paper stacks Portals in mount order).
+        close: () => {
+          setSelected(null);
+          onDismiss();
+        },
+        wait: waitForModalClose,
+        showOnSuccess: onRestored,
+        // Failure: never close - the message below is the only place the
+        // person sees why it failed (audit finding CRÍTICO 2). Unmapped errors
+        // keep their technical detail instead of a generic sentence (audit
+        // finding IMPORTANTE 2).
+        onError: (err) => {
+          console.error("Error restoring project from Drive:", err);
+          const { key, technicalDetail } = describeRestoreError(err);
+          setError(
+            technicalDetail
+              ? t("driveRestore.errorRestoringWithDetail", { detail: technicalDetail })
+              : t(key),
+          );
+        },
+      });
     } catch (err) {
-      console.error("Error restoring project from Drive:", err);
-      // Never dismiss the choice dialog on failure - it's the only place
-      // this message is shown, and the person needs to actually see it
-      // (audit finding CRÍTICO 2). Unmapped errors keep their technical
-      // detail instead of being replaced by a generic sentence (audit
-      // finding IMPORTANTE 2).
-      const { key, technicalDetail } = describeRestoreError(err);
-      setError(
-        technicalDetail
-          ? t("driveRestore.errorRestoringWithDetail", { detail: technicalDetail })
-          : t(key),
-      );
+      // The restore itself succeeded; the caller's dialog/navigation failed.
+      console.error("Error after restoring project from Drive:", err);
     } finally {
       setIsRestoring(false);
     }
+  };
+
+  // Closing mid-restore would leave it running with nobody to show the result to.
+  const handleDismiss = () => {
+    if (!isRestoring) onDismiss();
   };
 
   return (
     <Portal>
       <Modal
         visible={visible}
-        onDismiss={onDismiss}
+        onDismiss={handleDismiss}
         contentContainerStyle={[styles.modal, { backgroundColor: theme.colors.background }]}
       >
         <View style={styles.header}>
           <Text variant="titleLarge" style={[styles.headerTitle, { color: theme.colors.onSurface }]}>
             {t("driveRestore.modalTitle")}
           </Text>
-          <IconButton icon="close" onPress={onDismiss} />
+          <IconButton icon="close" onPress={handleDismiss} disabled={isRestoring} />
         </View>
 
         <View style={styles.content}>
           {isLoadingList ? (
-            <ActivityIndicator animating size="large" style={{ marginTop: 24 }} />
+            <View style={styles.loadingBlock}>
+              <ActivityIndicator animating size="large" />
+              <Text variant="bodyMedium" style={{ marginTop: 12, color: theme.colors.onSurfaceVariant }}>
+                {t("driveRestore.loadingProjects")}
+              </Text>
+            </View>
           ) : error && projects.length === 0 ? (
             <Text variant="bodyMedium" style={{ color: theme.colors.error }}>
               {error}
@@ -160,6 +193,11 @@ export const RestoreProjectsModal: React.FC<RestoreProjectsModalProps> = ({
           <Text variant="bodyMedium" style={{ textAlign: "justify" }}>
             {t("driveRestore.confirmRestore")}
           </Text>
+          {isRestoring && (
+            <Text variant="bodySmall" style={{ marginTop: 8, color: theme.colors.onSurfaceVariant }}>
+              {t("driveRestore.restoring")}
+            </Text>
+          )}
           {error && (
             <Text variant="bodySmall" style={{ color: theme.colors.error, marginTop: 8 }}>
               {error}
@@ -191,6 +229,7 @@ export const RestoreProjectsModal: React.FC<RestoreProjectsModalProps> = ({
 };
 
 const styles = StyleSheet.create({
+  loadingBlock: { alignItems: "center", marginTop: 24 },
   modal: {
     marginHorizontal: 16,
     marginVertical: 32,

@@ -1,6 +1,7 @@
 import {
   getCurrentGoogleAccount,
   signInWithGoogle,
+  type SignInOptions,
   signOutFromGoogle,
   GoogleSignInUnavailableError,
   type GoogleAccount,
@@ -31,11 +32,12 @@ export function getInitialGoogleAccountState(): GoogleAccountState {
 export async function connectGoogleAccount(
   onStateChange: (state: GoogleAccountState) => void,
   currentState: GoogleAccountState,
+  options?: SignInOptions,
 ): Promise<GoogleAccountState> {
   onStateChange({ ...currentState, isConnecting: true, error: null, unavailable: false });
 
   try {
-    const account = await signInWithGoogle();
+    const account = await signInWithGoogle(options);
     return { account, isConnecting: false, error: null, unavailable: false };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

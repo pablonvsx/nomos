@@ -251,10 +251,16 @@ Two screens, both pure local SQL — no Drive read of any kind:
 - `app/(projects)/project-pending-approvals/[id].tsx` — lists
   `approval_status = 'pending'`. **Approve** sets `'approved'` (nothing
   else happens automatically — approval and backup are fully decoupled).
-  **Reject** sets `'rejected'` with an optional reason; the point is not
-  deleted.
+  **Reject** sets `'rejected'` with a **required** reason
+  (`components/project-sharing/RejectPointDialog.tsx`, shared with the
+  details screen); the point is not deleted. Tapping a card opens the
+  point's details (next section) so the owner can look before deciding.
+  `updatePointApprovalStatus` returns `false` on a database failure
+  (`updatePoint` swallows errors); both screens treat that as a failed
+  decision, not a success.
 - `app/(projects)/project-rejected/[id].tsx` — lists
-  `approval_status = 'rejected'`, with a permanent-delete action
+  `approval_status = 'rejected'`; tapping a card opens the point's details
+  read-only. It has a permanent-delete action
   (`core/points/delete-point-media.ts`). Deleting a point — here and from
   the regular point screen — removes every media file it references:
   the photo/audio columns and the module media of custom protocols,
@@ -262,6 +268,35 @@ Two screens, both pure local SQL — no Drive read of any kind:
   app's own storage (`Paths.document` / `Paths.cache`, no `..` segments)
   are deleted; a reference to anything else (a `content://` uri, a gallery
   picture) is left alone. Rejected points are never auto-purged.
+
+### Reviewing a point before approving or rejecting it
+
+`app/(survey)/survey-point-details/[id].tsx` is the same screen used for
+any point; its behavior comes from
+`getPointDetailsMode(approval_status, role)`
+(`core/project-sharing/point-details-mode.ts`), deduced from the point
+itself and the project role — never from a route param, so every way of
+reaching the screen behaves the same:
+
+| Mode | When | What the screen offers |
+|---|---|---|
+| `review` | owner opens a `'pending'` point | Read-only data, a hint card, and a FAB with only **Approve** and **Reject**. Edit, edit location, delete, send-to-owner and the "view on map" button are hidden. |
+| `readonly` | owner opens a `'rejected'` point | Read-only data and the stored rejection reason. No FAB at all. |
+| `normal` | everything else, including any non-owner | The regular actions (edit, edit location, delete, send-to-owner for collaborators). |
+
+Only the owner can ever get `review`/`readonly` (it reuses
+`getProjectActionVisibility(role).pendingApprovals`); pending and rejected
+points exist only on the owner's device anyway. The map button is hidden
+because the map only lists visible points, so it could not show them.
+
+The screen loads the point with `getPoint` (`SELECT * FROM points WHERE
+id = ?`), which deliberately does **not** apply `VISIBLE_POINT_CONDITION`
+(below); a regression test in `db/queries/__tests__/points-approval.test.ts`
+guards that. After approving or rejecting, the screen clears the map cache
+(`clearMapData(project.id)`, same as the queue) and goes back; the queue
+reloads on focus. If saving the rejection fails, the reject dialog is
+closed first and the error alert shown after it (see "Dialogs inside
+Portals and Modals").
 
 **Visibility rule.** The project's general point list, map, CSV/GeoJSON/
 media exports and landscape-class numbering only ever contain points whose
@@ -283,7 +318,17 @@ numbers, so the visible list can show gaps until they are approved.
 Available only when `collaboration_role = 'owner'` and a Google account
 is connected. Two steps:
 
-**1. Activation** — `activateDriveBackup(projectId)`
+**1. Activation** — before it runs, `project-details/[id].tsx` asks for
+confirmation: *"This project will be linked to the account <email> and
+this cannot be changed later."* with **Cancel**, **Use another account**
+and **Continue**. The reason is that `owner_email` is written once (into
+the manifest and `projects.owner_email`) and never changes
+(`updateManifest` refuses to rewrite it), so the person must see which
+account the project is binding to. **Use another account** signs the
+current account out and reopens the connection modal with the account
+chooser forced (see "Google account and shared modals"); once the new
+account connects, the confirmation is shown again with the new email.
+Only **Continue** starts `activateDriveBackup(projectId)`
 (`core/drive-sync/project-drive-service.ts`). Refuses a project whose
 `collaboration_role` is already set to anything
 (`InvalidCollaborationRoleError`) and a missing account
@@ -294,8 +339,15 @@ finally calls `setProjectAsOwner`.
 
 **2. Ongoing backup of approved points** — `backupPoint`/
 `backupAllPendingPoints` (`core/drive-sync/backup-service.ts`), driven
-by `drive_synced_at IS NULL`. Media is part of the collection, so a point
-is **all-or-nothing**:
+by `drive_synced_at IS NULL`. `backupAllPendingPoints(projectId,
+onProgress?)` calls `onProgress({ current, total })` (1-based, fixed
+`total`) before each point; the screen shows "Uploading point N of M".
+A failure in one point never stops the batch: besides the failures
+`backupPoint` returns, an **unexpected exception** thrown while backing up
+a point (a database error, say) is now caught and recorded as that point's
+entry in `BackupSummary.failed`, and the loop continues — previously it
+aborted the whole batch and lost the report of the points already done.
+Media is part of the collection, so a point is **all-or-nothing**:
 
 - The point's data and **all** of its media must reach Drive: point-level
   photos and audio (`photo_N.<ext>`, `audio_note_N.<ext>`) and, for custom
@@ -435,7 +487,13 @@ without it would be re-uploaded without it by the next backup:
 - Restored points get the Drive file's timestamp as `drive_synced_at`
   (`createPoint` persists it), so they are not offered for backup again.
 - `RestoreProjectsModal` asks for a single confirmation (Cancel /
-  Restore); it no longer offers two modes.
+  Restore); it no longer offers two modes. While restoring, the button
+  shows a spinner and the modal cannot be dismissed.
+- On **success** the modal closes itself (including its confirmation
+  dialog) and waits for its exit animation before calling `onRestored`, so
+  the summary alert is not stacked behind it (see "Dialogs inside Portals
+  and Modals"); on **error** nothing closes and the message stays visible
+  in the dialog.
 
 A defensive `Set` of seen `point_uuid`s also protects against a stray
 duplicate file in `approved/` producing two local rows for the same point
@@ -443,8 +501,10 @@ duplicate file in `approved/` producing two local rows for the same point
 [05_DATA_MODEL.md](05_DATA_MODEL.md) — that would otherwise reject the
 second insert outright).
 
-`RestoreResult`'s fields, each surfaced to the user in
-`projects.tsx`'s `handleProjectRestored`:
+`RestoreResult`'s fields, each surfaced to the user in the single
+summary alert built by `projects.tsx`'s `handleProjectRestored` (the
+warnings are merged into that one alert, because showing several in a row
+would replace one another):
 
 | Field | Meaning |
 |---|---|
@@ -473,6 +533,116 @@ automatically once the modal's `onConnected` fires.
 (never a static top-level import) so the module doesn't crash an
 environment without the native binding (Expo Go); `getCurrentGoogleAccount()`
 never throws, since Settings calls it eagerly on mount.
+
+**Account chooser.** On Android, `GoogleSignin.signIn()` has no "force the
+chooser" option: it returns the last signed-in (or previously consented)
+account without any UI, even after the app's data was cleared, because the
+Drive consent lives in Google Play Services, not in the app.
+`signInWithGoogle({ forceAccountChooser: true })` therefore calls
+`signOut()` first (clears the cached account, keeps the consent;
+`revokeAccess()` would drop the consent too), and the modal's
+`forceAccountChooser` prop is what "Use another account" sets. On a device
+with a single Google account Android may still skip the chooser.
+
+Each `useGoogleAccount()` instance keeps its own state, so the modal
+re-reads the account (`refresh()`) whenever it opens, and `onConnected` is
+fired from the sign-in's own result — never from an account-state effect —
+so opening the modal on an already-connected account cannot trigger it.
+The modal cannot be dismissed while a sign-in is in flight.
+
+## Network timeouts
+
+React Native's Android OkHttp client runs with connect/read/write timeouts of
+`0` (no limit), so every Drive call has its own:
+
+- `core/drive-sync/drive-api-client.ts` sends every request through one
+  helper (`driveRequest`) built on `withTimeout`
+  (`core/net/network-timeout.ts`): an `AbortController` whose limit covers
+  the whole exchange, body read included. Two named levels:
+  `DRIVE_METADATA_TIMEOUT_MS` (30 s: folder lookups, listings, point and
+  manifest JSON) and `DRIVE_TRANSFER_TIMEOUT_MS` (180 s: photo/audio upload
+  and download; media is 1-10 MB, base64 uploads ~33% larger, so a slow
+  ~100 kB/s link needs up to ~140 s). A timeout throws `DriveTimeoutError`
+  (`core/drive-sync/drive-errors.ts`, a `NetworkTimeoutError`).
+- `File.downloadFileAsync` cannot be aborted (see Known limitations), so it
+  is raced against the same timer.
+- `core/google-auth/google-auth-service.ts`: `getTokens()`, `signOut()` and
+  the Play Services check use `GOOGLE_AUTH_TIMEOUT_MS` (30 s). The
+  interactive `signIn()` has its own, longer `GOOGLE_SIGN_IN_TIMEOUT_MS`
+  (120 s) because the person picks an account and may type a password.
+
+A timeout is an ordinary failure for the flows that already handle failures:
+`backupPoint` fails the point without writing its JSON or setting
+`drive_synced_at`, and flags `BackupResult.timedOut` (also carried in each
+`BackupSummary.failed[]` entry); the restore is undone like for any other
+error. Every screen shows the localized `common.slowConnection` message
+instead of the technical text (`describeRestoreError` for the restore;
+`timedOut` / `isNetworkTimeoutError` for backup and activation), and the
+exclusive-operation lock is released in all cases.
+
+## Progress and exclusive operations
+
+Long operations (network or file work) show a banner
+(`components/ui/OperationProgressBanner.tsx`) and cannot be started twice.
+`hooks/use-exclusive-operation.ts` exposes `{ operation, busy, run }`;
+`run(label, task)` ignores a second call while one is running, and the task
+can report progress (`update({ label, current, total })`). The rules live
+in the pure `core/ui/exclusive-runner.ts`, which releases the lock in a
+`finally` — on success, on a rejected promise and on a synchronous throw —
+so a failing operation can never leave a screen blocked.
+
+`FAB.Group` has no per-action loading or disabled state, so while an
+operation runs the FAB offers no actions (and folds away); the banner shows
+what is happening. Covered: `project-details/[id].tsx` (backup, single-point
+backup, retry after discarding media, activation, points import, every
+export, classification), `projects.tsx` (configuration-package import,
+protocol import/export), the details screen (send to owner, approve/reject)
+and `RestoreProjectsModal` (its own spinner).
+
+## Dialogs inside Portals and Modals
+
+App dialogs (`useAlertDialog`, `useDialog` in `hooks/use-dialog.tsx`) are
+rendered by one `DialogProvider` mounted in `app/_layout.tsx`, **inside**
+`PaperProvider`. React Native Paper renders every `<Portal>` (so every
+`Modal` and `Dialog` wrapped in one) as a *sibling* of the app tree, and
+stacks portals in **mount order**. Two consequences:
+
+1. **A component rendered inside a `<Portal>` that calls `useAlertDialog()`
+   throws** ("must be used within a DialogProvider"), because the root
+   provider is not above it.
+2. **A dialog shown while a Paper Modal/Dialog is open — or still fading
+   out — renders behind it**, because the root provider's portal mounted
+   first.
+
+Use one of two patterns:
+
+- **Nested `DialogProvider`** when the dialog must appear *over* a modal
+  that stays open. Put `<DialogProvider>` inside the modal's content when
+  the hook is called by components rendered in the portal
+  (`modules/generic/RepeatableGroupField.tsx`, whose photo and audio
+  sub-fields call `useAlertDialog`). When the hook is called in the body of the screen or
+  component that owns the portals, export it through `withDialogScope(...)`
+  (`project-details/[id].tsx`, `SpeciesManagementModal`); the scoped
+  provider's portal mounts after its children's, so it lands on top. A
+  portal mounted *later* than the provider (a conditionally rendered modal)
+  still stacks above it, so use the second pattern there.
+- **Close the modal first, wait, then show** when the flow ends in the
+  modal. `core/ui/close-then-show.ts` has `closeModalThenShow({ close, wait,
+  show })` and `runThenCloseAndShow({ run, close, showOnSuccess, onError,
+  wait })`: on success the modal closes, `waitForModalClose()`
+  (`core/ui/wait-for-modal-close.ts`, a fixed 300 ms — Paper's exit
+  animation is 220 ms and runs on the native driver, so
+  `InteractionManager.runAfterInteractions` would not wait for it) elapses,
+  and only then is the dialog shown; on error the modal is **not** closed,
+  so its error message stays visible. Used by the restore flow, the
+  connection and collector-code modals' follow-up actions, and the reject
+  dialog's error path.
+
+Two smaller rules: a dialog button first hides its dialog and then runs its
+callback (`pressDialogButton` in `core/ui/dialog-state.ts`), so a callback
+may open the next dialog (an alert's OK leading to a confirmation); and
+`showDialog` replaces the current dialog, so several warnings must be
+merged into one message rather than alerted one after another.
 
 ## Known limitations
 
@@ -532,6 +702,19 @@ never throws, since Settings calls it eagerly on mount.
   configuration package and the Drive restore (`protocol-package.json`) —
   do not run that check, so media inside a hand-edited nested group coming
   through those paths would still be ignored.
+- **A timed-out download cannot be cancelled.** `File.downloadFileAsync`
+  takes no `AbortSignal` and has no cancel handle, so `downloadBinaryFile`
+  only stops *waiting* at the limit; the native download may keep running
+  and, if it finishes late, writes into a file the failed restore is already
+  cleaning up. Requests made with `fetch` are really aborted.
+- **Activation is not atomic on Drive.** A timeout part-way through
+  `activateDriveBackup` can leave some folders created; nothing is marked as
+  activated (`setProjectAsOwner` is the last step) and a retry reuses them
+  (`ensureFolder` is idempotent).
+- **No real-device validation of the dialog and progress flows.** The pure
+  rules (review mode, close-then-show ordering, exclusive runner, dialog
+  reducer, backup progress) are unit-tested; the stacking of dialogs over
+  modals, the 300 ms wait, the banners and the review flow are not.
 - **Test fidelity.** The real-zip suites use a real temporary filesystem
   and a real zip reader, but not the native `react-native-zip-archive`
   library; the Drive suites use an in-memory fake Drive. Neither replaces

@@ -36,7 +36,11 @@
     "somethingWentWrong": "Algo deu errado",
     "unexpectedError": "Ocorreu um erro inesperado. Por favor, tente novamente.",
     "tryAgain": "Tentar Novamente",
-    "errorDetails": "Detalhes do erro:"
+    "errorDetails": "Detalhes do erro:",
+    "exporting": "Exportando...",
+    "importing": "Importando...",
+    "processing": "Processando...",
+    "slowConnection": "A conexão está lenta ou instável. Tente novamente com uma conexão melhor."
   },
   "home": {
     "title": "Nomos",
@@ -1120,7 +1124,10 @@
     "deletePermanentlyConfirm": "Tem certeza que deseja excluir este ponto permanentemente? Esta ação não pode ser desfeita e removerá também as fotos e áudios associados.",
     "errorApproving": "Não foi possível aprovar o ponto.",
     "errorRejecting": "Não foi possível rejeitar o ponto.",
-    "errorDeleting": "Não foi possível excluir o ponto."
+    "errorDeleting": "Não foi possível excluir o ponto.",
+    "reviewHint": "Você está revisando um ponto pendente. Confira os dados e aprove ou rejeite.",
+    "readOnlyHint": "Ponto rejeitado. Somente leitura.",
+    "rejectionReasonShown": "Motivo da rejeição: {{reason}}"
   },
   "googleAccount": {
     "sectionTitle": "Conta Google",
@@ -1145,7 +1152,15 @@
     "discardMissingMediaTitle": "Mídias não encontradas",
     "discardMissingMediaMessage": "{{count}} arquivo(s) de foto ou áudio de {{points}} ponto(s) não existem mais neste aparelho e impedem o backup. Descartar essas mídias removerá apenas as referências a elas nesses pontos e o backup será tentado de novo. Essa ação não pode ser desfeita.",
     "discardMissingMediaConfirm": "Descartar mídias não encontradas",
-    "errorBackingUpPoint": "Não foi possível fazer o backup do ponto."
+    "errorBackingUpPoint": "Não foi possível fazer o backup do ponto.",
+    "confirmAccountLinkTitle": "Vincular conta do Google",
+    "confirmAccountLink": "Este projeto ficará vinculado à conta {{email}} e isso não pode ser alterado depois.",
+    "useOtherAccount": "Usar outra conta",
+    "activating": "Ativando backup no Drive...",
+    "backingUp": "Preparando o backup...",
+    "sendingPoint": "Enviando ponto {{current}} de {{total}}",
+    "backingUpPoint": "Enviando ponto para o Drive...",
+    "retryingBackup": "Tentando o backup novamente..."
   },
   "driveRestore": {
     "restoreAction": "Restaurar Meus Projetos do Drive",

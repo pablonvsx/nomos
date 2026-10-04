@@ -271,6 +271,7 @@ jest.mock("@/db/queries/points", () => ({
 }));
 
 import { restoreOwnProjectFromDrive, MediaRestoreError } from "../restore-service";
+import { DriveTimeoutError } from "../drive-errors";
 
 const restore = (driveFolderId: string) => restoreOwnProjectFromDrive(driveFolderId);
 
@@ -530,6 +531,30 @@ describe("restoreOwnProjectFromDrive - points and media (always a full restore)"
     expect(deleteProjectMock).toHaveBeenCalledWith(1);
     expect(projects).toHaveLength(0);
     expect(importedMediaKeys()).toEqual([]); // photo_1.jpg, already downloaded, was cleaned up too
+  });
+
+  it("a download that times out undoes the whole restore and surfaces the timeout itself (not a generic media error)", async () => {
+    getManifestMock.mockResolvedValue(baseManifest());
+    addFolder("folder-1", "approved-id", "approved");
+    addJsonFile(
+      "approved-id",
+      "point1-file-id",
+      "point-uuid-1.json",
+      samplePointEntry({ point_uuid: "point-uuid-1", photos: ["photo_1.jpg", "photo_2.jpg"] }),
+    );
+    addPointMedia("point-uuid-1", ["photo_1.jpg", "photo_2.jpg"]);
+    downloadBinaryFileMock.mockImplementation(async (fileId: string, destinationUri: string) => {
+      if (fileId === "drive-point-uuid-1-photo_2.jpg") throw new DriveTimeoutError(180_000);
+      fsState.set(destinationUri, { isDir: false, content: "downloaded-bytes" });
+    });
+
+    const error = await restore("folder-1").catch((e) => e);
+
+    expect(error).toBeInstanceOf(DriveTimeoutError);
+    expect(error).not.toBeInstanceOf(MediaRestoreError);
+    expect(deleteProjectMock).toHaveBeenCalledWith(1);
+    expect(projects).toHaveLength(0);
+    expect(importedMediaKeys()).toEqual([]);
   });
 
   it("aborts and undoes when a point lists media but the point's media folder is missing in Drive", async () => {

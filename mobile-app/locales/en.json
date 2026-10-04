@@ -36,7 +36,11 @@
     "somethingWentWrong": "Something went wrong",
     "unexpectedError": "An unexpected error occurred. Please try again.",
     "tryAgain": "Try Again",
-    "errorDetails": "Error details:"
+    "errorDetails": "Error details:",
+    "exporting": "Exporting...",
+    "importing": "Importing...",
+    "processing": "Processing...",
+    "slowConnection": "The connection is slow or unstable. Try again with a better connection."
   },
   "home": {
     "title": "Nomos",
@@ -1120,7 +1124,10 @@
     "deletePermanentlyConfirm": "Are you sure you want to permanently delete this point? This action cannot be undone and will also remove its associated photos and audio.",
     "errorApproving": "Could not approve the point.",
     "errorRejecting": "Could not reject the point.",
-    "errorDeleting": "Could not delete the point."
+    "errorDeleting": "Could not delete the point.",
+    "reviewHint": "You are reviewing a pending point. Check the data, then approve or reject it.",
+    "readOnlyHint": "Rejected point. Read-only.",
+    "rejectionReasonShown": "Rejection reason: {{reason}}"
   },
   "googleAccount": {
     "sectionTitle": "Google Account",
@@ -1145,7 +1152,15 @@
     "discardMissingMediaTitle": "Media not found",
     "discardMissingMediaMessage": "{{count}} photo or audio file(s) from {{points}} point(s) no longer exist on this device and block the backup. Discarding them removes only the references to them in those points, and the backup will be tried again. This cannot be undone.",
     "discardMissingMediaConfirm": "Discard missing media",
-    "errorBackingUpPoint": "Could not back up the point."
+    "errorBackingUpPoint": "Could not back up the point.",
+    "confirmAccountLinkTitle": "Link Google account",
+    "confirmAccountLink": "This project will be linked to the account {{email}} and this cannot be changed later.",
+    "useOtherAccount": "Use another account",
+    "activating": "Activating Drive backup...",
+    "backingUp": "Preparing backup...",
+    "sendingPoint": "Uploading point {{current}} of {{total}}",
+    "backingUpPoint": "Uploading point to Drive...",
+    "retryingBackup": "Retrying backup..."
   },
   "driveRestore": {
     "restoreAction": "Restore My Projects from Drive",

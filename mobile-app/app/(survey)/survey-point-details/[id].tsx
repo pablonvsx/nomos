@@ -31,6 +31,11 @@ import {
 import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
 import type { AudioPlayer } from "expo-audio";
 import { useAlertDialog } from "@/hooks/use-dialog";
+import { useExclusiveOperation } from "@/hooks/use-exclusive-operation";
+import { OperationProgressBanner } from "@/components/ui/OperationProgressBanner";
+import { RejectPointDialog } from "@/components/project-sharing/RejectPointDialog";
+import { closeModalThenShow } from "@/core/ui/close-then-show";
+import { waitForModalClose } from "@/core/ui/wait-for-modal-close";
 import { useBottomContentPadding } from "@/hooks/use-bottom-content-padding";
 import { useI18n } from "@/contexts/i18n-context";
 import { useMapData } from "@/contexts/map-data-context";
@@ -41,7 +46,7 @@ import {
 } from "@/contexts/protocol-registry-context";
 
 // DB imports
-import { getPoint } from "@/db/queries/points";
+import { getPoint, updatePointApprovalStatus } from "@/db/queries/points";
 import { deletePointPermanently } from "@/core/points/delete-point-media";
 import { getProjectById } from "@/db/queries/projects";
 import { getCustomProtocolById } from "@/db/queries/custom-protocols";
@@ -58,6 +63,7 @@ import {
   CollectorCodeRequiredError,
 } from "@/core/project-sharing/export-points";
 import { getProjectActionVisibility } from "@/core/project-sharing/action-visibility";
+import { getPointDetailsMode } from "@/core/project-sharing/point-details-mode";
 import { CollectorCodeModal } from "@/components/local-identity/CollectorCodeModal";
 
 const screenWidth = Dimensions.get("window").width;
@@ -229,6 +235,8 @@ export default function UnifiedSurveyPointViewScreen() {
   const { confirm, alert } = useAlertDialog();
   const { t, currentLanguage } = useI18n();
   const { clearMapData } = useMapData();
+  // One long operation at a time (send to owner, approve/reject): banner + no double taps.
+  const { operation, busy, run } = useExclusiveOperation();
   const registry = useProtocolRegistry();
   const readOnlyRendererRegistry = useReadOnlyRendererRegistry();
   const bottomPadding = useBottomContentPadding(36); // extra clearance for the floating FAB.Group below the scroll
@@ -245,7 +253,14 @@ export default function UnifiedSurveyPointViewScreen() {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [galleryPhotos, setGalleryPhotos] = useState<string[] | null>(null);
   const [collectorCodeModalVisible, setCollectorCodeModalVisible] = useState(false);
+  const [rejectDialogVisible, setRejectDialogVisible] = useState(false);
   const [speciesList, setSpeciesList] = useState<Species[]>([]);
+
+  // "review" (owner + pending), "readonly" (owner + rejected) or "normal":
+  // deduced from the point itself, not from a route param, so every way of
+  // reaching this screen behaves the same.
+  const mode = point && project ? getPointDetailsMode(point.approval_status, project.collaboration_role) : "normal";
+  const isReviewMode = mode === "review";
 
   const resolvedId = project ? resolveManifestId(project) : null;
   const isCustom = resolvedId === "custom";
@@ -415,24 +430,69 @@ export default function UnifiedSurveyPointViewScreen() {
 
   const handleExportSinglePoint = async () => {
     if (!point) return;
-    try {
-      const report = await exportPointsPackage([point.id.toString()]);
-      if (report.skippedMedia.length > 0) {
-        alert(
-          t("common.info"),
-          t("surveyView.mediaSkippedWarning", { count: report.skippedMedia.length.toString() }),
-        );
-      } else {
-        alert(t("common.success"), t("surveyView.pointSentToOwner"));
+    await run(t("common.exporting"), async () => {
+      try {
+        const report = await exportPointsPackage([point.id.toString()]);
+        if (report.skippedMedia.length > 0) {
+          alert(
+            t("common.info"),
+            t("surveyView.mediaSkippedWarning", { count: report.skippedMedia.length.toString() }),
+          );
+        } else {
+          alert(t("common.success"), t("surveyView.pointSentToOwner"));
+        }
+      } catch (error) {
+        if (error instanceof CollectorCodeRequiredError) {
+          setCollectorCodeModalVisible(true);
+          return;
+        }
+        console.error("Error exporting point:", error);
+        alert(t("common.error"), t("surveyView.errorSendingPoint"));
       }
-    } catch (error) {
-      if (error instanceof CollectorCodeRequiredError) {
-        setCollectorCodeModalVisible(true);
-        return;
+    });
+  };
+
+  // --- REVIEW MODE (owner opening a pending point from the approvals queue) ---
+
+  const handleApprove = async () => {
+    if (!point || !project) return;
+    await run(t("common.processing"), async () => {
+      try {
+        if (!(await updatePointApprovalStatus(point.id, "approved"))) {
+          throw new Error("Could not save the approval.");
+        }
+        // Same cache cleanup the queue does: approval changes what the list/map show.
+        clearMapData(project.id);
+        // Back to the queue, which reloads on focus.
+        router.back();
+      } catch (error) {
+        console.error("Error approving point:", error);
+        alert(t("common.error"), t("pointApproval.errorApproving"));
       }
-      console.error("Error exporting point:", error);
-      alert(t("common.error"), t("surveyView.errorSendingPoint"));
-    }
+    });
+  };
+
+  const handleConfirmReject = async (reason: string) => {
+    if (!point || !project) return;
+    await run(t("common.processing"), async () => {
+      try {
+        if (!(await updatePointApprovalStatus(point.id, "rejected", reason))) {
+          throw new Error("Could not save the rejection.");
+        }
+        clearMapData(project.id);
+        setRejectDialogVisible(false);
+        router.back();
+      } catch (error) {
+        console.error("Error rejecting point:", error);
+        // The reject dialog has its own Portal: close it and let it leave the
+        // screen before the alert, or the alert would render behind it.
+        await closeModalThenShow({
+          close: () => setRejectDialogVisible(false),
+          wait: waitForModalClose,
+          show: () => alert(t("common.error"), t("pointApproval.errorRejecting")),
+        });
+      }
+    });
   };
 
   const handleEdit = () => {
@@ -639,6 +699,23 @@ export default function UnifiedSurveyPointViewScreen() {
   const isSubstituted = conservationStatus === "substituida";
   const parsedPhotos: string[] = parsePhotoUris(point.photos);
 
+  // Review mode: the point is shown read-only and the owner can only decide.
+  // (Edit, edit location, delete and send-to-owner are not offered.)
+  const reviewActions = [
+    {
+      icon: "check-circle-outline",
+      label: t("pointApproval.approve"),
+      onPress: handleApprove,
+      color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
+    },
+    {
+      icon: "close-circle-outline",
+      label: t("pointApproval.reject"),
+      onPress: () => setRejectDialogVisible(true),
+      color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
+    },
+  ];
+
   return (
     <>
       <Stack.Screen
@@ -647,11 +724,34 @@ export default function UnifiedSurveyPointViewScreen() {
           headerBackTitle: "",
         }}
       />
+      <OperationProgressBanner operation={operation} />
       <ScrollView
         style={[styles.container, { backgroundColor: paperTheme.colors.background }]}
         contentContainerStyle={{ paddingBottom: bottomPadding }}
       >
         <View style={styles.content}>
+
+          {/* REVIEW / READ-ONLY HINT */}
+          {mode !== "normal" && (
+            <Card style={[styles.card, { backgroundColor: paperTheme.colors.secondaryContainer }]}>
+              <Card.Content>
+                <Text
+                  variant="bodyMedium"
+                  style={{ color: paperTheme.colors.onSecondaryContainer, textAlign: "justify" }}
+                >
+                  {isReviewMode ? t("pointApproval.reviewHint") : t("pointApproval.readOnlyHint")}
+                </Text>
+                {mode === "readonly" && !!point.rejection_reason && (
+                  <Text
+                    variant="bodyMedium"
+                    style={{ color: paperTheme.colors.onSecondaryContainer, textAlign: "justify", marginTop: 8 }}
+                  >
+                    {t("pointApproval.rejectionReasonShown", { reason: point.rejection_reason })}
+                  </Text>
+                )}
+              </Card.Content>
+            </Card>
+          )}
 
           {/* 1. PROJECT INFO CARD */}
           <Card style={[styles.card, { backgroundColor: paperTheme.colors.surface }]}>
@@ -713,7 +813,10 @@ export default function UnifiedSurveyPointViewScreen() {
                 <Text variant="titleMedium" style={{ color: paperTheme.colors.primary, flex: 1 }}>
                   {t("location.title")}
                 </Text>
-                <IconButton icon="map" size={20} onPress={handleViewMap} style={{ margin: 0 }} />
+                {/* The map only lists approved/own points, so it can't show a pending or rejected one. */}
+                {mode === "normal" && (
+                  <IconButton icon="map" size={20} onPress={handleViewMap} style={{ margin: 0 }} />
+                )}
               </View>
               <View style={styles.coordRow}>
                 <View style={{ flex: 1 }}>
@@ -935,57 +1038,71 @@ export default function UnifiedSurveyPointViewScreen() {
         </View>
       </ScrollView>
 
-      <FAB.Group
-        open={fabOpen}
-        visible
-        icon={fabOpen ? "close" : "dots-vertical"}
-        color={paperTheme.colors.onPrimary}
-        fabStyle={{ backgroundColor: paperTheme.colors.primary }}
-        actions={[
-          {
-            icon: "pencil",
-            label: t("common.edit"),
-            onPress: () => { if (!isNavigating) handleEdit(); },
-            color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
-          },
-          {
-            icon: "map-marker-radius",
-            label: t("surveyView.editLocation"),
-            onPress: () => { if (!isNavigating) handleEditLocation(); },
-            color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
-          },
-          {
-            icon: "delete",
-            label: t("common.delete"),
-            onPress: handleDelete,
-            color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
-          },
-          ...(visibility.exportPointsToOwner
-            ? [
-                {
-                  icon: "send",
-                  label: t("surveyView.sendToOwner"),
-                  onPress: handleExportSinglePoint,
-                  color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
-                },
-              ]
-            : []),
-        ]}
-        onStateChange={({ open }) => setFabOpen(open)}
-        theme={{
-          colors: {
-            primary: paperTheme.colors.primary,
-            onPrimary: paperTheme.colors.onPrimary,
-          },
-        }}
+      {/* Rejected points are read-only: no actions at all. */}
+      {mode !== "readonly" && (
+        <FAB.Group
+          open={fabOpen}
+          visible
+          icon={fabOpen ? "close" : "dots-vertical"}
+          color={paperTheme.colors.onPrimary}
+          fabStyle={{ backgroundColor: paperTheme.colors.primary }}
+          actions={busy ? [] : isReviewMode ? reviewActions : [
+            {
+              icon: "pencil",
+              label: t("common.edit"),
+              onPress: () => { if (!isNavigating) handleEdit(); },
+              color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
+            },
+            {
+              icon: "map-marker-radius",
+              label: t("surveyView.editLocation"),
+              onPress: () => { if (!isNavigating) handleEditLocation(); },
+              color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
+            },
+            {
+              icon: "delete",
+              label: t("common.delete"),
+              onPress: handleDelete,
+              color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
+            },
+            ...(visibility.exportPointsToOwner
+              ? [
+                  {
+                    icon: "send",
+                    label: t("surveyView.sendToOwner"),
+                    onPress: handleExportSinglePoint,
+                    color: paperTheme.dark ? paperTheme.colors.onSurface : paperTheme.colors.primary,
+                  },
+                ]
+              : []),
+          ]}
+          onStateChange={({ open }) => setFabOpen(open)}
+          theme={{
+            colors: {
+              primary: paperTheme.colors.primary,
+              onPrimary: paperTheme.colors.onPrimary,
+            },
+          }}
+        />
+      )}
+
+      <RejectPointDialog
+        visible={rejectDialogVisible}
+        busy={busy}
+        onCancel={() => setRejectDialogVisible(false)}
+        onConfirm={handleConfirmReject}
       />
 
       <CollectorCodeModal
         visible={collectorCodeModalVisible}
         onDismiss={() => setCollectorCodeModalVisible(false)}
         onSaved={() => {
-          setCollectorCodeModalVisible(false);
-          handleExportSinglePoint();
+          // The export shows alerts: let this modal leave the screen first.
+          closeModalThenShow({
+            close: () => setCollectorCodeModalVisible(false),
+            wait: waitForModalClose,
+            show: handleExportSinglePoint,
+          });
         }}
       />
 

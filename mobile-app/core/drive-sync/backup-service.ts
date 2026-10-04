@@ -22,6 +22,7 @@ import {
 } from "@/core/project-sharing/module-media";
 import { parseAudioNotes, parsePhotoUris } from "@/db/mappers/json-utils";
 import type { PointPackageAudioNote, PointPackageEntry } from "@/core/project-sharing/export-points";
+import { isNetworkTimeoutError } from "@/core/net/network-timeout";
 
 export interface BackupResult {
   success: boolean;
@@ -38,11 +39,23 @@ export interface BackupResult {
    * references (discardMissingMedia) and retry.
    */
   missingMediaCount?: number;
+  /**
+   * True when at least one failure was a network timeout (a stalled
+   * connection, not a rejected request): the UI shows its friendly "slow
+   * connection" message instead of the technical text in `error`.
+   */
+  timedOut?: boolean;
 }
 
 export interface BackupSummary {
   backedUp: number;
-  failed: Array<{ pointId: number; pointLabel: string; reason: string; missingMediaCount: number }>;
+  failed: Array<{
+    pointId: number;
+    pointLabel: string;
+    reason: string;
+    missingMediaCount: number;
+    timedOut: boolean;
+  }>;
 }
 
 function extensionFromUri(uri: string, fallback: string): string {
@@ -81,7 +94,7 @@ async function uploadPhoto(
   uri: string,
   index: number,
   mediaFolderId: string,
-): Promise<{ filename: string } | { failure: string; missing?: boolean }> {
+): Promise<{ filename: string } | { failure: string; missing?: boolean; timedOut?: boolean }> {
   const file = new File(uri);
   if (!file.exists) {
     return { failure: `Foto ${index + 1} não encontrada no dispositivo.`, missing: true };
@@ -92,7 +105,7 @@ async function uploadPhoto(
     return { filename };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return { failure: `Foto ${index + 1} falhou ao enviar: ${message}` };
+    return { failure: `Foto ${index + 1} falhou ao enviar: ${message}`, timedOut: isNetworkTimeoutError(error) };
   }
 }
 
@@ -100,7 +113,7 @@ async function uploadAudioNote(
   note: { uri: string; duration: number; timestamp: number },
   index: number,
   mediaFolderId: string,
-): Promise<{ entry: PointPackageAudioNote } | { failure: string; missing?: boolean }> {
+): Promise<{ entry: PointPackageAudioNote } | { failure: string; missing?: boolean; timedOut?: boolean }> {
   const file = new File(note.uri);
   if (!file.exists) {
     return { failure: `Áudio ${index + 1} não encontrado no dispositivo.`, missing: true };
@@ -111,7 +124,7 @@ async function uploadAudioNote(
     return { entry: { filename, duration: note.duration, timestamp: note.timestamp } };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return { failure: `Áudio ${index + 1} falhou ao enviar: ${message}` };
+    return { failure: `Áudio ${index + 1} falhou ao enviar: ${message}`, timedOut: isNetworkTimeoutError(error) };
   }
 }
 
@@ -135,7 +148,7 @@ export async function backupPoint(pointId: string): Promise<BackupResult> {
     approvedFolderId = await ensureFolder("approved", project.drive_folder_id);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return { success: false, error: message };
+    return { success: false, error: message, timedOut: isNetworkTimeoutError(error) };
   }
 
   // Media is part of the collection (section 8): every photo, audio note and
@@ -143,6 +156,7 @@ export async function backupPoint(pointId: string): Promise<BackupResult> {
   // Failures are collected so the person sees all of them at once.
   const mediaProblems: string[] = [];
   let missingMediaCount = 0;
+  let timedOut = false;
   const photoFilenames: string[] = [];
   const audioEntries: PointPackageAudioNote[] = [];
 
@@ -161,6 +175,7 @@ export async function backupPoint(pointId: string): Promise<BackupResult> {
       return mediaFolderId;
     } catch (error) {
       mediaFolderFailed = true;
+      if (isNetworkTimeoutError(error)) timedOut = true;
       const message = error instanceof Error ? error.message : String(error);
       mediaProblems.push(`Não foi possível criar a pasta de mídia: ${message}`);
       return null;
@@ -179,6 +194,7 @@ export async function backupPoint(pointId: string): Promise<BackupResult> {
     } else {
       mediaProblems.push(outcome.failure);
       if (outcome.missing) missingMediaCount += 1;
+      if (outcome.timedOut) timedOut = true;
     }
   }
   for (let i = 0; i < audioNotes.length; i++) {
@@ -193,6 +209,7 @@ export async function backupPoint(pointId: string): Promise<BackupResult> {
     } else {
       mediaProblems.push(outcome.failure);
       if (outcome.missing) missingMediaCount += 1;
+      if (outcome.timedOut) timedOut = true;
     }
   }
 
@@ -225,6 +242,7 @@ export async function backupPoint(pointId: string): Promise<BackupResult> {
               await putBinaryFile(relativePath.replace(/\//g, "__"), folderId, uri, mimeTypeForUri(uri));
               return `${PACKAGE_MEDIA_PREFIX}${relativePath}`;
             } catch (error) {
+              if (isNetworkTimeoutError(error)) timedOut = true;
               const message = error instanceof Error ? error.message : String(error);
               mediaProblems.push(`Mídia do módulo ${mod.module_id} falhou ao enviar: ${message}`);
               return null;
@@ -237,7 +255,7 @@ export async function backupPoint(pointId: string): Promise<BackupResult> {
     // Nothing is written to the point's JSON on Drive, and drive_synced_at
     // stays null: an existing Drive JSON must never be rewritten with fewer
     // media than the point really has.
-    return { success: false, error: mediaProblems.join(" "), missingMediaCount };
+    return { success: false, error: mediaProblems.join(" "), missingMediaCount, timedOut };
   }
 
   const entry: PointPackageEntry = {
@@ -272,7 +290,7 @@ export async function backupPoint(pointId: string): Promise<BackupResult> {
       : await uploadJsonFile(pointFilename, approvedFolderId, entry);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return { success: false, error: message };
+    return { success: false, error: message, timedOut: isNetworkTimeoutError(error) };
   }
 
   const syncedAt = uploaded.modifiedTime ?? new Date().toISOString();
@@ -281,14 +299,37 @@ export async function backupPoint(pointId: string): Promise<BackupResult> {
   return { success: true };
 }
 
-export async function backupAllPendingPoints(projectId: number): Promise<BackupSummary> {
+export interface BackupProgress {
+  /** 1-based position of the point about to be uploaded. */
+  current: number;
+  total: number;
+}
+
+export async function backupAllPendingPoints(
+  projectId: number,
+  onProgress?: (progress: BackupProgress) => void,
+): Promise<BackupSummary> {
   const points = await getApprovedUnsyncedPointsByProject(projectId);
 
   let backedUp = 0;
   const failed: BackupSummary["failed"] = [];
 
-  for (const point of points) {
-    const result = await backupPoint(point.id.toString());
+  for (const [index, point] of points.entries()) {
+    onProgress?.({ current: index + 1, total: points.length });
+
+    // An unexpected throw (e.g. a DB error) counts as this point failing,
+    // not as the whole batch aborting with the earlier points' work unreported.
+    let result: BackupResult;
+    try {
+      result = await backupPoint(point.id.toString());
+    } catch (error) {
+      result = {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        timedOut: isNetworkTimeoutError(error),
+      };
+    }
+
     if (result.success) {
       backedUp += 1;
     } else {
@@ -297,6 +338,7 @@ export async function backupAllPendingPoints(projectId: number): Promise<BackupS
         pointLabel: `${point.created_by ?? "?"}-${point.point_number}`,
         reason: result.error ?? "Erro desconhecido.",
         missingMediaCount: result.missingMediaCount ?? 0,
+        timedOut: result.timedOut ?? false,
       });
     }
   }

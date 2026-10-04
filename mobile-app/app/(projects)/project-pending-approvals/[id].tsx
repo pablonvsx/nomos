@@ -6,9 +6,6 @@ import {
   Button,
   ActivityIndicator,
   useTheme as usePaperTheme,
-  Portal,
-  Dialog,
-  TextInput,
 } from "react-native-paper";
 import { useLocalSearchParams, useFocusEffect, useRouter, Stack } from "expo-router";
 import { useAlertDialog } from "@/hooks/use-dialog";
@@ -20,6 +17,9 @@ import { useMapData } from "@/contexts/map-data-context";
 import { getProjectById } from "@/db/queries/projects";
 import { getProjectActionVisibility } from "@/core/project-sharing/action-visibility";
 import type { Point } from "@/types/database";
+import { RejectPointDialog } from "@/components/project-sharing/RejectPointDialog";
+import { closeModalThenShow } from "@/core/ui/close-then-show";
+import { waitForModalClose } from "@/core/ui/wait-for-modal-close";
 
 export default function ProjectPendingApprovalsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -33,7 +33,6 @@ export default function ProjectPendingApprovalsScreen() {
   const [points, setPoints] = useState<Point[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [rejectingPoint, setRejectingPoint] = useState<Point | null>(null);
-  const [rejectionReason, setRejectionReason] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
 
   const loadData = useCallback(async () => {
@@ -62,7 +61,8 @@ export default function ProjectPendingApprovalsScreen() {
   const handleApprove = async (point: Point) => {
     setBusyId(point.id);
     try {
-      await updatePointApprovalStatus(point.id, "approved");
+      // updatePoint swallows DB errors and returns false: treat that as a failure too.
+      if (!(await updatePointApprovalStatus(point.id, "approved"))) throw new Error("Could not save the approval.");
       // Approval changes what the general list/map shows - drop the cached map data.
       clearMapData(parseInt(id));
       setPoints((prev) => prev.filter((p) => p.id !== point.id));
@@ -75,28 +75,43 @@ export default function ProjectPendingApprovalsScreen() {
   };
 
   const openRejectDialog = (point: Point) => {
-    setRejectionReason("");
     setRejectingPoint(point);
   };
 
-  const confirmReject = async () => {
-    if (!rejectingPoint || !rejectionReason.trim()) return;
-    setBusyId(rejectingPoint.id);
+  const confirmReject = async (reason: string) => {
+    if (!rejectingPoint) return;
+    const point = rejectingPoint;
+    setBusyId(point.id);
     try {
-      await updatePointApprovalStatus(rejectingPoint.id, "rejected", rejectionReason.trim());
+      if (!(await updatePointApprovalStatus(point.id, "rejected", reason))) throw new Error("Could not save the rejection.");
       clearMapData(parseInt(id));
-      setPoints((prev) => prev.filter((p) => p.id !== rejectingPoint.id));
+      setPoints((prev) => prev.filter((p) => p.id !== point.id));
       setRejectingPoint(null);
     } catch (error) {
       console.error("Error rejecting point:", error);
-      alert(t("common.error"), t("pointApproval.errorRejecting"));
+      // The reject dialog has its own Portal: close it and let it leave the
+      // screen first, or this alert would render behind it.
+      await closeModalThenShow({
+        close: () => setRejectingPoint(null),
+        wait: waitForModalClose,
+        show: () => alert(t("common.error"), t("pointApproval.errorRejecting")),
+      });
     } finally {
       setBusyId(null);
     }
   };
 
+  // Review the full point (read-only) before deciding, instead of approving blind.
+  const openPointDetails = (point: Point) => {
+    router.push(`/survey-point-details/${point.id}?projectId=${id}` as any);
+  };
+
   const renderItem = ({ item }: { item: Point }) => (
-    <Card style={[styles.card, { backgroundColor: paperTheme.colors.surface }]} mode="elevated">
+    <Card
+      style={[styles.card, { backgroundColor: paperTheme.colors.surface }]}
+      mode="elevated"
+      onPress={() => openPointDetails(item)}
+    >
       <Card.Content>
         <Text variant="titleMedium" style={{ fontWeight: "bold" }}>
           {item.created_by ?? "?"}-{item.point_number}
@@ -148,28 +163,12 @@ export default function ProjectPendingApprovalsScreen() {
         />
       )}
 
-      <Portal>
-        <Dialog visible={rejectingPoint !== null} onDismiss={() => setRejectingPoint(null)}>
-          <Dialog.Title>{t("pointApproval.reject")}</Dialog.Title>
-          <Dialog.Content>
-            <TextInput
-              mode="outlined"
-              label={t("pointApproval.rejectionReasonLabel")}
-              placeholder={t("pointApproval.rejectionReasonPlaceholder")}
-              value={rejectionReason}
-              onChangeText={setRejectionReason}
-              multiline
-              numberOfLines={3}
-            />
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setRejectingPoint(null)}>{t("common.cancel")}</Button>
-            <Button onPress={confirmReject} disabled={!rejectionReason.trim()}>
-              {t("pointApproval.reject")}
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <RejectPointDialog
+        visible={rejectingPoint !== null}
+        busy={busyId !== null}
+        onCancel={() => setRejectingPoint(null)}
+        onConfirm={confirmReject}
+      />
     </View>
   );
 }

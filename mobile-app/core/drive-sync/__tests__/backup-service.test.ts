@@ -217,6 +217,7 @@ jest.mock("@/db/queries/projects", () => ({
 
 import { backupPoint, backupAllPendingPoints } from "../backup-service";
 import { discardMissingMedia } from "@/core/points/discard-missing-media";
+import { DriveTimeoutError } from "../drive-errors";
 import { ProjectRoleNotAllowedError } from "@/core/project-sharing/action-visibility";
 
 beforeEach(() => {
@@ -473,6 +474,163 @@ describe("backupAllPendingPoints", () => {
 
     expect(getApprovedUnsyncedPointsByProjectMock).toHaveBeenCalledWith(project.id);
     expect(uploadJsonFileMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("backupAllPendingPoints - progress callback", () => {
+  it("reports (current, total) once per point, in order, with a fixed total", async () => {
+    const project = seedProject();
+    seedPoint(project.id);
+    seedPoint(project.id);
+    seedPoint(project.id);
+    const onProgress = jest.fn();
+
+    await backupAllPendingPoints(project.id, onProgress);
+
+    expect(onProgress.mock.calls.map(([p]) => p)).toEqual([
+      { current: 1, total: 3 },
+      { current: 2, total: 3 },
+      { current: 3, total: 3 },
+    ]);
+  });
+
+  it("reports progress before each point is uploaded", async () => {
+    const project = seedProject();
+    const point1 = seedPoint(project.id);
+    seedPoint(project.id);
+    const seenSyncedAtAtCall: Array<string | null> = [];
+
+    await backupAllPendingPoints(project.id, ({ current }) => {
+      if (current === 1) seenSyncedAtAtCall.push(point1.drive_synced_at);
+    });
+
+    // At the moment of "point 1 of N" the point hadn't been backed up yet.
+    expect(seenSyncedAtAtCall).toEqual([null]);
+    expect(point1.drive_synced_at).toBeTruthy();
+  });
+
+  it("keeps reporting the remaining points when one fails in the middle", async () => {
+    const project = seedProject();
+    const point1 = seedPoint(project.id);
+    const point2 = seedPoint(project.id);
+    const point3 = seedPoint(project.id);
+    uploadJsonFileMock.mockImplementation(async (name: string) => {
+      if (name === `point-uuid-${point2.id}.json`) throw new Error("network error");
+      return { id: `json-${name}`, name, mimeType: "application/json", modifiedTime: "2026-01-01T00:00:00.000Z" };
+    });
+    const onProgress = jest.fn();
+
+    const summary = await backupAllPendingPoints(project.id, onProgress);
+
+    expect(onProgress.mock.calls.map(([p]) => p.current)).toEqual([1, 2, 3]);
+    expect(summary.backedUp).toBe(2);
+    expect(summary.failed).toHaveLength(1);
+    expect(point1.drive_synced_at).toBeTruthy();
+    expect(point3.drive_synced_at).toBeTruthy();
+  });
+
+  it("turns an unexpected exception from one point into a failure and continues the batch", async () => {
+    const project = seedProject();
+    const point1 = seedPoint(project.id);
+    const point2 = seedPoint(project.id);
+    const point3 = seedPoint(project.id);
+    const realImpl = getPointMock.getMockImplementation()!;
+    getPointMock.mockImplementation(async (id: number) => {
+      if (id === point2.id) throw new Error("db exploded");
+      return realImpl(id);
+    });
+    const onProgress = jest.fn();
+
+    let summary;
+    try {
+      summary = await backupAllPendingPoints(project.id, onProgress);
+    } finally {
+      // clearAllMocks() in beforeEach doesn't reset implementations.
+      getPointMock.mockImplementation(realImpl);
+    }
+
+    expect(onProgress.mock.calls.map(([p]) => p.current)).toEqual([1, 2, 3]);
+    expect(summary.backedUp).toBe(2);
+    expect(summary.failed).toEqual([
+      expect.objectContaining({ pointId: point2.id, reason: "db exploded" }),
+    ]);
+    expect(point1.drive_synced_at).toBeTruthy();
+    expect(point3.drive_synced_at).toBeTruthy();
+  });
+
+  it("works without a callback and does not call it for an empty batch", async () => {
+    const project = seedProject();
+    const onProgress = jest.fn();
+
+    await expect(backupAllPendingPoints(project.id)).resolves.toEqual({ backedUp: 0, failed: [] });
+    await backupAllPendingPoints(project.id, onProgress);
+
+    expect(onProgress).not.toHaveBeenCalled();
+  });
+});
+
+describe("backupPoint - network timeouts", () => {
+  it("a media upload that times out fails the point, writes no JSON, leaves drive_synced_at null and flags timedOut", async () => {
+    const project = seedProject();
+    const point = seedPoint(project.id, { photos: JSON.stringify([{ uri: "file:///p1.jpg", timestamp: 1 }]) });
+    fsState.set("file:///p1.jpg", { isDir: false, content: "bytes" });
+    uploadBinaryFileMock.mockRejectedValue(new DriveTimeoutError(180_000));
+
+    const result = await backupPoint(point.id.toString());
+
+    expect(result.success).toBe(false);
+    expect(result.timedOut).toBe(true);
+    expect(uploadJsonFileMock).not.toHaveBeenCalled();
+    expect(updateJsonFileMock).not.toHaveBeenCalled();
+    expect(point.drive_synced_at).toBeNull();
+  });
+
+  it("a timeout while writing the point's JSON also fails the point and flags timedOut", async () => {
+    const project = seedProject();
+    const point = seedPoint(project.id);
+    uploadJsonFileMock.mockRejectedValue(new DriveTimeoutError(30_000));
+
+    const result = await backupPoint(point.id.toString());
+
+    expect(result).toEqual(expect.objectContaining({ success: false, timedOut: true }));
+    expect(point.drive_synced_at).toBeNull();
+  });
+
+  it("a timeout creating the approved folder is flagged too", async () => {
+    const project = seedProject();
+    const point = seedPoint(project.id);
+    ensureFolderMock.mockRejectedValue(new DriveTimeoutError(30_000));
+
+    const result = await backupPoint(point.id.toString());
+
+    expect(result).toEqual(expect.objectContaining({ success: false, timedOut: true }));
+  });
+
+  it("an ordinary upload failure is not flagged as a timeout", async () => {
+    const project = seedProject();
+    const point = seedPoint(project.id);
+    uploadJsonFileMock.mockRejectedValue(new Error("Drive API error (500): boom"));
+
+    const result = await backupPoint(point.id.toString());
+
+    expect(result.success).toBe(false);
+    expect(result.timedOut).toBeFalsy();
+  });
+
+  it("backupAllPendingPoints carries timedOut into each failed entry and keeps going", async () => {
+    const project = seedProject();
+    const point1 = seedPoint(project.id);
+    const point2 = seedPoint(project.id);
+    uploadJsonFileMock.mockImplementation(async (name: string) => {
+      if (name === `point-uuid-${point1.id}.json`) throw new DriveTimeoutError(30_000);
+      return { id: `json-${name}`, name, mimeType: "application/json", modifiedTime: "2026-01-01T00:00:00.000Z" };
+    });
+
+    const summary = await backupAllPendingPoints(project.id);
+
+    expect(summary.backedUp).toBe(1);
+    expect(summary.failed).toEqual([expect.objectContaining({ pointId: point1.id, timedOut: true })]);
+    expect(point2.drive_synced_at).toBeTruthy();
   });
 });
 

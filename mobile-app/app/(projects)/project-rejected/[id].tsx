@@ -72,8 +72,17 @@ export default function ProjectRejectedScreen() {
     );
   };
 
+  // Read-only details (no edit actions): see what was rejected and why.
+  const openPointDetails = (point: Point) => {
+    router.push(`/survey-point-details/${point.id}?projectId=${id}` as any);
+  };
+
   const renderItem = ({ item }: { item: Point }) => (
-    <Card style={[styles.card, { backgroundColor: paperTheme.colors.surface }]} mode="elevated">
+    <Card
+      style={[styles.card, { backgroundColor: paperTheme.colors.surface }]}
+      mode="elevated"
+      onPress={() => openPointDetails(item)}
+    >
       <Card.Content>
         <Text variant="titleMedium" style={{ fontWeight: "bold" }}>
           {item.created_by ?? "?"}-{item.point_number}

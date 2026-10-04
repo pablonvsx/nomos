@@ -59,6 +59,14 @@ const getAllAsyncMock = jest.fn(async (sql: string, params: unknown[]) => {
   return [];
 });
 
+const getFirstAsyncMock = jest.fn(async (sql: string, params: unknown[]) => {
+  if (/^\s*SELECT \* FROM points WHERE id = \?/.test(sql)) {
+    const [pointId] = params as [number];
+    return pointsTable.find((p) => p.id === pointId) ?? null;
+  }
+  return null;
+});
+
 const runAsyncMock = jest.fn(async (sql: string, params: unknown[]) => {
   if (sql.includes("INSERT INTO points") && !sql.includes("point_modules")) {
     // Map the INSERT's column list onto its params, like SQLite would.
@@ -100,7 +108,7 @@ jest.mock("@/core/utils/uuid", () => ({ generateUuid: () => "fake-uuid" }));
 jest.mock("@/db/initialize", () => ({
   db: {
     getAllAsync: (...args: [string, unknown[]]) => getAllAsyncMock(...args),
-    getFirstAsync: jest.fn(async () => null),
+    getFirstAsync: (...args: [string, unknown[]]) => getFirstAsyncMock(...args),
     runAsync: (...args: [string, unknown[]]) => runAsyncMock(...args),
   },
 }));
@@ -110,6 +118,7 @@ import {
   createPoint,
   getApprovedUnsyncedPointsByProject,
   getPendingPointsByProject,
+  getPoint,
   getPointsByProject,
   getPointsWithModulesByProject,
   getPointsWithRawModulesByProject,
@@ -282,5 +291,36 @@ describe("createPoint persists drive_synced_at and rejection_reason", () => {
     await createPoint({ ...baseInput, approval_status: "rejected", rejection_reason: "blurry photo" });
 
     expect(pointsTable[0].rejection_reason).toBe("blurry photo");
+  });
+});
+
+describe("getPoint (by id) - must load pending and rejected points", () => {
+  // The details screen opens pending/rejected points for review, so the by-id
+  // query must NOT apply the visibility rule used by the general list/map.
+  it("returns a pending point", async () => {
+    seedPoint({ id: 10, project_id: 1, approval_status: "pending" });
+
+    const result = await getPoint(10);
+
+    expect(result?.point.id).toBe(10);
+    expect(result?.point.approval_status).toBe("pending");
+  });
+
+  it("returns a rejected point with its rejection reason", async () => {
+    seedPoint({ id: 11, project_id: 1, approval_status: "rejected", rejection_reason: "Duplicate" });
+
+    const result = await getPoint(11);
+
+    expect(result?.point.approval_status).toBe("rejected");
+    expect(result?.point.rejection_reason).toBe("Duplicate");
+  });
+
+  it("still returns approved and locally collected points, and null for an unknown id", async () => {
+    seedPoint({ id: 12, project_id: 1, approval_status: "approved" });
+    seedPoint({ id: 13, project_id: 1, approval_status: null });
+
+    expect((await getPoint(12))?.point.id).toBe(12);
+    expect((await getPoint(13))?.point.id).toBe(13);
+    expect(await getPoint(999)).toBeNull();
   });
 });

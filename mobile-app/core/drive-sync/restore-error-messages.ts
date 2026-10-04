@@ -1,5 +1,6 @@
 import { UnsupportedPackageVersionError } from "@/core/project-sharing/package-errors";
 import { MediaRestoreError } from "@/core/drive-sync/restore-errors";
+import { isNetworkTimeoutError } from "@/core/net/network-timeout";
 
 /**
  * Maps an error thrown by restoreOwnProjectFromDrive to the i18n key that
@@ -27,6 +28,12 @@ export interface RestoreErrorDescription {
 }
 
 export function describeRestoreError(error: unknown): RestoreErrorDescription {
+  // Any network timeout (Drive request, media download, Google token): one
+  // friendly message, no technical detail - the restore was undone.
+  if (isNetworkTimeoutError(error)) {
+    return { key: "common.slowConnection" };
+  }
+
   if (error instanceof UnsupportedPackageVersionError) {
     return { key: "driveRestore.errorUnsupportedFormatVersion" };
   }

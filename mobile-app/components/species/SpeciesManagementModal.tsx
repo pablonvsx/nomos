@@ -32,7 +32,7 @@ import FamilyGenusCollapsibleTree from "./FamilyGenusCollapsibleTree";
 import SpeciesResultCard from "./SpeciesResultCard";
 import { groupByFamilyAndGenus } from "@/core/species-catalog/group-by-taxonomy";
 import { useI18n } from "@/contexts/i18n-context";
-import { useAlertDialog } from "@/hooks/use-dialog";
+import { useAlertDialog, withDialogScope } from "@/hooks/use-dialog";
 import {
   searchPlantsNearby,
   getGBIFOccurrenceCount,
@@ -91,7 +91,7 @@ interface ManualSpeciesInput {
   }>;
 }
 
-export default function SpeciesManagementModal({
+function SpeciesManagementModal({
   visible,
   projectId,
   latitude,
@@ -1591,3 +1591,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
 });
+
+// Scoped dialog provider: this component opens Portal dialogs (edit species,
+// search progress) and raises alerts while they are open; a provider outside
+// its Portals makes those alerts render on top instead of behind them. It
+// also keeps useAlertDialog() valid when mode="modal" wraps everything in a Portal.
+export default withDialogScope(SpeciesManagementModal);

@@ -12,9 +12,29 @@ import type {
   User,
 } from '@react-native-google-signin/google-signin';
 import Constants from 'expo-constants';
+import { NetworkTimeoutError, withTimeout } from '@/core/net/network-timeout';
 
 const GOOGLE_WEB_CLIENT_ID = Constants.expoConfig?.extra?.googleWebClientId as string;
 const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+
+// React Native gives native calls no timeout of their own, so a stalled
+// connection would leave a screen waiting forever. Non-interactive calls
+// (Play Services check, sign-out, the token request - the only one that
+// touches the network) use the same short limit as Drive metadata requests.
+export const GOOGLE_AUTH_TIMEOUT_MS = 30_000;
+// signIn() is interactive - the person picks the account, may type a password
+// or pass a 2-step check - so the short limit would cut off a normal login.
+// This one only exists so a login that never returns can't block forever.
+export const GOOGLE_SIGN_IN_TIMEOUT_MS = 120_000;
+
+/** Races a native Google call against a timer (these calls take no AbortSignal). */
+function withGoogleTimeout<T>(call: () => Promise<T>, timeoutMs: number): Promise<T> {
+  return withTimeout(
+    () => call(),
+    timeoutMs,
+    () => new NetworkTimeoutError(timeoutMs, `Google did not respond within ${timeoutMs} ms.`),
+  );
+}
 
 /** Thrown when the native Google Sign-In module isn't available in this build (e.g. Expo Go). */
 export class GoogleSignInUnavailableError extends Error {
@@ -69,11 +89,29 @@ function toGoogleAccount(user: User): GoogleAccount {
   return { email: user.user.email, name: user.user.name };
 }
 
-export async function signInWithGoogle(): Promise<GoogleAccount> {
+export interface SignInOptions {
+  /**
+   * Android's Google Sign-In has no "force account chooser" flag: signIn()
+   * returns the last signed-in (or previously consented) account without any
+   * UI, even after the app's data was cleared. Signing out first is the
+   * documented way to get the chooser back; consent for the Drive scope is
+   * kept (revokeAccess() would drop it too).
+   */
+  forceAccountChooser?: boolean;
+}
+
+export async function signInWithGoogle(options: SignInOptions = {}): Promise<GoogleAccount> {
   const googleSignin = requireGoogleSignin();
   ensureConfigured();
-  await googleSignin.hasPlayServices();
-  const response = await googleSignin.signIn();
+  await withGoogleTimeout(() => googleSignin.hasPlayServices(), GOOGLE_AUTH_TIMEOUT_MS);
+  if (options.forceAccountChooser) {
+    try {
+      await withGoogleTimeout(() => googleSignin.signOut(), GOOGLE_AUTH_TIMEOUT_MS);
+    } catch {
+      // Nothing cached to clear (or it didn't answer) is fine - we only want the chooser to show.
+    }
+  }
+  const response = await withGoogleTimeout(() => googleSignin.signIn(), GOOGLE_SIGN_IN_TIMEOUT_MS);
   if (response.type !== 'success') {
     throw new Error('Login cancelado pelo usuário.');
   }
@@ -101,12 +139,12 @@ export function getCurrentGoogleAccount(): GoogleAccount | null {
 export async function signOutFromGoogle(): Promise<void> {
   const googleSignin = requireGoogleSignin();
   ensureConfigured();
-  await googleSignin.signOut();
+  await withGoogleTimeout(() => googleSignin.signOut(), GOOGLE_AUTH_TIMEOUT_MS);
 }
 
 export async function getDriveAccessToken(): Promise<string> {
   const googleSignin = requireGoogleSignin();
   ensureConfigured();
-  const { accessToken } = await googleSignin.getTokens();
+  const { accessToken } = await withGoogleTimeout(() => googleSignin.getTokens(), GOOGLE_AUTH_TIMEOUT_MS);
   return accessToken;
 }

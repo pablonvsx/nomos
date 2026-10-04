@@ -16,6 +16,10 @@ import * as DocumentPicker from "expo-document-picker";
 import * as Sharing from "expo-sharing";
 import { File, Paths } from "expo-file-system";
 import { useAlertDialog } from "@/hooks/use-dialog";
+import { useExclusiveOperation } from "@/hooks/use-exclusive-operation";
+import { OperationProgressBanner } from "@/components/ui/OperationProgressBanner";
+import { closeModalThenShow } from "@/core/ui/close-then-show";
+import { waitForModalClose } from "@/core/ui/wait-for-modal-close";
 import { useI18n } from "@/contexts/i18n-context";
 import { BUTTON_RADIUS, SEGMENTED_BUTTONS_SHAPE_THEME } from "@/constants/shape";
 
@@ -48,6 +52,8 @@ export default function ProjectsScreen() {
   const insets = useSafeAreaInsets();
   const { alert, confirm } = useAlertDialog();
   const { t, currentLanguage } = useI18n();
+  // One long operation at a time (import/export): shows a banner and ignores re-taps.
+  const { operation, busy, run } = useExclusiveOperation();
   const registry = useProtocolRegistry();
   const lang = (currentLanguage as string) ?? "pt";
 
@@ -170,7 +176,8 @@ export default function ProjectsScreen() {
     );
   };
 
-  const handleExportProtocol = async (protocol: CustomProtocol) => {
+  const handleExportProtocol = (protocol: CustomProtocol) =>
+    run(t("common.exporting"), async () => {
     try {
       const exportData = {
         name: protocol.name,
@@ -209,9 +216,10 @@ export default function ProjectsScreen() {
       console.error("Error exporting protocol:", error);
       alert(t("common.error"), t("protocol.errorExportingProtocol"));
     }
-  };
+  });
 
-  const handleImportProject = async () => {
+  const handleImportProject = () =>
+    run(t("common.importing"), async () => {
     try {
       const result = await importProjectConfigPackage();
       if (!result) return;
@@ -237,7 +245,7 @@ export default function ProjectsScreen() {
         alert(t("common.error"), t("projectsList.errorImportingProject"));
       }
     }
-  };
+  });
 
   const handleRestoreFromDrive = () => {
     if (!getCurrentGoogleAccount()) {
@@ -248,16 +256,12 @@ export default function ProjectsScreen() {
     setRestoreProjectsModalVisible(true);
   };
 
+  // Called by RestoreProjectsModal AFTER it has closed itself and waited for
+  // its exit animation, so this alert is not stacked behind it. Warnings are
+  // merged into the one alert: showDialog replaces the current dialog, so
+  // consecutive alerts would hide each other.
   const handleProjectRestored = (result: RestoreResult) => {
-    setRestoreProjectsModalVisible(false);
     loadData();
-
-    if (result.ownerEmailWarning) {
-      alert(t("common.info"), t("driveRestore.ownerEmailWarning"));
-    }
-    if (result.activeClassificationWarning) {
-      alert(t("common.info"), t("driveRestore.activeClassificationWarning"));
-    }
 
     const summary =
       t("driveRestore.restoreSummary", {
@@ -267,13 +271,18 @@ export default function ProjectsScreen() {
       (result.duplicatesSkipped > 0
         ? "\n" + t("driveRestore.duplicatesSkippedWarning", { count: result.duplicatesSkipped.toString() })
         : "");
+    const warnings = [
+      result.ownerEmailWarning ? t("driveRestore.ownerEmailWarning") : null,
+      result.activeClassificationWarning ? t("driveRestore.activeClassificationWarning") : null,
+    ].filter((message): message is string => message !== null);
 
-    alert(t("common.success"), summary, () =>
+    alert(t("common.success"), [summary, ...warnings].join("\n\n"), () =>
       router.push(`/project-details/${result.projectId}` as any),
     );
   };
 
-  const handleImportProtocol = async () => {
+  const handleImportProtocol = () =>
+    run(t("common.importing"), async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ["application/json", "text/plain", "*/*"],
@@ -300,22 +309,23 @@ export default function ProjectsScreen() {
             "{{name}}",
             importedData.name,
           ),
-          async () => {
-            try {
-              await createCustomProtocol(
-                importedData.name,
-                importedData.schema,
-                importedData.theme || "",
-                importedData.description || "",
-                importedData.collection_instructions || "",
-              );
-              loadData();
-              alert(t("common.success"), t("protocol.protocolImported"));
-            } catch (error) {
-              console.error("Error creating imported protocol:", error);
-              alert(t("common.error"), t("protocol.errorImportingProtocol"));
-            }
-          },
+          () =>
+            run(t("common.importing"), async () => {
+              try {
+                await createCustomProtocol(
+                  importedData.name,
+                  importedData.schema,
+                  importedData.theme || "",
+                  importedData.description || "",
+                  importedData.collection_instructions || "",
+                );
+                loadData();
+                alert(t("common.success"), t("protocol.protocolImported"));
+              } catch (error) {
+                console.error("Error creating imported protocol:", error);
+                alert(t("common.error"), t("protocol.errorImportingProtocol"));
+              }
+            }),
           () => {},
           t("common.import"),
           t("common.cancel"),
@@ -325,7 +335,7 @@ export default function ProjectsScreen() {
       console.error("Error importing protocol:", error);
       alert(t("common.error"), t("protocol.errorImportingProtocol"));
     }
-  };
+  });
 
   // 3. Component to render each project item in the list
   const renderProjectCard = ({ item }: { item: Project }) => {
@@ -537,6 +547,8 @@ export default function ProjectsScreen() {
         />
       </View>
 
+      <OperationProgressBanner operation={operation} />
+
       {/* Main Content List */}
       <View style={styles.content}>
         {isLoading ? (
@@ -638,8 +650,11 @@ export default function ProjectsScreen() {
         icon={(isProjectsTab ? projectFabOpen : protocolFabOpen) ? "close" : "plus"}
         color={paperTheme.colors.onPrimary}
         fabStyle={{ backgroundColor: paperTheme.colors.primary }}
+        // Hidden while an import/export runs: it is the trigger, so this is what prevents double taps.
         actions={
-          isProjectsTab
+          busy
+            ? []
+            : isProjectsTab
             ? [
                 {
                   icon: "folder-plus",
@@ -711,9 +726,14 @@ export default function ProjectsScreen() {
           setPendingDriveIntent(null);
         }}
         onConnected={() => {
-          setDriveConnectionModalVisible(false);
-          pendingDriveIntent?.();
+          // The resumed action may open another modal/dialog: wait for this one to be gone.
+          const intent = pendingDriveIntent;
           setPendingDriveIntent(null);
+          closeModalThenShow({
+            close: () => setDriveConnectionModalVisible(false),
+            wait: waitForModalClose,
+            show: () => intent?.(),
+          });
         }}
       />
 

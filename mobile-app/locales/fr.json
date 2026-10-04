@@ -36,7 +36,11 @@
     "somethingWentWrong": "Une erreur s'est produite",
     "unexpectedError": "Une erreur inattendue s'est produite. Veuillez réessayer.",
     "tryAgain": "Réessayer",
-    "errorDetails": "Détails de l'erreur :"
+    "errorDetails": "Détails de l'erreur :",
+    "exporting": "Exportation...",
+    "importing": "Importation...",
+    "processing": "Traitement...",
+    "slowConnection": "La connexion est lente ou instable. Réessayez avec une meilleure connexion."
   },
   "home": {
     "title": "Nomos",
@@ -1120,7 +1124,10 @@
     "deletePermanentlyConfirm": "Êtes-vous sûr de vouloir supprimer définitivement ce point ? Cette action est irréversible et supprimera également les photos et audios associés.",
     "errorApproving": "Impossible d'approuver le point.",
     "errorRejecting": "Impossible de rejeter le point.",
-    "errorDeleting": "Impossible de supprimer le point."
+    "errorDeleting": "Impossible de supprimer le point.",
+    "reviewHint": "Vous examinez un point en attente. Vérifiez les données, puis approuvez ou rejetez.",
+    "readOnlyHint": "Point rejeté. Lecture seule.",
+    "rejectionReasonShown": "Motif du rejet : {{reason}}"
   },
   "googleAccount": {
     "sectionTitle": "Compte Google",
@@ -1145,7 +1152,15 @@
     "discardMissingMediaTitle": "Médias introuvables",
     "discardMissingMediaMessage": "{{count}} fichier(s) photo ou audio de {{points}} point(s) n'existent plus sur cet appareil et bloquent la sauvegarde. Les écarter supprime uniquement les références à ces fichiers dans ces points, puis la sauvegarde sera retentée. Cette action est irréversible.",
     "discardMissingMediaConfirm": "Écarter les médias introuvables",
-    "errorBackingUpPoint": "Impossible de sauvegarder le point."
+    "errorBackingUpPoint": "Impossible de sauvegarder le point.",
+    "confirmAccountLinkTitle": "Associer le compte Google",
+    "confirmAccountLink": "Ce projet sera associé au compte {{email}} et cela ne pourra pas être modifié par la suite.",
+    "useOtherAccount": "Utiliser un autre compte",
+    "activating": "Activation de la sauvegarde sur Drive...",
+    "backingUp": "Préparation de la sauvegarde...",
+    "sendingPoint": "Envoi du point {{current}} sur {{total}}",
+    "backingUpPoint": "Envoi du point vers Drive...",
+    "retryingBackup": "Nouvelle tentative de sauvegarde..."
   },
   "driveRestore": {
     "restoreAction": "Restaurer Mes Projets depuis Drive",

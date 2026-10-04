@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import { Button, Text, Divider, useTheme, IconButton, Portal, Modal, HelperText } from "react-native-paper";
 import { useGoogleAccount } from "@/hooks/use-google-account";
@@ -15,37 +15,49 @@ interface GoogleConnectionModalProps {
    * automatically retry the pending Drive action (activate backup, back up,
    * restore) once the account is connected. */
   onConnected?: (account: GoogleAccount) => void;
+  /** Sign out before signing in so Android shows the account chooser instead of silently reusing the last account ("use another account" flow). */
+  forceAccountChooser?: boolean;
 }
 
 export const GoogleConnectionModal: React.FC<GoogleConnectionModalProps> = ({
   visible,
   onDismiss,
   onConnected,
+  forceAccountChooser = false,
 }) => {
   const theme = useTheme();
   const { t } = useI18n();
-  const { account, isConnecting, error, unavailable, connect, disconnect } = useGoogleAccount();
-  const previousAccount = useRef<GoogleAccount | null>(null);
+  const { account, isConnecting, error, unavailable, connect, disconnect, refresh } = useGoogleAccount();
 
+  // Each useGoogleAccount() instance has its own state, so re-sync with the
+  // native module whenever the modal opens (another screen may have changed
+  // the connection since this one mounted).
   useEffect(() => {
-    if (account && !previousAccount.current) {
-      onConnected?.(account);
-    }
-    previousAccount.current = account;
-  }, [account, onConnected]);
+    if (visible) refresh();
+  }, [visible, refresh]);
+
+  // onConnected fires from the sign-in itself (not from an account-state
+  // effect), so opening the modal on an already-connected account or the
+  // re-sync above can never be mistaken for a fresh connection.
+  const handleConnect = async () => {
+    const connected = await connect({ forceAccountChooser });
+    if (connected) onConnected?.(connected);
+  };
 
   return (
     <Portal>
       <Modal
         visible={visible}
-        onDismiss={onDismiss}
+        // Don't let a backdrop tap dismiss the modal mid sign-in: the result
+        // would arrive with nobody listening for it.
+        onDismiss={isConnecting ? undefined : onDismiss}
         contentContainerStyle={[styles.modal, { backgroundColor: theme.colors.background }]}
       >
         <View style={styles.header}>
           <Text variant="titleLarge" style={[styles.headerTitle, { color: theme.colors.onSurface }]}>
             {t("googleAccount.settingsItemTitle")}
           </Text>
-          <IconButton icon="close" onPress={onDismiss} />
+          <IconButton icon="close" onPress={onDismiss} disabled={isConnecting} />
         </View>
 
         <Divider />
@@ -79,7 +91,7 @@ export const GoogleConnectionModal: React.FC<GoogleConnectionModalProps> = ({
               </Text>
               <Button
                 mode="contained"
-                onPress={connect}
+                onPress={handleConnect}
                 loading={isConnecting}
                 disabled={isConnecting}
                 style={[styles.actionButton, { borderRadius: BUTTON_RADIUS }]}

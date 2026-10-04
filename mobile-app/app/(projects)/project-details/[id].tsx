@@ -26,7 +26,12 @@ import {
 } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import { File, Paths } from "expo-file-system";
-import { useAlertDialog } from "@/hooks/use-dialog";
+import { useAlertDialog, useDialog, withDialogScope } from "@/hooks/use-dialog";
+import { useExclusiveOperation } from "@/hooks/use-exclusive-operation";
+import { OperationProgressBanner } from "@/components/ui/OperationProgressBanner";
+import { closeModalThenShow } from "@/core/ui/close-then-show";
+import { isNetworkTimeoutError } from "@/core/net/network-timeout";
+import { waitForModalClose } from "@/core/ui/wait-for-modal-close";
 import { CardHeaderIconButton } from "@/components/ui/CardHeaderIconButton";
 import { useStableTextInput } from "@/hooks/use-stable-text-input";
 import { useBottomContentPadding } from "@/hooks/use-bottom-content-padding";
@@ -77,7 +82,7 @@ import {
 import { CollectorCodeModal } from "@/components/local-identity/CollectorCodeModal";
 import { PointDuplicatesModal } from "@/components/project-sharing/PointDuplicatesModal";
 import { GoogleConnectionModal } from "@/components/google-account/GoogleConnectionModal";
-import { getCurrentGoogleAccount } from "@/core/google-auth/google-auth-service";
+import { getCurrentGoogleAccount, signOutFromGoogle } from "@/core/google-auth/google-auth-service";
 import {
   activateDriveBackup,
   GoogleAccountRequiredError,
@@ -106,12 +111,26 @@ function buildProjectRef(project: Project): ProjectRef {
   };
 }
 
-export default function UnifiedProjectDetailsScreen() {
+function UnifiedProjectDetailsScreen() {
   const router = useRouter();
   const paperTheme = usePaperTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { confirm, alert } = useAlertDialog();
+  const { showDialog } = useDialog();
   const { t, currentLanguage } = useI18n();
+  // One long operation at a time (backup, export, import...): shows a banner and ignores re-taps.
+  const { operation, busy, run } = useExclusiveOperation();
+
+  // Drive calls can time out on a slow connection: show the friendly localized
+  // message instead of the technical one.
+  const describeError = (error: unknown, fallback: string): string =>
+    isNetworkTimeoutError(error)
+      ? t("common.slowConnection")
+      : error instanceof Error
+        ? error.message
+        : fallback;
+  const describeFailure = (failure: { reason: string; timedOut: boolean }): string =>
+    failure.timedOut ? t("common.slowConnection") : failure.reason;
   const registry = useProtocolRegistry();
   const bus = useCapabilityBus();
   const { clearMapData } = useMapData();
@@ -125,8 +144,6 @@ export default function UnifiedProjectDetailsScreen() {
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
   const [rejectedPointsCount, setRejectedPointsCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [isExporting, setIsExporting] = useState(false);
-  const [isClassifying, setIsClassifying] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
 
   // Vegetation Classification States
@@ -148,6 +165,10 @@ export default function UnifiedProjectDetailsScreen() {
 
   // FAB and Edit Dialog states
   const [fabOpen, setFabOpen] = useState(false);
+  // Fold the speed-dial away as soon as an operation starts (its actions are hidden while busy).
+  useEffect(() => {
+    if (busy) setFabOpen(false);
+  }, [busy]);
   const [editDialogVisible, setEditDialogVisible] = useState(false);
 
   // Points package export/import states (Fase 2)
@@ -157,11 +178,10 @@ export default function UnifiedProjectDetailsScreen() {
 
   // Drive backup activation states (Fase 5)
   const [driveConnectionModalVisible, setDriveConnectionModalVisible] = useState(false);
-  const [isActivatingDriveBackup, setIsActivatingDriveBackup] = useState(false);
+  const [driveForceAccountChooser, setDriveForceAccountChooser] = useState(false);
   const [pendingDriveIntent, setPendingDriveIntent] = useState<(() => void) | null>(null);
 
   // Drive backup upload states (Fase 6)
-  const [isBackingUp, setIsBackingUp] = useState(false);
   const [backingUpPointId, setBackingUpPointId] = useState<number | null>(null);
   const bottomPadding = useBottomContentPadding(64);
 
@@ -514,23 +534,21 @@ export default function UnifiedProjectDetailsScreen() {
     confirm(
       t("projectView.classifyDialogTitle") || "Classify Collection Points",
       t("projectView.classifyDialogMessage") || "This will classify collection points in field order based on Landscape Name. Point 1 defines Landscape Type 1. Continue?",
-      async () => {
-        setIsClassifying(true);
-        try {
-          const success = await classifyProjectPoints(parseInt(id));
-          if (success) {
-            await loadProjectData(); // Reload to show new classes if UI displayed them
-            alert(t("common.success"), t("projectView.classificationSuccess") || "Points classified successfully.");
-          } else {
+      () =>
+        run(t("common.processing"), async () => {
+          try {
+            const success = await classifyProjectPoints(parseInt(id));
+            if (success) {
+              await loadProjectData(); // Reload to show new classes if UI displayed them
+              alert(t("common.success"), t("projectView.classificationSuccess") || "Points classified successfully.");
+            } else {
+              alert(t("common.error"), t("common.error"));
+            }
+          } catch (e) {
+            console.error(e);
             alert(t("common.error"), t("common.error"));
           }
-        } catch (e) {
-          console.error(e);
-          alert(t("common.error"), t("common.error"));
-        } finally {
-          setIsClassifying(false);
-        }
-      },
+        }),
       () => {},
       t("survey.classify") || "Classify",
       t("common.cancel")
@@ -546,17 +564,16 @@ export default function UnifiedProjectDetailsScreen() {
     }
     const mf = registry.getProtocol(resolveManifestId(project));
     if (!mf) return;
-    try {
-      setIsExporting(true);
-      const pointsWithMods = await getPointsWithModulesByProject(parseInt(id), registry);
-      const envelopes = pointsWithMods.map(buildPointEnvelope);
-      await mf.exporter({ bus }).exportGeoJSON(envelopes, buildProjectRef(project), currentLanguage as LanguageCode);
-    } catch (error) {
-      console.error("Error exporting GeoJSON:", error);
-      alert(t("common.error"), t("projectView.errorExporting"));
-    } finally {
-      setIsExporting(false);
-    }
+    await run(t("common.exporting"), async () => {
+      try {
+        const pointsWithMods = await getPointsWithModulesByProject(parseInt(id), registry);
+        const envelopes = pointsWithMods.map(buildPointEnvelope);
+        await mf.exporter({ bus }).exportGeoJSON(envelopes, buildProjectRef(project), currentLanguage as LanguageCode);
+      } catch (error) {
+        console.error("Error exporting GeoJSON:", error);
+        alert(t("common.error"), t("projectView.errorExporting"));
+      }
+    });
   };
 
   const handleExportCSV = async () => {
@@ -566,149 +583,195 @@ export default function UnifiedProjectDetailsScreen() {
     }
     const mf = registry.getProtocol(resolveManifestId(project));
     if (!mf) return;
-    try {
-      setIsExporting(true);
-      const pointsWithMods = await getPointsWithModulesByProject(parseInt(id), registry);
-      const envelopes = pointsWithMods.map(buildPointEnvelope);
-      await mf.exporter({ bus }).exportCSV(envelopes, buildProjectRef(project), currentLanguage as LanguageCode);
-    } catch (error) {
-      console.error("Error exporting CSV:", error);
-      alert(t("common.error"), t("projectView.errorExportingCSV"));
-    } finally {
-      setIsExporting(false);
-    }
+    await run(t("common.exporting"), async () => {
+      try {
+        const pointsWithMods = await getPointsWithModulesByProject(parseInt(id), registry);
+        const envelopes = pointsWithMods.map(buildPointEnvelope);
+        await mf.exporter({ bus }).exportCSV(envelopes, buildProjectRef(project), currentLanguage as LanguageCode);
+      } catch (error) {
+        console.error("Error exporting CSV:", error);
+        alert(t("common.error"), t("projectView.errorExportingCSV"));
+      }
+    });
   };
 
   const handleExportMedia = async () => {
     if (!project || !id || surveyPoints.length === 0) return;
     const mf = registry.getProtocol(resolveManifestId(project));
     if (!mf) return;
-    try {
-      setIsExporting(true);
-      const pointsWithMods = await getPointsWithModulesByProject(parseInt(id), registry);
-      const envelopes = pointsWithMods.map(buildPointEnvelope);
-      const exporter = mf.exporter({ bus });
-      const projectRef = buildProjectRef(project);
-      const hasMedia = await exportMedia(
-        envelopes,
-        (p: PointEnvelope) => exporter.extractMedia(p, projectRef),
-        project.name,
-      );
-      if (!hasMedia) {
-        alert(t("common.info"), t("projectView.noMediaToExport") || "No media available to export.");
+    await run(t("common.exporting"), async () => {
+      try {
+        const pointsWithMods = await getPointsWithModulesByProject(parseInt(id), registry);
+        const envelopes = pointsWithMods.map(buildPointEnvelope);
+        const exporter = mf.exporter({ bus });
+        const projectRef = buildProjectRef(project);
+        const hasMedia = await exportMedia(
+          envelopes,
+          (p: PointEnvelope) => exporter.extractMedia(p, projectRef),
+          project.name,
+        );
+        if (!hasMedia) {
+          alert(t("common.info"), t("projectView.noMediaToExport") || "No media available to export.");
+        }
+      } catch (e) {
+        console.error(e);
+        alert(t("common.error"), t("projectView.errorExportingMedia") || "Error exporting media.");
       }
-    } catch (e) {
-      console.error(e);
-      alert(t("common.error"), t("projectView.errorExportingMedia") || "Error exporting media.");
-    } finally {
-      setIsExporting(false);
-    }
+    });
   };
 
   const handleExportConfigPackage = async () => {
     if (!project) return;
-    try {
-      await exportProjectConfigPackage(project.id);
-      alert(t("common.success"), t("projectView.configPackageExported"));
-    } catch (error) {
-      console.error("Error exporting project config package:", error);
-      alert(t("common.error"), t("projectView.errorExportingConfigPackage"));
-    }
+    await run(t("common.exporting"), async () => {
+      try {
+        await exportProjectConfigPackage(project.id);
+        alert(t("common.success"), t("projectView.configPackageExported"));
+      } catch (error) {
+        console.error("Error exporting project config package:", error);
+        alert(t("common.error"), t("projectView.errorExportingConfigPackage"));
+      }
+    });
   };
 
   const handleExportAllPoints = async () => {
     if (!project) return;
-    try {
-      const report = await exportAllPointsPackage(project.id);
-      if (report.skippedMedia.length > 0) {
-        alert(
-          t("common.info"),
-          t("projectView.mediaSkippedWarning", { count: report.skippedMedia.length.toString() }),
-        );
-      } else {
-        alert(t("common.success"), t("projectView.pointsPackageExported"));
+    await run(t("common.exporting"), async () => {
+      try {
+        const report = await exportAllPointsPackage(project.id);
+        if (report.skippedMedia.length > 0) {
+          alert(
+            t("common.info"),
+            t("projectView.mediaSkippedWarning", { count: report.skippedMedia.length.toString() }),
+          );
+        } else {
+          alert(t("common.success"), t("projectView.pointsPackageExported"));
+        }
+      } catch (error) {
+        if (error instanceof CollectorCodeRequiredError) {
+          setPendingExportIntent(() => handleExportAllPoints);
+          setCollectorCodeModalVisible(true);
+          return;
+        }
+        console.error("Error exporting points package:", error);
+        alert(t("common.error"), t("projectView.errorExportingPointsPackage"));
       }
-    } catch (error) {
-      if (error instanceof CollectorCodeRequiredError) {
-        setPendingExportIntent(() => handleExportAllPoints);
-        setCollectorCodeModalVisible(true);
-        return;
-      }
-      console.error("Error exporting points package:", error);
-      alert(t("common.error"), t("projectView.errorExportingPointsPackage"));
-    }
+    });
   };
 
   const handleImportPoints = async () => {
     if (!project) return;
+    await run(t("common.importing"), async () => {
+      try {
+        const result = await importPointsPackage(project.id);
+        if (!result) return;
+
+        // Refetch immediately: the screen stays focused after the file picker,
+        // so nothing else would trigger a reload of the list and pending count.
+        await refreshAfterImport({
+          clearMapData: () => clearMapData(project.id),
+          reload: loadProjectData,
+        });
+
+        // One alert, not one per warning: showDialog replaces the current
+        // dialog, so consecutive alerts would hide each other.
+        const warnings: string[] = [];
+        if (result.ownerEmailWarning) {
+          warnings.push(t("projectView.pointsImportOwnerEmailWarning"));
+        }
+        if (result.missingMedia > 0) {
+          warnings.push(
+            t("projectView.pointsImportMissingMedia", { count: result.missingMedia.toString() }),
+          );
+        }
+
+        if (result.duplicates.length > 0) {
+          // The duplicates modal is mounted conditionally, so its Portal would
+          // stack above an alert shown now: open it from the alert's OK instead.
+          if (warnings.length > 0) {
+            alert(t("common.info"), warnings.join("\n\n"), () => setDuplicatesResult(result));
+          } else {
+            setDuplicatesResult(result);
+          }
+        } else {
+          const imported = t("projectView.pointsImported", { count: result.imported.toString() });
+          alert(
+            warnings.length > 0 ? t("common.info") : t("common.success"),
+            [...warnings, imported].join("\n\n"),
+          );
+        }
+      } catch (error) {
+        console.error("Error importing points package:", error);
+        if (error instanceof ProjectMismatchError) {
+          alert(t("common.error"), error.message);
+        } else {
+          alert(t("common.error"), t("projectView.errorImportingPointsPackage"));
+        }
+      }
+    });
+  };
+
+  const runDriveBackupActivation = async () => {
+    if (!project) return;
+    await run(t("driveBackup.activating"), async () => {
+      try {
+        await activateDriveBackup(project.id);
+        alert(t("common.success"), t("driveBackup.activatedSuccess"));
+        loadProjectData();
+      } catch (error) {
+        if (error instanceof GoogleAccountRequiredError) {
+          setPendingDriveIntent(() => handleActivateDriveBackup);
+          setDriveConnectionModalVisible(true);
+          return;
+        }
+        console.error("Error activating Drive backup:", error);
+        alert(t("common.error"), describeError(error, t("driveBackup.errorActivating")));
+      }
+    });
+  };
+
+  // Signs the current account out and reopens the connection modal with the
+  // chooser forced, then resumes `intent` (which shows the confirmation again
+  // with the newly picked account).
+  const switchGoogleAccount = async (intent: () => void) => {
     try {
-      const result = await importPointsPackage(project.id);
-      if (!result) return;
-
-      // Refetch immediately: the screen stays focused after the file picker,
-      // so nothing else would trigger a reload of the list and pending count.
-      await refreshAfterImport({
-        clearMapData: () => clearMapData(project.id),
-        reload: loadProjectData,
-      });
-
-      if (result.ownerEmailWarning) {
-        alert(t("common.info"), t("projectView.pointsImportOwnerEmailWarning"));
-      }
-
-      if (result.missingMedia > 0) {
-        alert(
-          t("common.info"),
-          t("projectView.pointsImportMissingMedia", { count: result.missingMedia.toString() }),
-        );
-      }
-
-      if (result.duplicates.length > 0) {
-        setDuplicatesResult(result);
-      } else {
-        alert(
-          t("common.success"),
-          t("projectView.pointsImported", { count: result.imported.toString() }),
-        );
-      }
+      await signOutFromGoogle();
     } catch (error) {
-      console.error("Error importing points package:", error);
-      if (error instanceof ProjectMismatchError) {
-        alert(t("common.error"), error.message);
-      } else {
-        alert(t("common.error"), t("projectView.errorImportingPointsPackage"));
-      }
+      console.error("Error signing out of Google:", error);
     }
+    setPendingDriveIntent(() => intent);
+    setDriveForceAccountChooser(true);
+    setDriveConnectionModalVisible(true);
   };
 
   const handleActivateDriveBackup = async () => {
-    if (!project) return;
+    if (!project || busy) return;
 
-    if (!getCurrentGoogleAccount()) {
+    const account = getCurrentGoogleAccount();
+    if (!account) {
       setPendingDriveIntent(() => handleActivateDriveBackup);
+      setDriveForceAccountChooser(false);
       setDriveConnectionModalVisible(true);
       return;
     }
 
-    setIsActivatingDriveBackup(true);
-    try {
-      await activateDriveBackup(project.id);
-      alert(t("common.success"), t("driveBackup.activatedSuccess"));
-      loadProjectData();
-    } catch (error) {
-      if (error instanceof GoogleAccountRequiredError) {
-        setPendingDriveIntent(() => handleActivateDriveBackup);
-        setDriveConnectionModalVisible(true);
-        return;
-      }
-      console.error("Error activating Drive backup:", error);
-      alert(
-        t("common.error"),
-        error instanceof Error ? error.message : t("driveBackup.errorActivating"),
-      );
-    } finally {
-      setIsActivatingDriveBackup(false);
-    }
+    // owner_email is written once and never changes: make the person see which
+    // account the project will be bound to before the (long) activation starts.
+    showDialog({
+      title: t("driveBackup.confirmAccountLinkTitle"),
+      message: t("driveBackup.confirmAccountLink", { email: account.email }),
+      dismissable: false,
+      buttons: [
+        { label: t("common.cancel"), onPress: () => {}, mode: "text" },
+        {
+          label: t("driveBackup.useOtherAccount"),
+          onPress: () => {
+            switchGoogleAccount(handleActivateDriveBackup);
+          },
+          mode: "text",
+        },
+        { label: t("common.continue"), onPress: runDriveBackupActivation, mode: "text" },
+      ],
+    });
   };
 
   // Backup is blocked by photos/audio that no longer exist on this device.
@@ -727,35 +790,36 @@ export default function UnifiedProjectDetailsScreen() {
         count: total.toString(),
         points: withMissing.length.toString(),
       }),
-      async () => {
-        setIsBackingUp(true);
-        try {
-          for (const failure of withMissing) {
-            await discardMissingMedia(failure.pointId);
+      () =>
+        run(t("driveBackup.retryingBackup"), async (update) => {
+          try {
+            for (const failure of withMissing) {
+              await discardMissingMedia(failure.pointId);
+            }
+            const retry = await backupAllPendingPoints(project!.id, ({ current, total }) =>
+              update({
+                label: t("driveBackup.sendingPoint", { current: current.toString(), total: total.toString() }),
+                current,
+                total,
+              }),
+            );
+            const retryFailedText =
+              retry.failed.length > 0
+                ? "\n" + retry.failed.map((f) => `${f.pointLabel}: ${describeFailure(f)}`).join("\n")
+                : "";
+            alert(
+              t("common.success"),
+              t("driveBackup.backupSummary", {
+                backedUp: retry.backedUp.toString(),
+                failed: retry.failed.length.toString(),
+              }) + retryFailedText,
+            );
+            loadProjectData();
+          } catch (error) {
+            console.error("Error discarding missing media:", error);
+            alert(t("common.error"), describeError(error, t("driveBackup.errorBackingUpPoint")));
           }
-          const retry = await backupAllPendingPoints(project!.id);
-          const retryFailedText =
-            retry.failed.length > 0
-              ? "\n" + retry.failed.map((f) => `${f.pointLabel}: ${f.reason}`).join("\n")
-              : "";
-          alert(
-            t("common.success"),
-            t("driveBackup.backupSummary", {
-              backedUp: retry.backedUp.toString(),
-              failed: retry.failed.length.toString(),
-            }) + retryFailedText,
-          );
-          loadProjectData();
-        } catch (error) {
-          console.error("Error discarding missing media:", error);
-          alert(
-            t("common.error"),
-            error instanceof Error ? error.message : t("driveBackup.errorBackingUpPoint"),
-          );
-        } finally {
-          setIsBackingUp(false);
-        }
-      },
+        }),
       () => {},
       t("driveBackup.discardMissingMediaConfirm"),
       t("common.cancel"),
@@ -768,69 +832,72 @@ export default function UnifiedProjectDetailsScreen() {
 
     if (!getCurrentGoogleAccount()) {
       setPendingDriveIntent(() => handleBackupAllPoints);
+      setDriveForceAccountChooser(false);
       setDriveConnectionModalVisible(true);
       return;
     }
 
-    setIsBackingUp(true);
-    try {
-      const summary = await backupAllPendingPoints(project.id);
-      const failedText =
-        summary.failed.length > 0
-          ? "\n" + summary.failed.map((f) => `${f.pointLabel}: ${f.reason}`).join("\n")
-          : "";
-      alert(
-        t("common.success"),
-        t("driveBackup.backupSummary", {
-          backedUp: summary.backedUp.toString(),
-          failed: summary.failed.length.toString(),
-        }) + failedText,
-        () => offerDiscardMissingMedia(summary.failed),
-      );
-      loadProjectData();
-    } catch (error) {
-      console.error("Error backing up points:", error);
-      alert(
-        t("common.error"),
-        error instanceof Error ? error.message : t("driveBackup.errorBackingUpPoint"),
-      );
-    } finally {
-      setIsBackingUp(false);
-    }
+    await run(t("driveBackup.backingUp"), async (update) => {
+      try {
+        const summary = await backupAllPendingPoints(project.id, ({ current, total }) =>
+          update({
+            label: t("driveBackup.sendingPoint", { current: current.toString(), total: total.toString() }),
+            current,
+            total,
+          }),
+        );
+        const failedText =
+          summary.failed.length > 0
+            ? "\n" + summary.failed.map((f) => `${f.pointLabel}: ${describeFailure(f)}`).join("\n")
+            : "";
+        alert(
+          t("common.success"),
+          t("driveBackup.backupSummary", {
+            backedUp: summary.backedUp.toString(),
+            failed: summary.failed.length.toString(),
+          }) + failedText,
+          () => offerDiscardMissingMedia(summary.failed),
+        );
+        loadProjectData();
+      } catch (error) {
+        console.error("Error backing up points:", error);
+        alert(t("common.error"), describeError(error, t("driveBackup.errorBackingUpPoint")));
+      }
+    });
   };
 
   const handleBackupSinglePoint = async (pointId: number) => {
     if (!getCurrentGoogleAccount()) {
       setPendingDriveIntent(() => () => handleBackupSinglePoint(pointId));
+      setDriveForceAccountChooser(false);
       setDriveConnectionModalVisible(true);
       return;
     }
 
-    setBackingUpPointId(pointId);
-    try {
-      const result = await backupPoint(pointId.toString());
-      if (result.success) {
-        alert(t("common.success"), t("driveBackup.backupPointSuccess"));
-        loadProjectData();
-      } else {
-        alert(
-          t("common.error"),
-          result.error ?? t("driveBackup.errorBackingUpPoint"),
-          () =>
-            offerDiscardMissingMedia([
-              { pointId, pointLabel: "", missingMediaCount: result.missingMediaCount ?? 0 },
-            ]),
-        );
+    await run(t("driveBackup.backingUpPoint"), async () => {
+      setBackingUpPointId(pointId);
+      try {
+        const result = await backupPoint(pointId.toString());
+        if (result.success) {
+          alert(t("common.success"), t("driveBackup.backupPointSuccess"));
+          loadProjectData();
+        } else {
+          alert(
+            t("common.error"),
+            result.timedOut ? t("common.slowConnection") : (result.error ?? t("driveBackup.errorBackingUpPoint")),
+            () =>
+              offerDiscardMissingMedia([
+                { pointId, pointLabel: "", missingMediaCount: result.missingMediaCount ?? 0 },
+              ]),
+          );
+        }
+      } catch (error) {
+        console.error("Error backing up point:", error);
+        alert(t("common.error"), describeError(error, t("driveBackup.errorBackingUpPoint")));
+      } finally {
+        setBackingUpPointId(null);
       }
-    } catch (error) {
-      console.error("Error backing up point:", error);
-      alert(
-        t("common.error"),
-        error instanceof Error ? error.message : t("driveBackup.errorBackingUpPoint"),
-      );
-    } finally {
-      setBackingUpPointId(null);
-    }
+    });
   };
 
   const renderSurveyPoint = ({ item }: { item: Point }) => {
@@ -872,7 +939,7 @@ export default function UnifiedProjectDetailsScreen() {
                 icon={item.drive_synced_at ? "cloud-check" : "cloud-outline"}
                 size={22}
                 loading={backingUpPointId === item.id}
-                disabled={backingUpPointId !== null || Boolean(item.drive_synced_at)}
+                disabled={busy || Boolean(item.drive_synced_at)}
                 onPress={() => handleBackupSinglePoint(item.id)}
               />
             )}
@@ -912,6 +979,8 @@ export default function UnifiedProjectDetailsScreen() {
           headerBackTitle: "",
         }}
       />
+
+      <OperationProgressBanner operation={operation} />
 
       <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: bottomPadding }}>
         {/* Info Card */}
@@ -1177,7 +1246,9 @@ export default function UnifiedProjectDetailsScreen() {
         icon={fabOpen ? "close" : "dots-vertical"}
         color={paperTheme.colors.onPrimary}
         fabStyle={{ backgroundColor: paperTheme.colors.primary }}
-        actions={[
+        // While an operation runs the FAB offers nothing (it is the only trigger for
+        // most of them), which is what disables re-taps; the banner shows progress.
+        actions={busy ? [] : [
           {
             icon: "pencil",
             label: t("common.edit"),
@@ -1199,7 +1270,7 @@ export default function UnifiedProjectDetailsScreen() {
                 {
                   icon: "format-list-numbered",
                   label: t("projectView.classifyProject") || "Classify Collection Points",
-                  onPress: isClassifying ? () => {} : handleClassifyProject,
+                  onPress: handleClassifyProject,
                   color: paperTheme.dark
                     ? paperTheme.colors.onSurface
                     : paperTheme.colors.primary,
@@ -1209,7 +1280,7 @@ export default function UnifiedProjectDetailsScreen() {
           {
             icon: "file-delimited",
             label: t("projectView.exportCSV"),
-            onPress: (surveyPoints.length === 0 || isExporting) ? () => {} : handleExportCSV,
+            onPress: surveyPoints.length === 0 ? () => {} : handleExportCSV,
             color: paperTheme.dark
               ? paperTheme.colors.onSurface
               : paperTheme.colors.primary,
@@ -1217,7 +1288,7 @@ export default function UnifiedProjectDetailsScreen() {
           {
             icon: "map",
             label: t("projectView.exportGeoJSON"),
-            onPress: (surveyPoints.length === 0 || isExporting) ? () => {} : handleExportGeoJSON,
+            onPress: surveyPoints.length === 0 ? () => {} : handleExportGeoJSON,
             color: paperTheme.dark
               ? paperTheme.colors.onSurface
               : paperTheme.colors.primary,
@@ -1225,7 +1296,7 @@ export default function UnifiedProjectDetailsScreen() {
           {
             icon: "folder-image",
             label: t("projectView.exportMedia"),
-            onPress: (surveyPoints.length === 0 || isExporting) ? () => {} : handleExportMedia,
+            onPress: surveyPoints.length === 0 ? () => {} : handleExportMedia,
             color: paperTheme.dark
               ? paperTheme.colors.onSurface
               : paperTheme.colors.primary,
@@ -1271,7 +1342,7 @@ export default function UnifiedProjectDetailsScreen() {
                 {
                   icon: "backup-restore",
                   label: t("driveBackup.activateAction"),
-                  onPress: isActivatingDriveBackup ? () => {} : handleActivateDriveBackup,
+                  onPress: handleActivateDriveBackup,
                   color: paperTheme.dark
                     ? paperTheme.colors.onSurface
                     : paperTheme.colors.primary,
@@ -1283,7 +1354,7 @@ export default function UnifiedProjectDetailsScreen() {
                 {
                   icon: "cloud-upload",
                   label: t("driveBackup.backupAction"),
-                  onPress: isBackingUp ? () => {} : handleBackupAllPoints,
+                  onPress: handleBackupAllPoints,
                   color: paperTheme.dark
                     ? paperTheme.colors.onSurface
                     : paperTheme.colors.primary,
@@ -1291,7 +1362,7 @@ export default function UnifiedProjectDetailsScreen() {
               ]
             : []),
         ]}
-        onStateChange={({ open }) => setFabOpen(open)}
+        onStateChange={({ open }) => setFabOpen(open && !busy)}
         theme={{
           colors: {
             primary: paperTheme.colors.primary,
@@ -1322,9 +1393,15 @@ export default function UnifiedProjectDetailsScreen() {
           setPendingExportIntent(null);
         }}
         onSaved={() => {
-          setCollectorCodeModalVisible(false);
-          pendingExportIntent?.();
+          // Capture before clearing: the intent may show a dialog, which must
+          // wait for this modal's exit animation or it renders behind it.
+          const intent = pendingExportIntent;
           setPendingExportIntent(null);
+          closeModalThenShow({
+            close: () => setCollectorCodeModalVisible(false),
+            wait: waitForModalClose,
+            show: () => intent?.(),
+          });
         }}
       />
 
@@ -1349,11 +1426,19 @@ export default function UnifiedProjectDetailsScreen() {
         onDismiss={() => {
           setDriveConnectionModalVisible(false);
           setPendingDriveIntent(null);
+          setDriveForceAccountChooser(false);
         }}
+        forceAccountChooser={driveForceAccountChooser}
         onConnected={() => {
-          setDriveConnectionModalVisible(false);
-          pendingDriveIntent?.();
+          // The resumed action shows dialogs: wait for this modal to be gone first.
+          const intent = pendingDriveIntent;
           setPendingDriveIntent(null);
+          setDriveForceAccountChooser(false);
+          closeModalThenShow({
+            close: () => setDriveConnectionModalVisible(false),
+            wait: waitForModalClose,
+            show: () => intent?.(),
+          });
         }}
       />
 
@@ -1447,3 +1532,6 @@ const styles = StyleSheet.create({
   vizItemTitle: { flex: 1, fontWeight: "600" },
   vizItemButton: { margin: -6 },
 });
+
+// Scoped provider: alerts triggered while this screen's Portal dialogs/modals are open (edit project, etc.) must render above them.
+export default withDialogScope(UnifiedProjectDetailsScreen);

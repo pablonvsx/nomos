@@ -1,6 +1,18 @@
 import { describeRestoreError } from "../restore-error-messages";
 import { UnsupportedPackageVersionError } from "@/core/project-sharing/package-errors";
 import { MediaRestoreError } from "../restore-errors";
+import { DriveTimeoutError } from "../drive-errors";
+import { NetworkTimeoutError } from "@/core/net/network-timeout";
+
+describe("describeRestoreError - timeouts", () => {
+  it("maps a Drive timeout to the friendly slow-connection message, without a technical detail", () => {
+    expect(describeRestoreError(new DriveTimeoutError(30_000))).toEqual({ key: "common.slowConnection" });
+  });
+
+  it("maps any NetworkTimeoutError (e.g. the Google token request) the same way", () => {
+    expect(describeRestoreError(new NetworkTimeoutError(30_000))).toEqual({ key: "common.slowConnection" });
+  });
+});
 
 describe("describeRestoreError", () => {
   it("maps 'project already exists locally' to its specific key, without a technical detail", () => {
