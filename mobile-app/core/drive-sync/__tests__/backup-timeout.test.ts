@@ -50,7 +50,7 @@ let point: FakePoint;
 
 jest.mock("@/db/queries/points", () => ({
   getPoint: jest.fn(async () => ({ point, modules: [] })),
-  getApprovedUnsyncedPointsByProject: jest.fn(async () => (point.drive_synced_at ? [] : [point])),
+  getBackupEligiblePointsByProject: jest.fn(async () => (point.drive_synced_at ? [] : [point])),
   ensurePointUuid: jest.fn(async () => point.uuid),
   updatePoint: jest.fn(async (_id: number, updates: { drive_synced_at?: string }) => {
     if (updates.drive_synced_at !== undefined) point.drive_synced_at = updates.drive_synced_at;

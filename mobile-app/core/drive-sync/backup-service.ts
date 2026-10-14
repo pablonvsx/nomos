@@ -9,7 +9,7 @@ import {
 } from "@/core/drive-sync/drive-api-client";
 import {
   ensurePointUuid,
-  getApprovedUnsyncedPointsByProject,
+  getBackupEligiblePointsByProject,
   getPoint,
   updatePoint,
 } from "@/db/queries/points";
@@ -23,6 +23,7 @@ import {
 import { parseAudioNotes, parsePhotoUris } from "@/db/mappers/json-utils";
 import type { PointPackageAudioNote, PointPackageEntry } from "@/core/project-sharing/export-points";
 import { isNetworkTimeoutError } from "@/core/net/network-timeout";
+import { isBackupEligibleStatus } from "@/core/drive-sync/backup-eligibility";
 
 export interface BackupResult {
   success: boolean;
@@ -139,6 +140,12 @@ export async function backupPoint(pointId: string): Promise<BackupResult> {
   const project = await getProjectById(point.project_id);
   if (!project || project.collaboration_role !== "owner" || !project.drive_folder_id) {
     return { success: false, error: "O projeto não está com o backup no Drive ativado." };
+  }
+
+  // Only the owner's own collection (no status) and approved points are
+  // backed up; a point still under review, or rejected, never is.
+  if (!isBackupEligibleStatus(point.approval_status)) {
+    return { success: false, error: "Só pontos aprovados ou coletados pelo próprio dono entram no backup." };
   }
 
   const pointUuid = await ensurePointUuid(point.id);
@@ -309,7 +316,7 @@ export async function backupAllPendingPoints(
   projectId: number,
   onProgress?: (progress: BackupProgress) => void,
 ): Promise<BackupSummary> {
-  const points = await getApprovedUnsyncedPointsByProject(projectId);
+  const points = await getBackupEligiblePointsByProject(projectId);
 
   let backedUp = 0;
   const failed: BackupSummary["failed"] = [];

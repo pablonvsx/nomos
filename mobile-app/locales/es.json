@@ -1118,6 +1118,7 @@
     "rejectionReasonLabel": "Motivo del rechazo",
     "rejectionReasonPlaceholder": "Describa el motivo del rechazo",
     "deletePermanently": "Eliminar Permanentemente",
+    "viewPointData": "Ver datos del punto",
     "deletePermanentlyConfirm": "¿Está seguro de que desea eliminar este punto permanentemente? Esta acción no se puede deshacer y también eliminará las fotos y audios asociados.",
     "errorApproving": "No se pudo aprobar el punto.",
     "errorRejecting": "No se pudo rechazar el punto.",

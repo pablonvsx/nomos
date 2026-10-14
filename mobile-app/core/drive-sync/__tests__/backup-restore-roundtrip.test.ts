@@ -156,7 +156,7 @@ const moduleRow = {
 jest.mock("@/db/queries/points", () => ({
   getPoint: async () => ({ point: pointRow, modules: [moduleRow] }),
   ensurePointUuid: async () => "point-uuid-1",
-  getApprovedUnsyncedPointsByProject: async () => [],
+  getBackupEligiblePointsByProject: async () => [],
   updatePoint: async (_id: number, updates: any) => {
     if (updates.drive_synced_at !== undefined) pointRow.drive_synced_at = updates.drive_synced_at;
     return true;

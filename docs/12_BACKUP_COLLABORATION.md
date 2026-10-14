@@ -222,6 +222,18 @@ the **entire** package, nothing is inserted
   local point's data, reset it to `'pending'` for re-review) or
   **Descartar** (keep the local point exactly as it is).
 
+The pass over the duplicates (`core/project-sharing/duplicates-session.ts`)
+lives in `project-details/[id].tsx`, not in the modal: the modal receives
+the list still undecided and reports each decision. `resolveDuplicate`
+removes the decided point (by `point_uuid`) and counts it as replaced or
+discarded; the screen then reloads **silently**
+(`loadProjectData({ silent: true })`) instead of swapping itself for the
+loading spinner, which would unmount the modal and bring it back with the
+original list. A second tap on a point whose decision is already running is
+ignored (`beginDecision`). When the list is empty the modal closes
+(close-then-show) and the consolidated summary is shown. A replaced point
+returns to the approval queue as `'pending'`; that is expected.
+
 Media extracted from the `.zip` is copied into
 `Paths.document/imported_points_media/<point_uuid>/` (module media into its
 `modules/` subdirectory) **before** any database write references it —
@@ -321,7 +333,11 @@ is connected. Two steps:
 **1. Activation** — before it runs, `project-details/[id].tsx` asks for
 confirmation: *"This project will be linked to the account <email> and
 this cannot be changed later."* with **Cancel**, **Use another account**
-and **Continue**. The reason is that `owner_email` is written once (into
+and **Continue**, stacked one per row at full width (`actionsLayout:
+"stacked"` on `showDialog`: the `role: "primary"` action first, the
+`role: "cancel"` one last), with the email made breakable
+(`makeEmailBreakable`, `core/ui/dialog-layout.ts`) so a long address wraps
+inside the dialog. The reason is that `owner_email` is written once (into
 the manifest and `projects.owner_email`) and never changes
 (`updateManifest` refuses to rewrite it), so the person must see which
 account the project is binding to. **Use another account** signs the
@@ -337,9 +353,15 @@ uuid-guaranteeing logic as the collaborator package) to build the
 initial state, then creates the whole Drive folder tree in one pass and
 finally calls `setProjectAsOwner`.
 
-**2. Ongoing backup of approved points** — `backupPoint`/
+**2. Ongoing backup of the owner's points** — `backupPoint`/
 `backupAllPendingPoints` (`core/drive-sync/backup-service.ts`), driven
-by `drive_synced_at IS NULL`. `backupAllPendingPoints(projectId,
+by `drive_synced_at IS NULL`. Eligible points are those with
+`approval_status` `NULL` (the owner's own field work, collected directly)
+or `'approved'` — the same set as `VISIBLE_POINT_CONDITION` —
+(`getBackupEligiblePointsByProject`, `isBackupEligibleStatus`); `'pending'`
+and `'rejected'` points never are. `backupPoint` enforces the same rule on
+its own (the owner-only check was already there), and the per-point cloud
+icon on the list follows it. `backupAllPendingPoints(projectId,
 onProgress?)` calls `onProgress({ current, total })` (1-based, fixed
 `total`) before each point; the screen shows "Uploading point N of M".
 A failure in one point never stops the batch: besides the failures
@@ -715,6 +737,16 @@ merged into one message rather than alerted one after another.
   rules (review mode, close-then-show ordering, exclusive runner, dialog
   reducer, backup progress) are unit-tested; the stacking of dialogs over
   modals, the 300 ms wait, the banners and the review flow are not.
+- **Editing a point after its backup does not resend the change.** Nothing
+  clears `drive_synced_at` when a point is edited, so an edited point stays
+  "synced", its per-point backup action stays disabled and the Drive copy
+  keeps the old data. This includes **Substituir** on a duplicate, which
+  keeps the previous `drive_synced_at`. Re-sending would require clearing
+  `drive_synced_at` on edit.
+- **Restored points are always `'approved'`.** The owner's own points
+  (`approval_status` `NULL`) come back from Drive as `'approved'` with
+  `drive_synced_at` set; both are visible and already backed up, so nothing
+  is uploaded again, but the original distinction is lost.
 - **Test fidelity.** The real-zip suites use a real temporary filesystem
   and a real zip reader, but not the native `react-native-zip-archive`
   library; the Drive suites use an in-memory fake Drive. Neither replaces

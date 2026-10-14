@@ -4,6 +4,7 @@ import { Card, Text, Button, IconButton, Portal, Modal, useTheme } from "react-n
 import type { DynamicGroupRule, LanguageCode } from "@/protocol-kernel/types";
 import { useI18n } from "@/contexts/i18n-context";
 import { DialogProvider } from "@/hooks/use-dialog";
+import { BUTTON_RADIUS } from "@/constants/shape";
 import { GenericFieldRow } from "./GenericFieldRow";
 
 interface Props {
@@ -54,6 +55,11 @@ export function RepeatableGroupField({
     onChange(items.filter((_, i) => i !== index));
   };
 
+  const removeEditedItem = () => {
+    if (editingIndex !== null) removeItem(editingIndex);
+    setModalVisible(false);
+  };
+
   const saveItem = () => {
     if (editingIndex === null) {
       onChange([...items, draftItem]);
@@ -85,7 +91,7 @@ export function RepeatableGroupField({
         mode="outlined"
         icon="plus"
         onPress={openAdd}
-        style={{ marginTop: 8, borderStyle: "dashed" }}
+        style={{ marginTop: 8, borderStyle: "dashed", borderRadius: BUTTON_RADIUS }}
         textColor={theme.colors.primary}
       >
         {t("survey.addGroupItem", { label })}
@@ -122,12 +128,26 @@ export function RepeatableGroupField({
                 />
               ))}
 
-              <Button mode="contained" onPress={saveItem} style={{ marginTop: 8 }}>
+              <Button mode="contained" onPress={saveItem} style={{ marginTop: 8, borderRadius: BUTTON_RADIUS }}>
                 {t("common.save")}
               </Button>
-              <Button onPress={() => setModalVisible(false)} style={{ marginTop: 8 }}>
+              <Button
+                mode="outlined"
+                onPress={() => setModalVisible(false)}
+                style={{ marginTop: 8, borderRadius: BUTTON_RADIUS }}
+              >
                 {t("common.cancel")}
               </Button>
+              {editingIndex !== null && (
+                <Button
+                  mode="outlined"
+                  textColor={theme.colors.error}
+                  onPress={removeEditedItem}
+                  style={{ marginTop: 8, borderRadius: BUTTON_RADIUS }}
+                >
+                  {t("common.remove")}
+                </Button>
+              )}
             </ScrollView>
           </DialogProvider>
         </Modal>

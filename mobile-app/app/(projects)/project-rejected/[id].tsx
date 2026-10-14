@@ -12,6 +12,7 @@ import { useMapData } from "@/contexts/map-data-context";
 import { getProjectById } from "@/db/queries/projects";
 import { getProjectActionVisibility } from "@/core/project-sharing/action-visibility";
 import type { Point } from "@/types/database";
+import { getPointDisplayLabel } from "@/core/points/point-label";
 
 export default function ProjectRejectedScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -85,11 +86,20 @@ export default function ProjectRejectedScreen() {
     >
       <Card.Content>
         <Text variant="titleMedium" style={{ fontWeight: "bold" }}>
-          {item.created_by ?? "?"}-{item.point_number}
+          {getPointDisplayLabel(item)}
         </Text>
         <Text variant="bodySmall" style={{ color: paperTheme.colors.onSurfaceVariant, marginTop: 4 }}>
           {item.rejection_reason}
         </Text>
+        <Button
+          mode="outlined"
+          icon="eye-outline"
+          onPress={() => openPointDetails(item)}
+          disabled={busyId !== null}
+          style={[styles.viewButton, { borderRadius: BUTTON_RADIUS }]}
+        >
+          {t("pointApproval.viewPointData")}
+        </Button>
         <Button
           mode="outlined"
           textColor={paperTheme.colors.error}
@@ -134,5 +144,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   listContent: { padding: 16 },
   card: { marginBottom: 8 },
-  deleteButton: { marginTop: 12 },
+  viewButton: { marginTop: 12 },
+  deleteButton: { marginTop: 8 },
 });

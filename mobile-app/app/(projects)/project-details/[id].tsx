@@ -1,6 +1,6 @@
 // src/app/project-details/[id].tsx
 // Paisageo / official protocol project details screen
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { View, ScrollView, StyleSheet, FlatList } from "react-native";
 import {
   Text,
@@ -30,6 +30,8 @@ import { useAlertDialog, useDialog, withDialogScope } from "@/hooks/use-dialog";
 import { useExclusiveOperation } from "@/hooks/use-exclusive-operation";
 import { OperationProgressBanner } from "@/components/ui/OperationProgressBanner";
 import { closeModalThenShow } from "@/core/ui/close-then-show";
+import { makeEmailBreakable } from "@/core/ui/dialog-layout";
+import { isBackupEligibleStatus } from "@/core/drive-sync/backup-eligibility";
 import { isNetworkTimeoutError } from "@/core/net/network-timeout";
 import { waitForModalClose } from "@/core/ui/wait-for-modal-close";
 import { CardHeaderIconButton } from "@/components/ui/CardHeaderIconButton";
@@ -71,13 +73,19 @@ import { exportProjectConfigPackage } from "@/core/project-sharing/project-confi
 import { getProjectActionVisibility } from "@/core/project-sharing/action-visibility";
 import { refreshAfterImport } from "@/core/project-sharing/refresh-after-import";
 import {
+  createDuplicatesSession,
+  isSessionResolved,
+  resolveDuplicate,
+  type DuplicateAction,
+  type DuplicatesSession,
+} from "@/core/project-sharing/duplicates-session";
+import {
   exportAllPointsPackage,
   CollectorCodeRequiredError,
 } from "@/core/project-sharing/export-points";
 import {
   importPointsPackage,
   ProjectMismatchError,
-  type ImportPointsResult,
 } from "@/core/project-sharing/import-points";
 import { CollectorCodeModal } from "@/components/local-identity/CollectorCodeModal";
 import { PointDuplicatesModal } from "@/components/project-sharing/PointDuplicatesModal";
@@ -174,7 +182,15 @@ function UnifiedProjectDetailsScreen() {
   // Points package export/import states (Fase 2)
   const [collectorCodeModalVisible, setCollectorCodeModalVisible] = useState(false);
   const [pendingExportIntent, setPendingExportIntent] = useState<(() => void) | null>(null);
-  const [duplicatesResult, setDuplicatesResult] = useState<ImportPointsResult | null>(null);
+  // The duplicates pass lives here, not in the modal: every decision reloads
+  // this screen, and state kept inside the modal came back whole on remount.
+  // The ref mirrors it so two quick decisions both build on the latest session.
+  const [duplicatesSession, setDuplicatesSession] = useState<DuplicatesSession | null>(null);
+  const duplicatesSessionRef = useRef<DuplicatesSession | null>(null);
+  const updateDuplicatesSession = (next: DuplicatesSession | null) => {
+    duplicatesSessionRef.current = next;
+    setDuplicatesSession(next);
+  };
 
   // Drive backup activation states (Fase 5)
   const [driveConnectionModalVisible, setDriveConnectionModalVisible] = useState(false);
@@ -194,10 +210,12 @@ function UnifiedProjectDetailsScreen() {
 
 
   // Load project data
-  const loadProjectData = useCallback(async () => {
+  // `silent` reloads underneath the current UI. The default swaps the whole
+  // screen for a spinner, which unmounts any open modal.
+  const loadProjectData = useCallback(async (options?: { silent?: boolean }) => {
     if (!id) return;
 
-    setIsLoading(true);
+    if (!options?.silent) setIsLoading(true);
     try {
       const projectData = await getProjectById(parseInt(id));
 
@@ -321,7 +339,7 @@ function UnifiedProjectDetailsScreen() {
       console.error("Error loading project:", error);
       alert(t("common.error"), t("projectView.loadError"));
     } finally {
-      setIsLoading(false);
+      if (!options?.silent) setIsLoading(false);
     }
   }, [id, router, t]);
 
@@ -658,6 +676,37 @@ function UnifiedProjectDetailsScreen() {
     });
   };
 
+  const handleDuplicateResolved = (pointId: string, action: DuplicateAction) => {
+    const current = duplicatesSessionRef.current;
+    if (!current || !project) return;
+    const next = resolveDuplicate(current, pointId, action);
+    updateDuplicatesSession(next);
+
+    // Silent: a full-screen reload would unmount the modal mid-decision.
+    refreshAfterImport({
+      clearMapData: () => clearMapData(project.id),
+      reload: () => loadProjectData({ silent: true }),
+    }).catch((error) => console.error("Error refreshing after duplicate decision:", error));
+
+    if (isSessionResolved(next)) {
+      // List empty: close the modal, then show the consolidated summary
+      // (a dialog shown while the modal is still closing renders behind it).
+      closeModalThenShow({
+        close: () => updateDuplicatesSession(null),
+        wait: waitForModalClose,
+        show: () =>
+          alert(
+            t("common.success"),
+            t("pointDuplicates.summary", {
+              imported: next.result.imported.toString(),
+              replaced: next.replaced.toString(),
+              discarded: next.discarded.toString(),
+            }),
+          ),
+      });
+    }
+  };
+
   const handleImportPoints = async () => {
     if (!project) return;
     await run(t("common.importing"), async () => {
@@ -688,9 +737,11 @@ function UnifiedProjectDetailsScreen() {
           // The duplicates modal is mounted conditionally, so its Portal would
           // stack above an alert shown now: open it from the alert's OK instead.
           if (warnings.length > 0) {
-            alert(t("common.info"), warnings.join("\n\n"), () => setDuplicatesResult(result));
+            alert(t("common.info"), warnings.join("\n\n"), () =>
+              updateDuplicatesSession(createDuplicatesSession(result)),
+            );
           } else {
-            setDuplicatesResult(result);
+            updateDuplicatesSession(createDuplicatesSession(result));
           }
         } else {
           const imported = t("projectView.pointsImported", { count: result.imported.toString() });
@@ -758,18 +809,19 @@ function UnifiedProjectDetailsScreen() {
     // account the project will be bound to before the (long) activation starts.
     showDialog({
       title: t("driveBackup.confirmAccountLinkTitle"),
-      message: t("driveBackup.confirmAccountLink", { email: account.email }),
+      message: t("driveBackup.confirmAccountLink", { email: makeEmailBreakable(account.email) }),
       dismissable: false,
+      // Three actions with long labels do not fit side by side on a phone.
+      actionsLayout: "stacked",
       buttons: [
-        { label: t("common.cancel"), onPress: () => {}, mode: "text" },
+        { label: t("common.cancel"), onPress: () => {}, role: "cancel" },
         {
           label: t("driveBackup.useOtherAccount"),
           onPress: () => {
             switchGoogleAccount(handleActivateDriveBackup);
           },
-          mode: "text",
         },
-        { label: t("common.continue"), onPress: runDriveBackupActivation, mode: "text" },
+        { label: t("common.continue"), onPress: runDriveBackupActivation, role: "primary" },
       ],
     });
   };
@@ -934,7 +986,7 @@ function UnifiedProjectDetailsScreen() {
                 {item.lat.toFixed(6)}, {item.lon.toFixed(6)}
               </Text>
             </View>
-            {visibility.backup && item.approval_status === "approved" && (
+            {visibility.backup && isBackupEligibleStatus(item.approval_status) && (
               <IconButton
                 icon={item.drive_synced_at ? "cloud-check" : "cloud-outline"}
                 size={22}
@@ -1406,17 +1458,12 @@ function UnifiedProjectDetailsScreen() {
       />
 
       {/* Points import duplicates resolution modal (Fase 2) */}
-      {duplicatesResult && (
+      {duplicatesSession && (
         <PointDuplicatesModal
           visible
-          result={duplicatesResult}
-          onDismiss={() => setDuplicatesResult(null)}
-          onResolved={() =>
-            refreshAfterImport({
-              clearMapData: () => clearMapData(project.id),
-              reload: loadProjectData,
-            })
-          }
+          duplicates={duplicatesSession.result.duplicates}
+          onDismiss={() => updateDuplicatesSession(null)}
+          onResolved={handleDuplicateResolved}
         />
       )}
 

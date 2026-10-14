@@ -20,6 +20,7 @@ import type { Point } from "@/types/database";
 import { RejectPointDialog } from "@/components/project-sharing/RejectPointDialog";
 import { closeModalThenShow } from "@/core/ui/close-then-show";
 import { waitForModalClose } from "@/core/ui/wait-for-modal-close";
+import { getPointDisplayLabel } from "@/core/points/point-label";
 
 export default function ProjectPendingApprovalsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -114,8 +115,17 @@ export default function ProjectPendingApprovalsScreen() {
     >
       <Card.Content>
         <Text variant="titleMedium" style={{ fontWeight: "bold" }}>
-          {item.created_by ?? "?"}-{item.point_number}
+          {getPointDisplayLabel(item)}
         </Text>
+        <Button
+          mode="outlined"
+          icon="eye-outline"
+          onPress={() => openPointDetails(item)}
+          disabled={busyId !== null}
+          style={[styles.viewButton, { borderRadius: BUTTON_RADIUS }]}
+        >
+          {t("pointApproval.viewPointData")}
+        </Button>
         <View style={styles.buttonRow}>
           <Button
             mode="outlined"
@@ -177,6 +187,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   listContent: { padding: 16 },
   card: { marginBottom: 8 },
-  buttonRow: { flexDirection: "row", gap: 8, marginTop: 12 },
+  viewButton: { marginTop: 12 },
+  buttonRow: { flexDirection: "row", gap: 8, marginTop: 8 },
   buttonHalf: { flex: 1 },
 });

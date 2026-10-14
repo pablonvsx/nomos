@@ -174,17 +174,19 @@ export async function getRejectedPointsByProject(projectId: number): Promise<Poi
 }
 
 /**
- * Lists approved points for a project that haven't been backed up to
- * Drive yet (Fase 6 backup). Used by backupAllPendingPoints.
+ * Lists the points of a project that can go to the owner's Drive backup and
+ * haven't yet: visible points (approved, or collected directly by the owner
+ * with a NULL status) with no drive_synced_at. Pending and rejected points
+ * never qualify. Used by backupAllPendingPoints, which is owner-only.
  */
-export async function getApprovedUnsyncedPointsByProject(projectId: number): Promise<Point[]> {
+export async function getBackupEligiblePointsByProject(projectId: number): Promise<Point[]> {
   try {
     return await db.getAllAsync<Point>(
-      "SELECT * FROM points WHERE project_id = ? AND approval_status = 'approved' AND drive_synced_at IS NULL ORDER BY point_number ASC",
+      `SELECT * FROM points WHERE project_id = ? AND ${VISIBLE_POINT_CONDITION} AND drive_synced_at IS NULL ORDER BY point_number ASC`,
       [projectId],
     );
   } catch (error) {
-    console.error("Error listing approved unsynced points:", error);
+    console.error("Error listing backup-eligible points:", error);
     return [];
   }
 }

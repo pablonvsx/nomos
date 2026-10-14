@@ -1121,6 +1121,7 @@
     "rejectionReasonLabel": "Rejection reason",
     "rejectionReasonPlaceholder": "Describe the reason for rejection",
     "deletePermanently": "Delete Permanently",
+    "viewPointData": "View point data",
     "deletePermanentlyConfirm": "Are you sure you want to permanently delete this point? This action cannot be undone and will also remove its associated photos and audio.",
     "errorApproving": "Could not approve the point.",
     "errorRejecting": "Could not reject the point.",

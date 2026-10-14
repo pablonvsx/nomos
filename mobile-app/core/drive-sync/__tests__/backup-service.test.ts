@@ -11,6 +11,7 @@
 // only line of defense.
 
 import { FakeFile, resetFakeFs, fsState } from "../../project-sharing/__tests__/fixtures/fake-environment";
+import { isBackupEligibleStatus } from "../backup-eligibility";
 
 jest.mock("expo-file-system", () => ({ File: FakeFile }));
 
@@ -142,8 +143,12 @@ const getPointMock = jest.fn(async (id: number) => {
   if (!row) return null;
   return { point: row, modules: row.rawModules };
 });
-const getApprovedUnsyncedPointsByProjectMock = jest.fn(async (projectId: number) =>
-  points.filter((p) => p.project_id === projectId && p.approval_status === "approved" && !p.drive_synced_at),
+// Mirrors db/queries/points.ts getBackupEligiblePointsByProject (whose real
+// SQL is covered by points-approval.test.ts): visible points not yet synced.
+const getBackupEligiblePointsByProjectMock = jest.fn(async (projectId: number) =>
+  points.filter(
+    (p) => p.project_id === projectId && isBackupEligibleStatus(p.approval_status) && !p.drive_synced_at,
+  ),
 );
 const ensurePointUuidMock = jest.fn(async (id: number) => {
   const row = points.find((p) => p.id === id);
@@ -168,8 +173,8 @@ const updatePointMock = jest.fn(async (id: number, updates: any) => {
 
 jest.mock("@/db/queries/points", () => ({
   getPoint: (id: number) => getPointMock(id),
-  getApprovedUnsyncedPointsByProject: (projectId: number) =>
-    getApprovedUnsyncedPointsByProjectMock(projectId),
+  getBackupEligiblePointsByProject: (projectId: number) =>
+    getBackupEligiblePointsByProjectMock(projectId),
   ensurePointUuid: (id: number) => ensurePointUuidMock(id),
   updatePoint: (id: number, updates: unknown) => updatePointMock(id, updates),
 }));
@@ -465,15 +470,67 @@ describe("backupAllPendingPoints", () => {
     expect(point3.drive_synced_at).toBeTruthy();
   });
 
-  it("relies on getApprovedUnsyncedPointsByProject for which points to process (not re-filtering itself)", async () => {
+  it("relies on getBackupEligiblePointsByProject for which points to process (not re-filtering itself)", async () => {
     const project = seedProject();
     seedPoint(project.id);
     seedPoint(project.id);
 
     await backupAllPendingPoints(project.id);
 
-    expect(getApprovedUnsyncedPointsByProjectMock).toHaveBeenCalledWith(project.id);
+    expect(getBackupEligiblePointsByProjectMock).toHaveBeenCalledWith(project.id);
     expect(uploadJsonFileMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("backup eligibility - the owner's own collection (approval_status NULL)", () => {
+  it("backs up a point the owner collected directly (NULL) in an owner project", async () => {
+    const project = seedProject();
+    const point = seedPoint(project.id, { approval_status: null });
+
+    const result = await backupPoint(point.id.toString());
+
+    expect(result.success).toBe(true);
+    expect(point.drive_synced_at).toBeTruthy();
+  });
+
+  it.each(["pending", "rejected"] as const)("refuses a %s point and uploads nothing", async (status) => {
+    const project = seedProject();
+    const point = seedPoint(project.id, { approval_status: status });
+
+    const result = await backupPoint(point.id.toString());
+
+    expect(result.success).toBe(false);
+    expect(point.drive_synced_at).toBeNull();
+    expect(uploadJsonFileMock).not.toHaveBeenCalled();
+    expect(uploadBinaryFileMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses a NULL point in a project that is not owned by this device", async () => {
+    const project = seedProject({ collaboration_role: "collaborator" });
+    const point = seedPoint(project.id, { approval_status: null });
+
+    const result = await backupPoint(point.id.toString());
+
+    expect(result.success).toBe(false);
+    expect(point.drive_synced_at).toBeNull();
+    expect(uploadJsonFileMock).not.toHaveBeenCalled();
+  });
+
+  it("the batch takes NULL and approved points, never pending or rejected", async () => {
+    const project = seedProject();
+    const own = seedPoint(project.id, { approval_status: null });
+    const approved = seedPoint(project.id, { approval_status: "approved" });
+    const pending = seedPoint(project.id, { approval_status: "pending" });
+    const rejected = seedPoint(project.id, { approval_status: "rejected" });
+
+    const summary = await backupAllPendingPoints(project.id);
+
+    expect(summary.backedUp).toBe(2);
+    expect(summary.failed).toEqual([]);
+    expect(own.drive_synced_at).toBeTruthy();
+    expect(approved.drive_synced_at).toBeTruthy();
+    expect(pending.drive_synced_at).toBeNull();
+    expect(rejected.drive_synced_at).toBeNull();
   });
 });
 

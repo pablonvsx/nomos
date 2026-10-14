@@ -26,6 +26,22 @@ const VISIBLE_CLAUSE = "(approval_status IS NULL OR approval_status = 'approved'
 
 const getAllAsyncMock = jest.fn(async (sql: string, params: unknown[]) => {
   if (sql.includes("FROM point_modules")) return [];
+  // Backup eligibility (visible AND not yet synced) shares the visible clause,
+  // so it has to be recognized before the plain visible-points branch below.
+  if (sql.includes("drive_synced_at IS NULL")) {
+    const [projectId] = params as [number];
+    const visible = sql.includes(VISIBLE_CLAUSE);
+    return pointsTable
+      .filter(
+        (p) =>
+          p.project_id === projectId &&
+          !p.drive_synced_at &&
+          (visible
+            ? p.approval_status === null || p.approval_status === "approved"
+            : p.approval_status === "approved"),
+      )
+      .sort((a, b) => a.point_number - b.point_number);
+  }
   if (sql.includes(VISIBLE_CLAUSE)) {
     const [projectId] = params as [number];
     return pointsTable
@@ -40,14 +56,6 @@ const getAllAsyncMock = jest.fn(async (sql: string, params: unknown[]) => {
     const [projectId] = params as [number];
     return pointsTable
       .filter((p) => p.project_id === projectId)
-      .sort((a, b) => a.point_number - b.point_number);
-  }
-  if (sql.includes("drive_synced_at IS NULL")) {
-    const [projectId] = params as [number];
-    return pointsTable
-      .filter(
-        (p) => p.project_id === projectId && p.approval_status === "approved" && !p.drive_synced_at,
-      )
       .sort((a, b) => a.point_number - b.point_number);
   }
   if (sql.includes("approval_status = ?")) {
@@ -116,7 +124,7 @@ jest.mock("@/db/initialize", () => ({
 import {
   classifyProjectPoints,
   createPoint,
-  getApprovedUnsyncedPointsByProject,
+  getBackupEligiblePointsByProject,
   getPendingPointsByProject,
   getPoint,
   getPointsByProject,
@@ -169,17 +177,27 @@ describe("getPendingPointsByProject / getRejectedPointsByProject", () => {
   });
 });
 
-describe("getApprovedUnsyncedPointsByProject", () => {
-  it("returns only approved points with no Drive backup yet, from the requested project", async () => {
+describe("getBackupEligiblePointsByProject", () => {
+  it("returns visible points (approved or collected directly) with no Drive backup yet, from the requested project", async () => {
     seedPoint({ id: 1, project_id: 1, approval_status: "approved", drive_synced_at: null });
     seedPoint({ id: 2, project_id: 1, approval_status: "approved", drive_synced_at: "2026-01-01T00:00:00.000Z" }); // already synced
-    seedPoint({ id: 3, project_id: 1, approval_status: "pending", drive_synced_at: null }); // not approved
-    seedPoint({ id: 4, project_id: 1, approval_status: "rejected", drive_synced_at: null }); // not approved
+    seedPoint({ id: 3, project_id: 1, approval_status: "pending", drive_synced_at: null }); // not decided yet
+    seedPoint({ id: 4, project_id: 1, approval_status: "rejected", drive_synced_at: null }); // rejected
     seedPoint({ id: 5, project_id: 2, approval_status: "approved", drive_synced_at: null }); // other project
+    seedPoint({ id: 6, project_id: 1, approval_status: null, drive_synced_at: null }); // owner's own collection
+    seedPoint({ id: 7, project_id: 1, approval_status: null, drive_synced_at: "2026-01-01T00:00:00.000Z" }); // own, already synced
 
-    const result = await getApprovedUnsyncedPointsByProject(1);
+    const result = await getBackupEligiblePointsByProject(1);
 
-    expect(result.map((p) => p.id)).toEqual([1]);
+    expect(result.map((p) => p.id)).toEqual([1, 6]);
+  });
+
+  it("issues SQL built on the shared visible-points condition", async () => {
+    await getBackupEligiblePointsByProject(1);
+
+    const sql = getAllAsyncMock.mock.calls[getAllAsyncMock.mock.calls.length - 1][0] as string;
+    expect(sql).toContain(VISIBLE_CLAUSE);
+    expect(sql).toContain("drive_synced_at IS NULL");
   });
 });
 
@@ -283,7 +301,7 @@ describe("createPoint persists drive_synced_at and rejection_reason", () => {
     await createPoint({ ...baseInput, approval_status: "approved" }); // never backed up
 
     expect(pointsTable[0].drive_synced_at).toBe("2026-01-01T00:00:00.000Z");
-    const unsynced = await getApprovedUnsyncedPointsByProject(1);
+    const unsynced = await getBackupEligiblePointsByProject(1);
     expect(unsynced.map((p) => p.id)).toEqual([2]);
   });
 
