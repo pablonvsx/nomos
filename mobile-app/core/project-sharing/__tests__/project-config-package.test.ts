@@ -8,6 +8,8 @@
 // across calls within a test - exactly what's needed to prove uuid
 // idempotency and re-import idempotency, not just the happy path once.
 
+import { speciesNameKey } from "@/core/species-catalog/name-key";
+
 interface FakeProject {
   id: number;
   name: string;
@@ -145,6 +147,11 @@ jest.mock("@/db/queries/project-species", () => ({
       species.find((s) => s.project_id === projectId && s.uuid === uuid) ?? null,
   ),
   createProjectSpecies: jest.fn(async (data: any) => {
+    // Same rule as the real query: a name already in the project is a duplicate.
+    const sameName = species.find(
+      (s) => s.project_id === data.project_id && speciesNameKey(s.scientific_name) === speciesNameKey(data.scientific_name),
+    );
+    if (sameName) return { status: "duplicate", existingId: sameName.id };
     const row: FakeSpecies = {
       id: nextSpeciesId++,
       project_id: data.project_id,
@@ -154,7 +161,7 @@ jest.mock("@/db/queries/project-species", () => ({
       common_names: data.common_names ?? [],
     };
     species.push(row);
-    return row.id;
+    return { status: "inserted", id: row.id };
   }),
 }));
 
@@ -429,6 +436,23 @@ describe("applyProjectConfigPackage — import behavior", () => {
       ...overrides,
     };
   }
+
+  it("a species whose name the catalog already has under another uuid is ignored without failing the import", async () => {
+    const first = await applyProjectConfigPackage(samplePackage());
+    expect(species).toHaveLength(1);
+
+    const second = await applyProjectConfigPackage(
+      samplePackage({
+        species_catalog: [
+          { uuid: "other-uuid", scientific_name: "PANTHERA  onca", source: "manual", common_names: [] },
+          { uuid: "species-uuid-2", scientific_name: "Puma concolor", source: "manual", common_names: [] },
+        ],
+      }),
+    );
+
+    expect(second.projectId).toBe(first.projectId);
+    expect(species.map((s) => s.uuid)).toEqual(["species-uuid-1", "species-uuid-2"]);
+  });
 
   it("creates a new local project with the species catalog and active vegetation classification", async () => {
     const pkg = samplePackage();

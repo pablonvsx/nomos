@@ -36,7 +36,6 @@ import { searchSpeciesAutocomplete } from "@/db/queries/species";
 import {
   getProjectSpeciesCatalogByProject,
   createProjectSpecies,
-  projectSpeciesExists,
   getProjectSpeciesById,
 } from "@/db/queries/project-species";
 import { getProjectById } from "@/db/queries/projects";
@@ -317,33 +316,33 @@ export default function SpeciesInput({
     // way species imported from GBIF/SpeciesLink do, so it becomes reusable
     // for future points (and for users who never do online lookups at all).
     if (isNewEntry && scientificName) {
-      const alreadyInCatalog = await projectSpeciesExists(projectId, scientificName);
-      if (!alreadyInCatalog) {
-        const catalogSpeciesId = await createProjectSpecies({
-          project_id: projectId,
-          scientific_name: scientificName,
-          family: family || undefined,
-          genus: genus || undefined,
-          source: "manual",
-          common_names: commonNames.map((name) => ({
-            common_name: name,
-            language: "pt",
-            source: "manual" as const,
-          })),
-        });
+      // createProjectSpecies refuses a name the project catalog already has
+      // ("duplicate"): then there is simply nothing to add - the point's own
+      // species entry above is saved either way.
+      const catalogResult = await createProjectSpecies({
+        project_id: projectId,
+        scientific_name: scientificName,
+        family: family || undefined,
+        genus: genus || undefined,
+        source: "manual",
+        common_names: commonNames.map((name) => ({
+          common_name: name,
+          language: "pt",
+          source: "manual" as const,
+        })),
+      });
 
-        if (catalogSpeciesId) {
-          // Best-effort, non-blocking push to Drive (audit finding
-          // IMPORTANTE 3) - never awaited, never blocks saving the point.
-          getProjectById(projectId)
-            .then((project) => project && syncSpeciesCatalogToDrive(project))
-            .catch(() => {});
+      if (catalogResult.status === "inserted") {
+        // Best-effort, non-blocking push to Drive (audit finding
+        // IMPORTANTE 3) - never awaited, never blocks saving the point.
+        getProjectById(projectId)
+          .then((project) => project && syncSpeciesCatalogToDrive(project))
+          .catch(() => {});
 
-          if (catalogSpecies.length > 0) {
-            const created = await getProjectSpeciesById(catalogSpeciesId);
-            if (created) {
-              setCatalogSpecies((prev) => [...prev, created]);
-            }
+        if (catalogSpecies.length > 0) {
+          const created = await getProjectSpeciesById(catalogResult.id);
+          if (created) {
+            setCatalogSpecies((prev) => [...prev, created]);
           }
         }
       }

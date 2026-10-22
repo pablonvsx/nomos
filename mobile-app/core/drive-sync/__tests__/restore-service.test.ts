@@ -228,7 +228,7 @@ jest.mock("@/db/queries/projects", () => ({
     setProjectAsOwnerMock(projectId, driveFolderId, ownerEmail),
 }));
 
-const createProjectSpeciesMock = jest.fn(async (data: unknown) => 1);
+const createProjectSpeciesMock = jest.fn(async (data: unknown): Promise<unknown> => ({ status: "inserted", id: 1 }));
 const getProjectSpeciesByUuidMock = jest.fn(async (projectId: number, uuid: string) => null);
 jest.mock("@/db/queries/project-species", () => ({
   createProjectSpecies: (data: unknown) => createProjectSpeciesMock(data),
@@ -332,6 +332,58 @@ describe("restoreOwnProjectFromDrive - identity preservation", () => {
 
     const created = projects.find((p) => p.id === result.projectId)!;
     expect(created.project_uuid).toBe("very-specific-uuid-42");
+  });
+});
+
+describe("restoreOwnProjectFromDrive - species catalog", () => {
+  function addSpeciesFiles(entries: Array<{ uuid: string; scientific_name: string }>) {
+    addFolder("folder-1", "species-folder-id", "species-catalog");
+    entries.forEach((entry, index) =>
+      addJsonFile("species-folder-id", `species-${index}`, `${entry.uuid}.json`, {
+        ...entry,
+        source: "manual",
+        common_names: [],
+      }),
+    );
+  }
+
+  it("a name the catalog already has under another uuid keeps the local record and does not fail the restore", async () => {
+    getManifestMock.mockResolvedValue(baseManifest());
+    addSpeciesFiles([
+      { uuid: "uuid-a", scientific_name: "Mimosa tenuiflora" },
+      { uuid: "uuid-b", scientific_name: "mimosa tenuiflora" },
+      { uuid: "uuid-c", scientific_name: "Mimosa hostilis" },
+    ]);
+    createProjectSpeciesMock.mockImplementation(async (data: any) =>
+      data.uuid === "uuid-b" ? { status: "duplicate", existingId: 7 } : { status: "inserted", id: 1 },
+    );
+
+    const result = await restore("folder-1");
+
+    expect(result.projectId).toBeTruthy();
+    expect(createProjectSpeciesMock).toHaveBeenCalledTimes(3);
+    expect(deleteProjectMock).not.toHaveBeenCalled();
+    expect(projects).toHaveLength(1);
+  });
+
+  it("skips an entry with no name without calling the query layer", async () => {
+    getManifestMock.mockResolvedValue(baseManifest());
+    addSpeciesFiles([{ uuid: "uuid-a", scientific_name: "   " }]);
+
+    await restore("folder-1");
+
+    expect(createProjectSpeciesMock).not.toHaveBeenCalled();
+  });
+
+  it("a real failure inserting a species is not swallowed: the whole restore is undone", async () => {
+    getManifestMock.mockResolvedValue(baseManifest());
+    addSpeciesFiles([{ uuid: "uuid-a", scientific_name: "Mimosa tenuiflora" }]);
+    createProjectSpeciesMock.mockResolvedValueOnce({ status: "error", message: "disk full" });
+
+    await expect(restore("folder-1")).rejects.toThrow("disk full");
+
+    expect(deleteProjectMock).toHaveBeenCalledTimes(1);
+    expect(projects).toHaveLength(0);
   });
 });
 

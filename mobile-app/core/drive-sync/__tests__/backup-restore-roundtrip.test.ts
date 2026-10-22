@@ -136,7 +136,7 @@ jest.mock("@/db/queries/projects", () => ({
   deleteProject: async () => true,
 }));
 jest.mock("@/db/queries/project-species", () => ({
-  createProjectSpecies: async () => 1,
+  createProjectSpecies: async () => ({ status: "inserted", id: 1 }),
   getProjectSpeciesByUuid: async () => null,
 }));
 jest.mock("@/db/queries/vegetation-classifications", () => ({

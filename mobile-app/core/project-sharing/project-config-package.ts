@@ -254,13 +254,20 @@ export async function applyProjectConfigPackage(
     const existingSpecies = await getProjectSpeciesByUuid(projectId, speciesEntry.uuid);
     if (existingSpecies) continue;
 
-    await createProjectSpecies({
+    if (!speciesEntry.scientific_name?.trim()) continue;
+
+    // A name already in the catalog under another uuid keeps the local record:
+    // the received one is ignored, not an error. A real failure is not swallowed.
+    const created = await createProjectSpecies({
       project_id: projectId,
       scientific_name: speciesEntry.scientific_name,
       source: sanitizeSpeciesSource(speciesEntry.source),
       uuid: speciesEntry.uuid,
       common_names: parseImportedCommonNames(speciesEntry.common_names),
     });
+    if (created.status === "error") {
+      throw new Error(`Failed to import species ${speciesEntry.scientific_name}: ${created.message}`);
+    }
   }
 
   const localVegetationIdByUuid = new Map<string, number>();

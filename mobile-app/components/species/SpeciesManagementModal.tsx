@@ -231,8 +231,10 @@ function SpeciesManagementModal({
       ];
       if (importResult.merged > 0)
         lines.push(t("species.catalogImportMerged", { count: importResult.merged }));
-      if (importResult.skipped > 0)
-        lines.push(t("species.catalogImportSkipped", { count: importResult.skipped }));
+      if (importResult.duplicates > 0)
+        lines.push(t("species.importDuplicatesIgnored", { count: importResult.duplicates }));
+      if (importResult.failed > 0)
+        lines.push(t("species.importFailed", { count: importResult.failed }));
       if (meta.exported_at)
         lines.push(t("species.catalogImportDate", { date: new Date(meta.exported_at).toLocaleDateString() }));
 
@@ -509,12 +511,14 @@ function SpeciesManagementModal({
 
   const handleImportSpeciesLink = async (speciesData: SpeciesLinkSearchResult) => {
     try {
-      const { inserted } = await importSpeciesFromSpeciesLink(projectId, [speciesData]);
+      const { inserted, failed } = await importSpeciesFromSpeciesLink(projectId, [speciesData]);
       if (inserted > 0) {
         alert(t("common.success"), t("species.imported"));
         await loadProjectSpecies();
         triggerSpeciesCatalogSync();
         onSpeciesImported?.(inserted);
+      } else if (failed > 0) {
+        alert(t("common.error"), t("species.addFailed"));
       } else {
         alert(t("common.warning"), t("species.alreadyExists"));
       }
@@ -523,14 +527,26 @@ function SpeciesManagementModal({
     }
   };
 
-  const buildImportSummaryMessage = (inserted: number, skipped: number) => {
-    if (inserted > 0 && skipped > 0) {
-      return `${inserted} ${t("species.results")} ${t("species.speciesAdded")}\n${skipped} ${t("species.alreadyExists")}`;
+  const showBatchImportSummary = (summary: { inserted: number; duplicates: number; failed: number }) => {
+    const lines: string[] = [];
+    if (summary.inserted > 0) {
+      lines.push(`${summary.inserted} ${t("species.results")} ${t("species.speciesAdded")}`);
     }
-    if (inserted > 0) {
-      return `${inserted} ${t("species.results")} ${t("species.speciesAdded")}`;
+    if (summary.duplicates > 0) {
+      lines.push(t("species.importDuplicatesIgnored", { count: summary.duplicates }));
     }
-    return t("species.allSpeciesExist");
+    if (summary.failed > 0) {
+      lines.push(t("species.importFailed", { count: summary.failed }));
+    }
+    if (lines.length === 0) lines.push(t("species.allSpeciesExist"));
+
+    const title =
+      summary.inserted > 0
+        ? t("common.success")
+        : summary.failed > 0
+          ? t("common.error")
+          : t("common.warning");
+    alert(title, lines.join("\n"));
   };
 
   const handleImportAllSpeciesLink = async () => {
@@ -541,18 +557,13 @@ function SpeciesManagementModal({
 
     setIsSpeciesLinkSearching(true);
     try {
-      const { inserted, skipped } = await importSpeciesFromSpeciesLink(projectId, speciesLinkResults);
+      const summary = await importSpeciesFromSpeciesLink(projectId, speciesLinkResults);
       await loadProjectSpecies();
-      if (inserted > 0) {
+      if (summary.inserted > 0) {
         triggerSpeciesCatalogSync();
       }
-      onSpeciesImported?.(inserted);
-      const isWarning = inserted === 0;
-      if (isWarning) {
-        alert(t("common.warning"), buildImportSummaryMessage(inserted, skipped));
-      } else {
-        alert(t("common.success"), buildImportSummaryMessage(inserted, skipped));
-      }
+      onSpeciesImported?.(summary.inserted);
+      showBatchImportSummary(summary);
       setSpeciesLinkResults([]);
     } catch (error) {
       console.error("Error importing all species:", error);
@@ -567,12 +578,14 @@ function SpeciesManagementModal({
 
   const handleImportSpecies = async (speciesData: any) => {
     try {
-      const { inserted } = await importSpeciesFromGBIF(projectId, [speciesData]);
+      const { inserted, failed } = await importSpeciesFromGBIF(projectId, [speciesData]);
       if (inserted > 0) {
         alert(t("common.success"), t("species.imported"));
         await loadProjectSpecies();
         triggerSpeciesCatalogSync();
         onSpeciesImported?.(inserted);
+      } else if (failed > 0) {
+        alert(t("common.error"), t("species.addFailed"));
       } else {
         alert(t("common.warning"), t("species.alreadyExists"));
       }
@@ -589,18 +602,13 @@ function SpeciesManagementModal({
 
     setIsSearching(true);
     try {
-      const { inserted, skipped } = await importSpeciesFromGBIF(projectId, searchResults);
+      const summary = await importSpeciesFromGBIF(projectId, searchResults);
       await loadProjectSpecies();
-      if (inserted > 0) {
+      if (summary.inserted > 0) {
         triggerSpeciesCatalogSync();
       }
-      onSpeciesImported?.(inserted);
-      const isWarning = inserted === 0;
-      if (isWarning) {
-        alert(t("common.warning"), buildImportSummaryMessage(inserted, skipped));
-      } else {
-        alert(t("common.success"), buildImportSummaryMessage(inserted, skipped));
-      }
+      onSpeciesImported?.(summary.inserted);
+      showBatchImportSummary(summary);
       setSearchResults([]);
     } catch (error) {
       console.error("Error importing all species:", error);
@@ -620,9 +628,10 @@ function SpeciesManagementModal({
     }
 
     try {
-      await createProjectSpecies({
+      const scientificName = manualSpecies.scientificName.trim();
+      const created = await createProjectSpecies({
         project_id: projectId,
-        scientific_name: manualSpecies.scientificName,
+        scientific_name: scientificName,
         family: manualSpecies.family,
         genus: manualSpecies.genus,
         source: "manual",
@@ -634,6 +643,16 @@ function SpeciesManagementModal({
             source: "manual" as const,
           })),
       });
+
+      // Not saved: keep the form as it is so the name can be corrected.
+      if (created.status === "duplicate") {
+        alert(t("common.error"), t("species.duplicateInCatalog", { name: scientificName }));
+        return;
+      }
+      if (created.status === "error") {
+        alert(t("common.error"), t("species.addFailed"));
+        return;
+      }
 
       alert(t("common.success"), t("species.speciesAdded"));
       setManualSpecies({
@@ -704,8 +723,9 @@ function SpeciesManagementModal({
     }
 
     try {
-      const success = await updateProjectSpeciesWithCommonNames(editingSpecies.id, {
-        scientific_name: editedSpeciesData.scientificName,
+      const scientificName = editedSpeciesData.scientificName.trim();
+      const outcome = await updateProjectSpeciesWithCommonNames(editingSpecies.id, {
+        scientific_name: scientificName,
         family: editedSpeciesData.family || undefined,
         genus: editedSpeciesData.genus || undefined,
         common_names: editedSpeciesData.commonNames
@@ -717,10 +737,13 @@ function SpeciesManagementModal({
           })),
       });
 
-      if (success) {
+      if (outcome.status === "updated") {
         alert(t("common.success"), t("species.speciesUpdated"));
         await loadProjectSpecies();
         handleCloseEditModal();
+      } else if (outcome.status === "duplicate") {
+        // Keep the edit modal open so the name can be corrected.
+        alert(t("common.error"), t("species.duplicateInCatalog", { name: scientificName }));
       } else {
         alert(t("common.error"), t("species.updateFailed"));
       }

@@ -151,13 +151,21 @@ export async function restoreOwnProjectFromDrive(driveFolderId: string): Promise
         const existingSpecies = await getProjectSpeciesByUuid(newProjectId, speciesEntry.uuid);
         if (existingSpecies) continue;
 
-        await createProjectSpecies({
+        if (!speciesEntry.scientific_name?.trim()) continue;
+
+        // A name already in the catalog under another uuid keeps the local
+        // record: the received one is ignored, not an error. A real failure
+        // is not swallowed - the restore is undone like any other failure.
+        const created = await createProjectSpecies({
           project_id: newProjectId,
           scientific_name: speciesEntry.scientific_name,
           source: sanitizeSpeciesSource(speciesEntry.source),
           uuid: speciesEntry.uuid,
           common_names: parseImportedCommonNames(speciesEntry.common_names),
         });
+        if (created.status === "error") {
+          throw new Error(`Falha ao restaurar a espécie ${speciesEntry.scientific_name}: ${created.message}`);
+        }
       }
     }
 

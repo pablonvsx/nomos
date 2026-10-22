@@ -537,6 +537,15 @@ under `approved/` with `approval_status = 'approved'` fixed (pending and
 rejected points are never uploaded in the first place, so there's
 nothing else to pull).
 
+A project catalog never holds two species with the same scientific name
+(`createProjectSpecies`, `db/queries/project-species.ts`, compares
+`speciesNameKey`: case, accents and repeated spaces ignored, the whole name
+compared - authorship is not stripped). On restore, and when importing a
+configuration package, a species whose name already exists under **another
+uuid** keeps the local record and the received one is ignored; the operation
+does not fail. A real failure inserting a species, by contrast, is not
+swallowed: the restore is undone like any other failure.
+
 The restore is **always complete and all-or-nothing**; there is no "data
 only" mode, because media is part of the collection and a point restored
 without it would be re-uploaded without it by the next backup:
