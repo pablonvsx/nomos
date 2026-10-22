@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { View, StyleSheet, ScrollView, Linking } from "react-native";
 import {
   List,
@@ -11,13 +11,16 @@ import {
   RadioButton,
   Button,
 } from "react-native-paper";
-import { Stack, router } from "expo-router";
+import { Stack, router, useFocusEffect } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "@/contexts/theme-context";
 import { useI18n } from "@/contexts/i18n-context";
 import { getAvailableLanguages } from "@/utils/i18n";
 import { useDialog } from "@/hooks/use-dialog";
 import { SpeciesLinkSettingsModal } from "@/components/settings/SpeciesLinkSettingsModal";
+import { CollectorCodeModal } from "@/components/local-identity/CollectorCodeModal";
+import { GoogleConnectionModal } from "@/components/google-account/GoogleConnectionModal";
+import { useGoogleAccount } from "@/hooks/use-google-account";
 
 export default function SettingsScreen() {
   const paperTheme = usePaperTheme();
@@ -27,6 +30,18 @@ export default function SettingsScreen() {
   const [languageDialogVisible, setLanguageDialogVisible] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage);
   const [speciesLinkModalVisible, setSpeciesLinkModalVisible] = useState(false);
+  const [collectorCodeModalVisible, setCollectorCodeModalVisible] = useState(false);
+  const [googleConnectionModalVisible, setGoogleConnectionModalVisible] = useState(false);
+  const { account: googleAccount, refresh: refreshGoogleAccount } = useGoogleAccount();
+
+  // This tab stays mounted and its useGoogleAccount() state is its own, so
+  // it must re-read the connection whenever the screen is shown again (the
+  // account may have been connected or disconnected from another screen).
+  useFocusEffect(
+    useCallback(() => {
+      refreshGoogleAccount();
+    }, [refreshGoogleAccount]),
+  );
 
   const availableLanguages = getAvailableLanguages();
 
@@ -167,6 +182,50 @@ export default function SettingsScreen() {
 
         <Divider />
 
+        {/* SECTION 3B: COLLABORATION */}
+        <List.Section>
+          <List.Subheader
+            style={[styles.subheader, { color: paperTheme.colors.primary }]}
+          >
+            {t("settings.collaboration")}
+          </List.Subheader>
+
+          <List.Item
+            title={t("collectorCode.settingsTitle")}
+            description={t("collectorCode.description")}
+            left={(props) => <List.Icon {...props} icon="account-badge-outline" />}
+            onPress={() => setCollectorCodeModalVisible(true)}
+            titleStyle={styles.itemTitle}
+            descriptionStyle={styles.itemDescription}
+            descriptionNumberOfLines={0}
+          />
+        </List.Section>
+
+        <Divider />
+
+        {/* SECTION 3C: GOOGLE ACCOUNT */}
+        <List.Section>
+          <List.Subheader
+            style={[styles.subheader, { color: paperTheme.colors.primary }]}
+          >
+            {t("googleAccount.sectionTitle")}
+          </List.Subheader>
+
+          <List.Item
+            title={t("googleAccount.settingsItemTitle")}
+            description={
+              googleAccount ? t("googleAccount.connectedAs", { email: googleAccount.email }) : t("googleAccount.notConnected")
+            }
+            left={(props) => <List.Icon {...props} icon="google" />}
+            onPress={() => setGoogleConnectionModalVisible(true)}
+            titleStyle={styles.itemTitle}
+            descriptionStyle={styles.itemDescription}
+            descriptionNumberOfLines={0}
+          />
+        </List.Section>
+
+        <Divider />
+
         {/* SECTION 4: SYSTEM INFO */}
         <List.Section>
           <List.Subheader
@@ -257,6 +316,19 @@ export default function SettingsScreen() {
       <SpeciesLinkSettingsModal
         visible={speciesLinkModalVisible}
         onDismiss={() => setSpeciesLinkModalVisible(false)}
+      />
+
+      {/* Collector Code Modal */}
+      <CollectorCodeModal
+        visible={collectorCodeModalVisible}
+        onDismiss={() => setCollectorCodeModalVisible(false)}
+      />
+
+      {/* Google Connection Modal */}
+      <GoogleConnectionModal
+        visible={googleConnectionModalVisible}
+        onDismiss={() => setGoogleConnectionModalVisible(false)}
+        onAccountChange={refreshGoogleAccount}
       />
     </ScrollView>
   );

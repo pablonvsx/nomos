@@ -1,20 +1,26 @@
 import React, {
   createContext,
   useContext,
-  useState,
+  useReducer,
   ReactNode,
   useRef,
   useCallback,
   useMemo,
 } from "react";
+import { View, StyleSheet } from "react-native";
 import { Portal, Dialog, Button, Text, useTheme } from "react-native-paper";
 import { useI18n } from "@/contexts/i18n-context";
+import { dialogReducer, initialDialogState, pressDialogButton } from "@/core/ui/dialog-state";
+import { orderStackedButtons, type DialogButtonRole } from "@/core/ui/dialog-layout";
+import { BUTTON_RADIUS } from "@/constants/shape";
 
 interface DialogButton {
   label: string;
   onPress: () => void;
   mode?: "text" | "outlined" | "contained" | "contained-tonal";
   style?: "default" | "destructive";
+  /** Only used by the "stacked" layout: where the action goes and how it is emphasized. */
+  role?: DialogButtonRole;
 }
 
 interface DialogOptions {
@@ -22,6 +28,12 @@ interface DialogOptions {
   message: string;
   buttons?: DialogButton[];
   dismissable?: boolean;
+  /**
+   * "row" (default) keeps the actions side by side. "stacked" puts one action
+   * per row at full width - primary first, cancel last - for dialogs with 3+
+   * actions or long labels that would not fit in a row.
+   */
+  actionsLayout?: "row" | "stacked";
 }
 
 interface DialogContextType {
@@ -29,12 +41,19 @@ interface DialogContextType {
   hideDialog: () => void;
 }
 
+const styles = StyleSheet.create({
+  stackedActions: { paddingHorizontal: 24, paddingBottom: 24, paddingTop: 8, gap: 8 },
+  stackedButton: { width: "100%" },
+});
+
 const DialogContext = createContext<DialogContextType | undefined>(undefined);
 
 export function DialogProvider({ children }: { children: ReactNode }) {
   const theme = useTheme();
-  const [visible, setVisible] = useState(false);
-  const [options, setOptions] = useState<DialogOptions | null>(null);
+  const [{ visible, options }, dispatch] = useReducer(
+    dialogReducer<DialogOptions>,
+    initialDialogState<DialogOptions>(),
+  );
   const clearOptionsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -50,8 +69,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
       clearTimeout(clearOptionsTimeoutRef.current);
       clearOptionsTimeoutRef.current = null;
     }
-    setOptions(dialogOptions);
-    setVisible(true);
+    dispatch({ type: "show", options: dialogOptions });
   }, []);
 
   const hideDialog = useCallback(() => {
@@ -59,16 +77,17 @@ export function DialogProvider({ children }: { children: ReactNode }) {
       clearTimeout(clearOptionsTimeoutRef.current);
       clearOptionsTimeoutRef.current = null;
     }
-    setVisible(false);
+    dispatch({ type: "hide" });
     clearOptionsTimeoutRef.current = setTimeout(() => {
-      setOptions(null);
+      dispatch({ type: "clearOptions" });
       clearOptionsTimeoutRef.current = null;
     }, 300); // Wait for animation
   }, []);
 
   const handleButtonPress = (onPress: () => void) => {
-    onPress();
-    hideDialog();
+    // Hide first, then the callback (see pressDialogButton): the callback may
+    // open the next dialog, which hiding afterwards would immediately close.
+    pressDialogButton(onPress, hideDialog);
   };
 
   const contextValue = useMemo(
@@ -109,32 +128,77 @@ export function DialogProvider({ children }: { children: ReactNode }) {
               </Text>
             </Dialog.Content>
           )}
-          <Dialog.Actions>
-            {options?.buttons && options.buttons.length > 0 ? (
-              options.buttons.map((button, index) => (
+          {options?.actionsLayout === "stacked" && options.buttons && options.buttons.length > 0 ? (
+            <View style={styles.stackedActions}>
+              {orderStackedButtons(options.buttons).map((button, index) => (
                 <Button
                   key={index}
-                  mode={button.mode || "text"}
+                  mode={button.role === "primary" ? "contained" : "outlined"}
                   onPress={() => handleButtonPress(button.onPress)}
-                  textColor={
-                    button.style === "destructive"
-                      ? theme.colors.error
-                      : undefined
-                  }
+                  style={[styles.stackedButton, { borderRadius: BUTTON_RADIUS }]}
+                  textColor={button.style === "destructive" ? theme.colors.error : undefined}
                 >
                   {button.label}
                 </Button>
-              ))
-            ) : (
-              <Button mode="text" onPress={hideDialog}>
-                OK
-              </Button>
-            )}
-          </Dialog.Actions>
+              ))}
+            </View>
+          ) : (
+            <Dialog.Actions>
+              {options?.buttons && options.buttons.length > 0 ? (
+                options.buttons.map((button, index) => (
+                  <Button
+                    key={index}
+                    mode={button.mode || "text"}
+                    onPress={() => handleButtonPress(button.onPress)}
+                    textColor={
+                      button.style === "destructive"
+                        ? theme.colors.error
+                        : undefined
+                    }
+                  >
+                    {button.label}
+                  </Button>
+                ))
+              ) : (
+                <Button mode="text" onPress={hideDialog}>
+                  OK
+                </Button>
+              )}
+            </Dialog.Actions>
+          )}
         </Dialog>
       </Portal>
     </DialogContext.Provider>
   );
+}
+
+/**
+ * Where a dialog can be shown from - Paper renders every <Portal> (Modal,
+ * Dialog...) outside the app tree, as a sibling of the root DialogProvider's
+ * own Portal, and stacks them in mount order:
+ *
+ * - A component rendered INSIDE a <Portal> that calls useAlertDialog() throws
+ *   (no provider above it): wrap its content in a nested <DialogProvider>
+ *   (see modules/generic/RepeatableGroupField.tsx).
+ * - A screen/component that calls the hook in its own body but opens Portal
+ *   dialogs it must show alerts over: export it through withDialogScope().
+ *   The scoped provider's Portal mounts after the component's own, so the
+ *   alert lands on top instead of behind.
+ * - A Portal mounted later than the scoped provider (conditionally rendered
+ *   modals) still stacks above it, and a dialog opened while a modal is
+ *   closing is hidden by it: close the modal first, wait, then show
+ *   (core/ui/close-then-show.ts).
+ */
+export function withDialogScope<P extends object>(Component: React.ComponentType<P>): React.ComponentType<P> {
+  function DialogScoped(props: P) {
+    return (
+      <DialogProvider>
+        <Component {...props} />
+      </DialogProvider>
+    );
+  }
+  DialogScoped.displayName = `withDialogScope(${Component.displayName ?? Component.name ?? "Component"})`;
+  return DialogScoped;
 }
 
 export function useDialog() {

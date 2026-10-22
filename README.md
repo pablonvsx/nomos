@@ -47,6 +47,7 @@ Beyond data collection based on the primary methodological instrument, the app a
 - **Modular protocol architecture.** The reference protocol is one module among others; users can build and run custom, self-contained protocols on the same platform.
 - **Species catalog integration.** Connects to GBIF and SpeciesLink for taxonomic verification during collection.
 - **Structured exports.** Outputs data as GeoJSON and CSV, and packages field media into a compressed archive, ready for use in GIS and statistical software.
+- **Backup and collaboration.** A project's owner can back it up to Google Drive and restore it on another device; collaborators without a Google account can collect independently and send their points back for review, with no live connection required. See [docs/12_BACKUP_COLLABORATION.md](docs/12_BACKUP_COLLABORATION.md).
 - **Multilingual interface.** Available in Portuguese, English, Spanish, and French.
 
 ---
@@ -87,7 +88,7 @@ A pre-built APK of the latest release is also available under [Releases](https:/
 
 - **User guide and field materials:** [Google Drive folder](https://drive.google.com/drive/folders/1Ikc18svAf_pBV3j8QSXvILa6XqKRPcRI?usp=sharing) — practical usage guide, printable field sheet, and the vegetation classification catalog. The installable APK is also available here.
 - **Architecture documentation:** see the `docs/` directory in this repository for the layered architecture, data model, and internationalization notes. All documents are written in English.
-- **In-app tutorials:** step-by-step walkthroughs are available directly inside the app, no external documentation needed for basic field use.
+- **Project page and tutorials:** tutorials, guides, and the latest app download are on the project page: https://pablonvsx.github.io/nomos/ (the in-app Help tab links to it). The former in-app tutorial texts are preserved in [`docs/tutoriais-app-legado.md`](docs/tutoriais-app-legado.md).
 - **Archival record (DOI):** citable, versioned deposit on Zenodo — link to be added once the first tagged release is archived.
 
 ---

@@ -67,8 +67,15 @@ Real dependencies extracted from `mobile-app/package.json`. Exact versions per t
 |---|---|---|
 | `expo-file-system` | ~19.0.23 | CSV/GeoJSON/media writing (`core/export/file-writer.ts`) |
 | `expo-sharing` | ~14.0.8 | Sharing the exported file |
-| `react-native-zip-archive` | ^7.0.2 | Compressing media into `.zip` on export |
-| `expo-document-picker` | ^14.0.8 | File selection (e.g. catalog/CSV import) |
+| `react-native-zip-archive` | ^7.0.2 | Compressing media into `.zip` on export, and points-package export/import (`core/project-sharing/`) |
+| `expo-document-picker` | ^14.0.8 | File selection — catalog/CSV import, and picking a configuration/points package to import (`core/project-sharing/`) |
+
+## Backup and authentication
+
+| Package | Version | Use |
+|---|---|---|
+| `@react-native-google-signin/google-signin` | ^16.1.5 | Google Sign-In + Drive access token, imported lazily (never a static top-level import) to avoid crashing environments without the native binding — `core/google-auth/google-auth-service.ts`, see [12_BACKUP_COLLABORATION.md](12_BACKUP_COLLABORATION.md) |
+| `expo-crypto` | ~15.0.9 | Backs the single shared uuid helper (`core/utils/uuid.ts`) used everywhere a `project_uuid`/point/species/classification identity is generated |
 
 ## i18n
 
@@ -103,6 +110,7 @@ The repository moved from **CC BY-NC 4.0** to **GNU GPL v3.0** (`LICENSE` file a
 | `jest` (dev) | ^29.7.0 | Test runner |
 | `ts-jest` (dev) | ^29.4.11 | TypeScript support in Jest |
 | `@types/jest` (dev) | 29.5.14 | Types (pinned without `^`) |
+| `jszip` (dev) | ^3.10.2 | Tests only: builds and opens real `.zip` files so the points-package suites can check what is physically inside the archive (the app itself uses `react-native-zip-archive`) |
 | `eslint` (dev) | ^9.25.0 | Lint |
 | `eslint-config-expo` (dev) | ~10.0.0 | Expo's lint config |
 

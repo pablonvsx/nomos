@@ -25,6 +25,17 @@ Two protocols exist today: **`paisageo`** (scientific, with 3 modules: vegetatio
 2. The CSV/GeoJSON exporter already knows how to handle variable-cardinality structures (N soil layers, N vegetation strata, N impacts) because each module's schema describes that variation (`ModuleSchema.dynamic`), and the generic engine (`core/export/generic-export-engine.ts` + `core/schema/dynamic-columns.ts`) expands the columns on its own.
 3. A protocol can reuse an entire scientific module from another (e.g. custom attaching PAISAGEO's geoecological constraints module) without a direct import between protocols, only going through the `modules/registry.ts` catalog.
 
+## Backup and collaboration
+
+Beyond single-device, offline collection, a project can optionally be
+backed up to a Google Drive account and worked on by collaborators who
+never need a Google account themselves: exactly one device is ever the
+**owner** of a given project (defined by having Drive backup active for
+it), and everyone else holds an independent **collaborator copy** that
+exchanges data with the owner through exported packages, never a shared
+live connection. See [12_BACKUP_COLLABORATION.md](12_BACKUP_COLLABORATION.md)
+for the full model.
+
 ## Navigation map: if you want to understand X, read Y
 
 | To understand... | Read |
@@ -40,7 +51,8 @@ Two protocols exist today: **`paisageo`** (scientific, with 3 modules: vegetatio
 | Which screens exist and how the user navigates between them | [09_SCREEN_FLOW.md](09_SCREEN_FLOW.md) |
 | How to create a brand-new scientific protocol | [10_GUIDE_NEW_PROTOCOL.md](10_GUIDE_NEW_PROTOCOL.md) |
 | How to add a module to an already-existing protocol | [11_GUIDE_NEW_MODULE.md](11_GUIDE_NEW_MODULE.md) |
-| Quick answers to recurring questions | [12_FAQ.md](12_FAQ.md) |
+| How backup and collaboration work across devices | [12_BACKUP_COLLABORATION.md](12_BACKUP_COLLABORATION.md) |
+| Quick answers to recurring questions | [13_FAQ.md](13_FAQ.md) |
 
 ## About this documentation's fidelity
 

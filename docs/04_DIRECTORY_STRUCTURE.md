@@ -30,18 +30,19 @@ app/
 ├── about.tsx
 ├── (tabs)/                     _layout.tsx, index.tsx (home), help.tsx, settings.tsx
 ├── (projects)/
-│   ├── projects.tsx            project list
+│   ├── projects.tsx            project list; also "Restaurar Meus Projetos do Drive" (owner-only)
 │   ├── project/new.tsx         create project
-│   ├── project-details/[id].tsx        the SINGLE details screen (PAISAGEO and custom)
+│   ├── project-details/[id].tsx        the SINGLE details screen (PAISAGEO and custom); collaboration actions shown per role, see 12 "Role-based actions"
+│   ├── project-pending-approvals/[id].tsx  local approval queue for imported points (pure SQL, no Drive)
+│   ├── project-rejected/[id].tsx       rejected points area (permanent delete)
 │   ├── protocol/builder.tsx    the "Personalized" protocol builder
 │   ├── protocol/native-catalog.tsx  catalog/picker of native scientific protocols (today only paisageo)
-│   ├── protocol/tutorials.tsx  tutorials screen (protocol picker + step-by-step guide), reads constants/protocol-tutorials.ts
 │   ├── species-catalog/[id].tsx
 │   └── view-map.tsx
 └── (survey)/
     ├── insert-location.tsx     captures GPS before collecting a point
     ├── survey/form.tsx         manifest-driven collection form
-    └── survey-point-details/[id].tsx    details of an already-collected point
+    └── survey-point-details/[id].tsx    details of an already-collected point; collector export action
 ```
 
 **Update:** `project-details-custom/[id].tsx` — an earlier compatibility shim that just redirected to `project-details/[id]` — has since been removed entirely; there is now exactly one details screen, `project-details/[id].tsx`, for both PAISAGEO and custom projects. `app/modal.tsx`, an unused Expo template screen, is also gone. `view_map.tsx` and `insert_location.tsx` were renamed to kebab-case (`view-map.tsx`, `insert-location.tsx`).
@@ -63,13 +64,40 @@ core/
 │   ├── module-schema.ts     validateModuleSchema
 │   ├── dynamic-columns.ts   buildColumns (dynamic column expansion, used by generic-export-engine.ts)
 │   └── __tests__/
-└── species-catalog/
-    ├── gbif.ts                    GBIF integration
-    ├── specieslink.ts              SpeciesLink integration
-    ├── api-key-manager.ts          API keys (expo-secure-store)
-    ├── group-by-taxonomy.ts        groups search results by taxonomy
-    ├── search-progress.ts          batch-search progress state (UI)
-    └── species-catalog-sharing.ts  JSON catalog export/import
+├── species-catalog/
+│   ├── gbif.ts                    GBIF integration
+│   ├── specieslink.ts              SpeciesLink integration
+│   ├── api-key-manager.ts          API keys (expo-secure-store)
+│   ├── group-by-taxonomy.ts        groups search results by taxonomy
+│   ├── search-progress.ts          batch-search progress state (UI)
+│   └── species-catalog-sharing.ts  JSON catalog export/import
+├── points/
+│   ├── delete-point-media.ts       permanently deletes a point + every media file it references (columns and custom-protocol module/group media), only inside the app's own storage
+│   └── discard-missing-media.ts    removes references to photo/audio files that no longer exist on the device, so a blocked backup can proceed
+├── utils/
+│   └── uuid.ts                     generateUuid() — the single shared uuid helper, see 12_BACKUP_COLLABORATION.md
+├── drive-sync/                     backup/restore to Google Drive, see 12_BACKUP_COLLABORATION.md
+│   ├── drive-api-client.ts         raw Drive REST v3 calls (no SDK)
+│   ├── project-drive-service.ts    activateDriveBackup, getManifest/updateManifest, listOwnNomosProjectFolders
+│   ├── backup-service.ts           backupPoint, backupAllPendingPoints
+│   ├── catalog-sync-service.ts     best-effort catalog/classification sync after activation
+│   ├── restore-service.ts          restoreOwnProjectFromDrive (always full, all-or-nothing)
+│   ├── restore-errors.ts           MediaRestoreError (dependency-free, usable with instanceof)
+│   └── restore-error-messages.ts   describeRestoreError (pure, testable error→i18n-key mapping)
+├── project-sharing/                the two export/import packages, see 12_BACKUP_COLLABORATION.md
+│   ├── project-config-package.ts   build/apply the configuration package
+│   ├── export-points.ts            build/share the points package (.zip)
+│   ├── import-points.ts            import a points package, duplicate detection
+│   ├── module-media.ts             finds/rewrites custom-protocol media inside module data (top level and repeatable groups); shared by zip, backup, restore, discard, delete and media export
+│   ├── action-visibility.ts        getProjectActionVisibility: the role → action table (single source of truth for the screens)
+│   ├── refresh-after-import.ts     clears the map cache and refetches right after an import
+│   └── package-errors.ts           InvalidPackageError, UnsupportedPackageVersionError (shared by both packages)
+├── local-identity/
+│   ├── collector-code.ts           local 4-character collector code (AsyncStorage)
+│   └── connected-account.ts        getConnectedGoogleAccountEmail() — thin bridge to google-auth
+└── google-auth/
+    ├── google-auth-service.ts      wraps @react-native-google-signin/google-signin behind a lazy require()
+    └── google-account-controller.ts  pure controller logic behind hooks/use-google-account.ts
 ```
 
 ## `modules/`
@@ -129,6 +157,7 @@ modules/
     │                         including from a CustomSection.moduleRef pointing to the registry above)
     ├── services/export.ts    customExporter (uses buildProtocolExportPlan from core, no EXTRA_POINT_COLUMNS)
     ├── slugify-field-key.ts   slugifyFieldKey/collectFieldKeys (stable column key per field)
+    ├── protocol-validation.ts  pure builder/import rules, incl. rejecting a repeatable_group nested in another
     ├── config/field-types.ts  catalog of field types offered in the builder (CustomFieldType)
     └── components/OptionsListInput.tsx
 ```
@@ -184,6 +213,10 @@ components/
 ├── survey/          InsertLocationModal.tsx, SpeciesInput.tsx, SurveySelect.tsx
 ├── map/            MapLegend.tsx, LayerMenu.tsx, map-overlay-styles.ts — map overlays (see 09_SCREEN_FLOW.md)
 ├── settings/        SpeciesLinkSettingsModal.tsx
+├── drive-sync/      RestoreProjectsModal.tsx — see 12_BACKUP_COLLABORATION.md
+├── google-account/  GoogleConnectionModal.tsx — single shared connection modal
+├── local-identity/  CollectorCodeModal.tsx — single shared collector-code modal
+├── project-sharing/ PointDuplicatesModal.tsx — Substituir/Descartar on points-package import
 ├── ErrorBoundary.tsx, HapticTab.tsx
 ```
 
@@ -209,13 +242,16 @@ hooks/
 ├── use-stable-text-input.ts     avoids re-injecting `value` into a focused TextInput (Android flicker bug)
 ├── use-bottom-content-padding.ts  bottom padding to clear floating UI/safe area
 ├── use-scroll-overflow.ts       tracks whether scrollable content overflows its container
-└── use-color-scheme.ts (+.web.ts)
+├── use-color-scheme.ts (+.web.ts)
+└── use-google-account.ts        thin useState wrapper around core/google-auth/google-account-controller.ts
+                                   (the pure logic lives in the controller so it's testable without
+                                   react-test-renderer, which this project's Jest setup doesn't have)
 ```
 
 ## `types/`, `utils/`, `constants/`, `locales/`, `assets/`
 
 - **`types/database.ts`**: domain interfaces (Point, Project, Species, Protocol, CustomProtocol, CustomSection, CustomFieldConfig, etc.) used by `db/` and the UI. **`types/index.ts`** is a barrel re-exporting `database.ts`.
-- **`utils/`**: `i18n.ts` (`locales/*.json` loading + language persistence), `azimuth.ts` (azimuth conversion/formatting), `date-time-input.ts` (date/time digit validation and formatting, used by `FieldRenderer.tsx`).
-- **`constants/theme.ts`**: palette and typography (Material Design 3, RN Paper). **`constants/shape.ts`**: shared rounded-rectangle button-shape tokens. **`constants/native-protocols-catalog.ts`**: `NATIVE_PROTOCOLS_CATALOG`, descriptive text (workflow + per-module description) for the native scientific protocol catalog shown in `app/(projects)/protocol/native-catalog.tsx` — today only has the `paisageo` entry; purely presentational, doesn't affect `ProtocolRegistry`. **`constants/protocol-tutorials.ts`**: `PROTOCOL_TUTORIALS`, the step-by-step tutorial content (sections → steps, each with icon/title/description) shown in `app/(projects)/protocol/tutorials.tsx`, with one entry per manifest `id` (`paisageo` and `custom` — the latter documents the generic custom-protocol mechanism, not one specific user instance). Same presentational pattern as `native-protocols-catalog.ts`: content only in `pt` for now, with `pt` fallback in other languages.
+- **`utils/`**: `i18n.ts` (`locales/*.json` loading + language persistence), `azimuth.ts` (azimuth conversion/formatting), `date-time-input.ts` (date/time digit validation and formatting, used by `FieldRenderer.tsx`), `open-external-url.ts` (opens an external link without throwing; used by the Help tab).
+- **`constants/theme.ts`**: palette and typography (Material Design 3, RN Paper). **`constants/shape.ts`**: shared rounded-rectangle button-shape tokens. **`constants/links.ts`**: `PROJECT_PAGE_URL`, the single definition of the project page URL (GitHub Pages) opened from the Help tab. **`constants/native-protocols-catalog.ts`**: `NATIVE_PROTOCOLS_CATALOG`, descriptive text (workflow + per-module description) for the native scientific protocol catalog shown in `app/(projects)/protocol/native-catalog.tsx` — today only has the `paisageo` entry; purely presentational, doesn't affect `ProtocolRegistry`.
 - **`locales/{pt,en,es,fr}.json`**: static UI strings (not protocol strings — see [08_I18N.md](08_I18N.md)).
 - **`assets/protocols/paisageo/`**: `paisageo_protocol.json` and `vegetation_classes.json`, legacy static protocol JSON (referenced by the `protocols` table in the database, see [05_DATA_MODEL.md](05_DATA_MODEL.md)); `assets/images/`: icons and logos.

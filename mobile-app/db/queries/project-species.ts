@@ -12,6 +12,8 @@ import {
   ProjectSpeciesCommonNameInput,
   Species,
 } from "@/types/database";
+import { generateUuid } from "@/core/utils/uuid";
+import { speciesNameKey } from "@/core/species-catalog/name-key";
 
 const VALID_CATALOG_SOURCES: ProjectSpeciesCatalog["source"][] = [
   "gbif",
@@ -78,6 +80,7 @@ export async function getProjectSpeciesCatalogByProject(
         created_at: sp.created_at,
         last_updated: sp.last_updated,
         common_names: commonNames,
+        uuid: sp.uuid ?? null,
       });
     }
 
@@ -86,6 +89,69 @@ export async function getProjectSpeciesCatalogByProject(
     console.error("Error fetching project species catalog:", error);
     return [];
   }
+}
+
+/**
+ * Get all species for a project, backfilling a uuid (via the shared uuid
+ * utility) for any row that doesn't have one yet. This is what the project
+ * configuration package export uses, so every exported row is guaranteed to
+ * carry a stable, persisted uuid.
+ */
+export async function getAllProjectSpeciesCatalogEnsuringUuids(
+  projectId: number,
+): Promise<ProjectSpeciesCatalog[]> {
+  const catalog = await getProjectSpeciesCatalogByProject(projectId);
+  const result: ProjectSpeciesCatalog[] = [];
+
+  for (const species of catalog) {
+    if (species.uuid) {
+      result.push(species);
+    } else {
+      const uuid = await ensureProjectSpeciesUuid(species.id);
+      result.push({ ...species, uuid });
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Get a species by its stable cross-device uuid, scoped to a project
+ * (project sharing import dedupe, Fase 0).
+ */
+export async function getProjectSpeciesByUuid(
+  projectId: number,
+  uuid: string,
+): Promise<ProjectSpeciesCatalog | null> {
+  const row = await db.getFirstAsync<{ id: number }>(
+    "SELECT id FROM project_species_catalog WHERE project_id = ? AND uuid = ?",
+    [projectId, uuid],
+  );
+
+  if (!row) return null;
+
+  return getProjectSpeciesById(row.id);
+}
+
+/**
+ * Returns the species row's uuid, generating and persisting one via the
+ * shared uuid utility if it doesn't have one yet. Never regenerates an
+ * existing uuid.
+ */
+export async function ensureProjectSpeciesUuid(speciesId: number): Promise<string> {
+  const row = await db.getFirstAsync<{ uuid: string | null }>(
+    "SELECT uuid FROM project_species_catalog WHERE id = ?",
+    [speciesId],
+  );
+
+  if (row?.uuid) return row.uuid;
+
+  const uuid = generateUuid();
+  await db.runAsync("UPDATE project_species_catalog SET uuid = ? WHERE id = ?", [
+    uuid,
+    speciesId,
+  ]);
+  return uuid;
 }
 
 /**
@@ -120,6 +186,7 @@ export async function getProjectSpeciesById(
       created_at: species.created_at,
       last_updated: species.last_updated,
       common_names: commonNames,
+      uuid: species.uuid ?? null,
     };
   } catch (error) {
     console.error("Error fetching species:", error);
@@ -128,46 +195,128 @@ export async function getProjectSpeciesById(
 }
 
 /**
- * Create a new species in the project catalog
+ * What happened to an attempt to add a species to a project catalog. A
+ * duplicate is a normal outcome, not a failure, and an error is never
+ * reported as one: callers must tell them apart.
+ */
+export type CreateSpeciesResult =
+  | { status: "inserted"; id: number }
+  | { status: "duplicate"; existingId: number }
+  | { status: "error"; message: string };
+
+export type UpdateSpeciesResult =
+  | { status: "updated" }
+  | { status: "duplicate"; existingId: number }
+  | { status: "error"; message: string };
+
+/** Species of one project by name key (see speciesNameKey) -> id. */
+export type SpeciesKeyIndex = Map<string, number>;
+
+/**
+ * Reads the names of a project's catalog once. Batch imports pass the same
+ * index to every createProjectSpecies call (it is kept up to date) instead of
+ * re-reading the table for each species. `excludeId` leaves one species out,
+ * so a rename is not compared with the species itself.
+ */
+export async function loadSpeciesKeyIndex(projectId: number, excludeId?: number): Promise<SpeciesKeyIndex> {
+  const rows = await db.getAllAsync<{ id: number; scientific_name: string }>(
+    "SELECT id, scientific_name FROM project_species_catalog WHERE project_id = ?",
+    [projectId],
+  );
+  const index: SpeciesKeyIndex = new Map();
+  for (const row of rows) {
+    if (row.id === excludeId) continue;
+    const key = speciesNameKey(row.scientific_name);
+    if (!index.has(key)) index.set(key, row.id);
+  }
+  return index;
+}
+
+const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+/**
+ * Adds a species to the project catalog - the ONE place every insertion goes
+ * through (manual, GBIF, SpeciesLink, file, Drive restore, config package).
+ * Within a project a name with the same key as an existing species is a
+ * duplicate whatever its source, and nothing is written. Checked before the
+ * insert, so nothing downstream (uuid, Drive sync) is ever set up for it.
  */
 export async function createProjectSpecies(
   data: ProjectSpeciesCatalogInput,
-): Promise<number | null> {
+  keyIndex?: SpeciesKeyIndex,
+): Promise<CreateSpeciesResult> {
   try {
-    const now = new Date().toISOString();
-    
-    const result = await db.runAsync(
-      `INSERT INTO project_species_catalog 
-       (project_id, scientific_name, family, genus, gbif_id, source, created_at, last_updated)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        data.project_id,
-        data.scientific_name,
-        data.family || null,
-        data.genus || null,
-        data.gbif_id || null,
-        data.source || "manual",
-        now,
-        now,
-      ],
-    );
+    const key = speciesNameKey(data.scientific_name ?? "");
+    if (!key) return { status: "error", message: "The scientific name is required." };
 
-    const speciesId = result.lastInsertRowId as number;
+    const index = keyIndex ?? (await loadSpeciesKeyIndex(data.project_id));
+    const existingId = index.get(key);
+    if (existingId !== undefined) return { status: "duplicate", existingId };
 
-    // Insert common names if provided
-    if (data.common_names && data.common_names.length > 0) {
-      for (const commonName of data.common_names) {
-        await addCommonNameToSpecies(speciesId, commonName);
-      }
-    }
-
-    await touchProject(data.project_id);
-
-    return speciesId;
+    const speciesId = await insertSpeciesRow(data);
+    index.set(key, speciesId);
+    return { status: "inserted", id: speciesId };
   } catch (error) {
+    // The same GBIF record already in this project is a duplicate too, even
+    // when it came with another name.
+    if (data.gbif_id && /UNIQUE constraint failed/i.test(errorMessage(error))) {
+      const existing = await db.getFirstAsync<{ id: number }>(
+        "SELECT id FROM project_species_catalog WHERE project_id = ? AND gbif_id = ?",
+        [data.project_id, data.gbif_id],
+      );
+      if (existing) return { status: "duplicate", existingId: existing.id };
+    }
     console.error("Error creating species:", error);
-    return null;
+    return { status: "error", message: errorMessage(error) };
   }
+}
+
+async function insertSpeciesRow(data: ProjectSpeciesCatalogInput): Promise<number> {
+  const now = new Date().toISOString();
+
+  const result = await db.runAsync(
+    `INSERT INTO project_species_catalog
+     (project_id, scientific_name, family, genus, gbif_id, source, created_at, last_updated, uuid)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      data.project_id,
+      data.scientific_name,
+      data.family || null,
+      data.genus || null,
+      data.gbif_id || null,
+      data.source || "manual",
+      now,
+      now,
+      data.uuid || null,
+    ],
+  );
+
+  const speciesId = result.lastInsertRowId as number;
+
+  // Insert common names if provided
+  if (data.common_names && data.common_names.length > 0) {
+    for (const commonName of data.common_names) {
+      await addCommonNameToSpecies(speciesId, commonName);
+    }
+  }
+
+  await touchProject(data.project_id);
+
+  return speciesId;
+}
+
+/**
+ * Would renaming this species to `newName` collide with another species of
+ * the same project? Returns the other species' id, or null.
+ */
+async function findRenameConflict(speciesId: number, newName: string): Promise<number | null> {
+  const row = await db.getFirstAsync<{ project_id: number }>(
+    "SELECT project_id FROM project_species_catalog WHERE id = ?",
+    [speciesId],
+  );
+  if (!row) return null;
+  const index = await loadSpeciesKeyIndex(row.project_id, speciesId);
+  return index.get(speciesNameKey(newName)) ?? null;
 }
 
 /**
@@ -176,10 +325,18 @@ export async function createProjectSpecies(
 export async function updateProjectSpecies(
   speciesId: number,
   data: Partial<ProjectSpeciesCatalogInput>,
-): Promise<boolean> {
+): Promise<UpdateSpeciesResult> {
   try {
     const now = new Date().toISOString();
-    
+
+    if (data.scientific_name !== undefined) {
+      if (!speciesNameKey(data.scientific_name)) {
+        return { status: "error", message: "The scientific name is required." };
+      }
+      const conflictId = await findRenameConflict(speciesId, data.scientific_name);
+      if (conflictId !== null) return { status: "duplicate", existingId: conflictId };
+    }
+
     const updates = [];
     const params = [];
 
@@ -200,7 +357,7 @@ export async function updateProjectSpecies(
       params.push(data.gbif_id);
     }
 
-    if (updates.length === 0) return true;
+    if (updates.length === 0) return { status: "updated" };
 
     updates.push("last_updated = ?");
     params.push(now);
@@ -215,10 +372,10 @@ export async function updateProjectSpecies(
 
     await touchProjectBySpeciesId(speciesId);
 
-    return true;
+    return { status: "updated" };
   } catch (error) {
     console.error("Error updating species:", error);
-    return false;
+    return { status: "error", message: errorMessage(error) };
   }
 }
 
@@ -238,9 +395,18 @@ export async function updateProjectSpeciesWithCommonNames(
       source?: ProjectSpeciesCommonName["source"];
     }>;
   },
-): Promise<boolean> {
+): Promise<UpdateSpeciesResult> {
   try {
     const now = new Date().toISOString();
+
+    // A rename that collides with another species is refused before anything is written.
+    if (data.scientific_name !== undefined) {
+      if (!speciesNameKey(data.scientific_name)) {
+        return { status: "error", message: "The scientific name is required." };
+      }
+      const conflictId = await findRenameConflict(speciesId, data.scientific_name);
+      if (conflictId !== null) return { status: "duplicate", existingId: conflictId };
+    }
 
     // Update basic species data
     const updates = [];
@@ -298,10 +464,10 @@ export async function updateProjectSpeciesWithCommonNames(
 
     await touchProjectBySpeciesId(speciesId);
 
-    return true;
+    return { status: "updated" };
   } catch (error) {
     console.error("Error updating species with common names:", error);
-    return false;
+    return { status: "error", message: errorMessage(error) };
   }
 }
 
@@ -435,17 +601,28 @@ export async function projectSpeciesExists(
   scientificName: string,
 ): Promise<boolean> {
   try {
-    const result = await db.getFirstAsync(
-      `SELECT id FROM project_species_catalog 
-       WHERE project_id = ? AND LOWER(scientific_name) = LOWER(?)`,
-      [projectId, scientificName],
-    );
-
-    return !!result;
+    const index = await loadSpeciesKeyIndex(projectId);
+    return index.has(speciesNameKey(scientificName));
   } catch (error) {
     console.error("Error checking species existence:", error);
     return false;
   }
+}
+
+/**
+ * Result of a batch import. `duplicates` were skipped because the project
+ * already had them; `failed` could not be added for another reason.
+ */
+export interface BatchImportSummary {
+  inserted: number;
+  duplicates: number;
+  failed: number;
+}
+
+function countOutcome(summary: BatchImportSummary, outcome: CreateSpeciesResult): void {
+  if (outcome.status === "inserted") summary.inserted++;
+  else if (outcome.status === "duplicate") summary.duplicates++;
+  else summary.failed++;
 }
 
 /**
@@ -460,45 +637,35 @@ export async function importSpeciesFromGBIF(
     gbif_id?: string;
     commonNames: Array<{ name: string; language: string }>;
   }>,
-): Promise<{ inserted: number; skipped: number }> {
-  let inserted = 0;
-  let skipped = 0;
+): Promise<BatchImportSummary> {
+  const summary: BatchImportSummary = { inserted: 0, duplicates: 0, failed: 0 };
 
   try {
+    const index = await loadSpeciesKeyIndex(projectId);
     for (const result of gbifResults) {
-      // Check if species already exists
-      const exists = await projectSpeciesExists(projectId, result.scientificName);
-      if (exists) {
-        skipped++;
-        continue;
-      }
-
-      // Create species
-      const speciesId = await createProjectSpecies({
-        project_id: projectId,
-        scientific_name: result.scientificName,
-        family: result.family,
-        genus: result.genus,
-        gbif_id: result.gbif_id,
-        source: "gbif",
-        common_names: result.commonNames.map(cn => ({
-          common_name: cn.name,
-          language: cn.language,
-          source: "gbif" as const,
-        })),
-      });
-
-      if (speciesId) {
-        inserted++;
-      } else {
-        skipped++;
-      }
+      const outcome = await createProjectSpecies(
+        {
+          project_id: projectId,
+          scientific_name: result.scientificName,
+          family: result.family,
+          genus: result.genus,
+          gbif_id: result.gbif_id,
+          source: "gbif",
+          common_names: result.commonNames.map(cn => ({
+            common_name: cn.name,
+            language: cn.language,
+            source: "gbif" as const,
+          })),
+        },
+        index,
+      );
+      countOutcome(summary, outcome);
     }
   } catch (error) {
     console.error("Error importing species from GBIF:", error);
   }
 
-  return { inserted, skipped };
+  return summary;
 }
 
 /**
@@ -655,45 +822,35 @@ export async function importSpeciesFromSpeciesLink(
       stateProvince?: string;
     };
   }>,
-): Promise<{ inserted: number; skipped: number }> {
-  let inserted = 0;
-  let skipped = 0;
+): Promise<BatchImportSummary> {
+  const summary: BatchImportSummary = { inserted: 0, duplicates: 0, failed: 0 };
 
   try {
+    const index = await loadSpeciesKeyIndex(projectId);
     for (const result of speciesLinkResults) {
-      // Check if species already exists
-      const exists = await projectSpeciesExists(projectId, result.scientificName);
-      if (exists) {
-        skipped++;
-        continue;
-      }
-
-      // Create species
-      const speciesId = await createProjectSpecies({
-        project_id: projectId,
-        scientific_name: result.scientificName,
-        family: result.family,
-        genus: result.genus,
-        gbif_id: undefined, // SpeciesLink doesn't use GBIF IDs
-        source: "specieslink",
-        common_names: result.commonNames.map(cn => ({
-          common_name: cn.name,
-          language: cn.language,
-          source: "specieslink" as const,
-        })),
-      });
-
-      if (speciesId) {
-        inserted++;
-      } else {
-        skipped++;
-      }
+      const outcome = await createProjectSpecies(
+        {
+          project_id: projectId,
+          scientific_name: result.scientificName,
+          family: result.family,
+          genus: result.genus,
+          gbif_id: undefined, // SpeciesLink doesn't use GBIF IDs
+          source: "specieslink",
+          common_names: result.commonNames.map(cn => ({
+            common_name: cn.name,
+            language: cn.language,
+            source: "specieslink" as const,
+          })),
+        },
+        index,
+      );
+      countOutcome(summary, outcome);
     }
   } catch (error) {
     console.error("Error importing species from SpeciesLink:", error);
   }
 
-  return { inserted, skipped };
+  return summary;
 }
 
 /**
@@ -715,28 +872,22 @@ export async function importSpeciesFromCatalog(
       source: string;
     }>;
   }>,
-): Promise<{ inserted: number; merged: number; skipped: number }> {
-  let inserted = 0;
-  let merged = 0;
-  let skipped = 0;
+): Promise<BatchImportSummary & { merged: number }> {
+  const summary = { inserted: 0, merged: 0, duplicates: 0, failed: 0 };
 
   try {
+    const index = await loadSpeciesKeyIndex(projectId);
     for (const entry of entries) {
-      if (!entry.scientific_name?.trim()) {
-        skipped++;
+      const name = entry.scientific_name?.trim();
+      if (!name) {
+        summary.failed++;
         continue;
       }
 
-      const existing = await db.getFirstAsync<{ id: number }>(
-        `SELECT id FROM project_species_catalog
-         WHERE project_id = ? AND LOWER(scientific_name) = LOWER(?)`,
-        [projectId, entry.scientific_name.trim()],
-      );
-
-      if (!existing) {
-        const speciesId = await createProjectSpecies({
+      const outcome = await createProjectSpecies(
+        {
           project_id: projectId,
-          scientific_name: entry.scientific_name.trim(),
+          scientific_name: name,
           family: entry.family,
           genus: entry.genus,
           gbif_id: entry.gbif_id,
@@ -746,45 +897,49 @@ export async function importSpeciesFromCatalog(
             language: cn.language,
             source: sanitizeCatalogSource(cn.source),
           })),
-        });
-        if (speciesId) inserted++;
-        else skipped++;
-      } else {
-        // Merge common names: insert only those not already present
-        let addedAny = false;
-        for (const cn of entry.common_names) {
-          if (!cn.common_name?.trim()) continue;
-          try {
-            await db.runAsync(
-              `INSERT OR IGNORE INTO project_species_common_names
-               (species_id, common_name, language, source, created_at)
-               VALUES (?, ?, ?, ?, ?)`,
-              [
-                existing.id,
-                cn.common_name.trim(),
-                cn.language ?? "pt",
-                sanitizeCatalogSource(cn.source),
-                new Date().toISOString(),
-              ],
-            );
-            addedAny = true;
-          } catch {
-            // Duplicate — silently skip
-          }
-        }
-        if (addedAny) merged++;
-        else skipped++;
+        },
+        index,
+      );
+
+      if (outcome.status !== "duplicate") {
+        countOutcome(summary, outcome);
+        continue;
       }
+
+      // Already in the catalog: merge only the common names it doesn't have yet.
+      let addedAny = false;
+      for (const cn of entry.common_names) {
+        if (!cn.common_name?.trim()) continue;
+        try {
+          await db.runAsync(
+            `INSERT OR IGNORE INTO project_species_common_names
+             (species_id, common_name, language, source, created_at)
+             VALUES (?, ?, ?, ?, ?)`,
+            [
+              outcome.existingId,
+              cn.common_name.trim(),
+              cn.language ?? "pt",
+              sanitizeCatalogSource(cn.source),
+              new Date().toISOString(),
+            ],
+          );
+          addedAny = true;
+        } catch {
+          // Already there - silently skip
+        }
+      }
+      if (addedAny) summary.merged++;
+      else summary.duplicates++;
     }
 
     // The `inserted` case already bumps the project via createProjectSpecies;
     // the merge-only case (existing species, new common names) needs its own touch.
-    if (merged > 0) {
+    if (summary.merged > 0) {
       await touchProject(projectId);
     }
   } catch (error) {
     console.error("Error importing species from catalog:", error);
   }
 
-  return { inserted, merged, skipped };
+  return summary;
 }

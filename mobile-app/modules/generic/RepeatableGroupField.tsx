@@ -3,6 +3,8 @@ import { View, ScrollView, StyleSheet } from "react-native";
 import { Card, Text, Button, IconButton, Portal, Modal, useTheme } from "react-native-paper";
 import type { DynamicGroupRule, LanguageCode } from "@/protocol-kernel/types";
 import { useI18n } from "@/contexts/i18n-context";
+import { DialogProvider } from "@/hooks/use-dialog";
+import { BUTTON_RADIUS } from "@/constants/shape";
 import { GenericFieldRow } from "./GenericFieldRow";
 
 interface Props {
@@ -53,6 +55,11 @@ export function RepeatableGroupField({
     onChange(items.filter((_, i) => i !== index));
   };
 
+  const removeEditedItem = () => {
+    if (editingIndex !== null) removeItem(editingIndex);
+    setModalVisible(false);
+  };
+
   const saveItem = () => {
     if (editingIndex === null) {
       onChange([...items, draftItem]);
@@ -84,7 +91,7 @@ export function RepeatableGroupField({
         mode="outlined"
         icon="plus"
         onPress={openAdd}
-        style={{ marginTop: 8, borderStyle: "dashed" }}
+        style={{ marginTop: 8, borderStyle: "dashed", borderRadius: BUTTON_RADIUS }}
         textColor={theme.colors.primary}
       >
         {t("survey.addGroupItem", { label })}
@@ -96,32 +103,53 @@ export function RepeatableGroupField({
           onDismiss={() => setModalVisible(false)}
           contentContainerStyle={[styles.modalContent, { backgroundColor: theme.colors.surface }]}
         >
-          <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
-            <Text variant="titleMedium" style={{ marginBottom: 16, fontWeight: "bold", color: theme.colors.primary }}>
-              {editingIndex === null
-                ? t("survey.addGroupItem", { label })
-                : `${label} ${editingIndex + 1}`}
-            </Text>
+          {/* Paper renders Portal content as a sibling of the app tree, outside
+              the root DialogProvider (app/_layout.tsx), so useAlertDialog() in
+              PhotoInput/AudioNotesInput would throw here. A nested provider
+              fixes that, and its own Portal mounts after this one, so alerts
+              stack on top of the modal instead of behind it. */}
+          <DialogProvider>
+            <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+              <Text variant="titleMedium" style={{ marginBottom: 16, fontWeight: "bold", color: theme.colors.primary }}>
+                {editingIndex === null
+                  ? t("survey.addGroupItem", { label })
+                  : `${label} ${editingIndex + 1}`}
+              </Text>
 
-            {group.itemFields.map((field) => (
-              <GenericFieldRow
-                key={field.id}
-                field={field}
-                value={draftItem[field.id]}
-                onChange={(val) => setDraftItem((prev) => ({ ...prev, [field.id]: val }))}
-                language={language}
-                projectId={projectId}
-                surveyPointId={surveyPointId}
-              />
-            ))}
+              {group.itemFields.map((field) => (
+                <GenericFieldRow
+                  key={field.id}
+                  field={field}
+                  value={draftItem[field.id]}
+                  onChange={(val) => setDraftItem((prev) => ({ ...prev, [field.id]: val }))}
+                  language={language}
+                  projectId={projectId}
+                  surveyPointId={surveyPointId}
+                />
+              ))}
 
-            <Button mode="contained" onPress={saveItem} style={{ marginTop: 8 }}>
-              {t("common.save")}
-            </Button>
-            <Button onPress={() => setModalVisible(false)} style={{ marginTop: 8 }}>
-              {t("common.cancel")}
-            </Button>
-          </ScrollView>
+              <Button mode="contained" onPress={saveItem} style={{ marginTop: 8, borderRadius: BUTTON_RADIUS }}>
+                {t("common.save")}
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={() => setModalVisible(false)}
+                style={{ marginTop: 8, borderRadius: BUTTON_RADIUS }}
+              >
+                {t("common.cancel")}
+              </Button>
+              {editingIndex !== null && (
+                <Button
+                  mode="outlined"
+                  textColor={theme.colors.error}
+                  onPress={removeEditedItem}
+                  style={{ marginTop: 8, borderRadius: BUTTON_RADIUS }}
+                >
+                  {t("common.remove")}
+                </Button>
+              )}
+            </ScrollView>
+          </DialogProvider>
         </Modal>
       </Portal>
     </View>

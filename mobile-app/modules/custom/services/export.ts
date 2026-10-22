@@ -4,7 +4,12 @@ import { escapeCsv, writeAndShare } from "@/core/export/file-writer";
 import { buildProtocolExportPlan } from "@/core/export/generic-export-engine";
 import { getCustomProtocolById } from "@/db/queries/custom-protocols";
 import { buildCustomModuleDescriptor } from "@/modules/custom/manifest";
-import { parsePhotoUris, parseJsonText } from "@/db/mappers/json-utils";
+import { parseJsonText } from "@/db/mappers/json-utils";
+import {
+  getModuleMediaFields,
+  listModuleMediaUris,
+  type ModuleMediaField,
+} from "@/core/project-sharing/module-media";
 
 async function resolveCustomModules(protocolId: string): Promise<ModuleDescriptor[]> {
   const cpId = parseInt(protocolId, 10);
@@ -23,6 +28,17 @@ function resolveCustomModulesCached(protocolId: string): Promise<ModuleDescripto
     cachedModules = { protocolId, modules: resolveCustomModules(protocolId) };
   }
   return cachedModules.modules;
+}
+
+// Same per-protocol caching as above, for the media fields (top-level and
+// repeatable-group sub-fields) that extractMedia reads through the shared
+// module-media walker.
+let cachedMediaFields: { protocolId: string; fields: Promise<ModuleMediaField[]> } | null = null;
+function resolveModuleMediaFieldsCached(protocolId: string): Promise<ModuleMediaField[]> {
+  if (cachedMediaFields?.protocolId !== protocolId) {
+    cachedMediaFields = { protocolId, fields: getModuleMediaFields(protocolId, "custom") };
+  }
+  return cachedMediaFields.fields;
 }
 
 // --- GeoJSON Export ---
@@ -91,22 +107,30 @@ async function extractMedia(point: PointEnvelope, project: ProjectRef): Promise<
   const notes: string[] = [];
 
   const modules = await resolveCustomModulesCached(project.protocolId);
+  const mediaFields = await resolveModuleMediaFieldsCached(project.protocolId);
   for (const descriptor of modules) {
     const data = (point.modules[descriptor.id] as Record<string, unknown>) ?? {};
     for (const field of descriptor.schema.fields) {
-      const raw = data[field.id];
-      if (field.renderAs === "photo_input") {
-        photos.push(...parsePhotoUris(raw));
-      } else if (field.renderAs === "audio_notes_input") {
-        const parsed = parseJsonText<unknown[]>(raw as any, [], Array.isArray);
-        audioNotes.push(
-          ...parsed
-            .filter(isAudioNoteRecord)
-            .map((n) => ({ uri: n.uri, duration: n.duration, timestamp: n.timestamp })),
-        );
-      } else if (field.renderAs === "notes_list") {
-        const parsed = parseJsonText<string[]>(raw as any, [], Array.isArray);
+      if (field.renderAs === "notes_list") {
+        const parsed = parseJsonText<string[]>(data[field.id] as any, [], Array.isArray);
         notes.push(...parsed.filter((n): n is string => typeof n === "string" && n.trim() !== ""));
+      }
+    }
+
+    // Photos and audio notes: top-level fields AND the media sub-fields of
+    // repeatable groups, found by the same walker the package export and the
+    // Drive backup use.
+    const fieldsOfModule = mediaFields.filter((f) => f.moduleId === descriptor.id);
+    if (fieldsOfModule.length === 0) continue;
+    for (const media of await listModuleMediaUris(JSON.stringify(data), fieldsOfModule)) {
+      if (media.kind === "photo") {
+        photos.push(media.uri);
+      } else if (isAudioNoteRecord(media.entry)) {
+        audioNotes.push({
+          uri: media.entry.uri,
+          duration: media.entry.duration,
+          timestamp: media.entry.timestamp,
+        });
       }
     }
   }

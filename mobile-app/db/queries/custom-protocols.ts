@@ -10,6 +10,7 @@ import {
   mapCustomProtocolFromDb,
   toDbProtocolSchema,
 } from "@/db/mappers/custom-protocol.mapper";
+import { generateUuid } from "@/core/utils/uuid";
 
 // ============================================
 // CREATE
@@ -40,6 +41,36 @@ export async function createCustomProtocol(
   return result.lastInsertRowId;
 }
 
+/**
+ * Create a custom protocol carrying a uuid that already exists elsewhere
+ * (e.g. imported from a project configuration package). The incoming uuid
+ * is persisted verbatim so cross-device identity is preserved - never
+ * generate a fresh one here.
+ */
+export async function createCustomProtocolWithUuid(
+  name: string,
+  schema: CustomProtocolSchema,
+  theme: string,
+  uuid: string,
+  description?: string,
+  collection_instructions?: string,
+): Promise<number> {
+  const result = await db.runAsync(
+    `INSERT INTO custom_protocols (name, theme, description, collection_instructions, schema, created_at, updated_at, uuid)
+     VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'), ?)`,
+    [
+      name,
+      theme,
+      description || null,
+      collection_instructions || null,
+      toDbProtocolSchema(schema),
+      uuid,
+    ],
+  );
+
+  return result.lastInsertRowId;
+}
+
 // ============================================
 // READ
 // ============================================
@@ -63,6 +94,22 @@ export async function getCustomProtocolById(
   const row = await db.getFirstAsync<CustomProtocolDbRow>(
     "SELECT * FROM custom_protocols WHERE id = ?",
     [id],
+  );
+
+  if (!row) return null;
+
+  return mapCustomProtocolFromDb(row);
+}
+
+/**
+ * Get a custom protocol by its stable cross-device uuid (project sharing, Fase 0)
+ */
+export async function getCustomProtocolByUuid(
+  uuid: string,
+): Promise<CustomProtocol | null> {
+  const row = await db.getFirstAsync<CustomProtocolDbRow>(
+    "SELECT * FROM custom_protocols WHERE uuid = ?",
+    [uuid],
   );
 
   if (!row) return null;
@@ -185,4 +232,26 @@ export async function getProtocolUsageCount(
   );
 
   return result?.count || 0;
+}
+
+/**
+ * Returns the custom protocol's uuid, generating and persisting one via the
+ * shared uuid utility if it doesn't have one yet. Never regenerates an
+ * existing uuid, so repeated calls (e.g. re-exporting a project's
+ * configuration package) always return the same value.
+ */
+export async function ensureCustomProtocolUuid(id: number): Promise<string> {
+  const row = await db.getFirstAsync<{ uuid: string | null }>(
+    "SELECT uuid FROM custom_protocols WHERE id = ?",
+    [id],
+  );
+
+  if (row?.uuid) return row.uuid;
+
+  const uuid = generateUuid();
+  await db.runAsync("UPDATE custom_protocols SET uuid = ? WHERE id = ?", [
+    uuid,
+    id,
+  ]);
+  return uuid;
 }

@@ -26,11 +26,7 @@ flowchart TD
     Projects -->|"create project"| NewProject["project/new.tsx"]
     Projects -->|"create/edit custom protocol"| Builder["protocol/builder.tsx"]
     Projects -->|"browse native scientific protocols"| NativeCatalog["protocol/native-catalog.tsx<br/>catalog/picker (today only paisageo)"]
-    Projects -->|"router.push('/protocol/tutorials')"| Tutorials["protocol/tutorials.tsx<br/>step-by-step tutorial (protocol picker)"]
     Projects -->|"router.push('/project-details/[id]')"| Details["project-details/[id].tsx<br/>THE SINGLE, manifest-driven screen"]
-
-    NativeCatalog -->|"'View Tutorial' (protocol pre-selected)"| Tutorials
-    Details -->|"tutorial icon (project's protocol pre-selected)"| Tutorials
 
     Details -->|"view map"| ViewMap["view-map.tsx"]
     Details -->|"species catalog"| SpeciesCatalog["species-catalog/[id].tsx"]
@@ -51,10 +47,6 @@ Verified points (file:line):
 - `survey-point-details/[id].tsx:410-416` builds the same URL when editing an existing point, branching on `isOfficial` (paisageo) vs. custom.
 - `survey/form.tsx:498` navigates back to `project-details/${projectId}` after saving.
 - `projects.tsx:522` → `router.push('/protocol/native-catalog')` — a recommendation card in the project list leads to the native scientific protocol catalog (`protocol/native-catalog.tsx`), which reads `NATIVE_PROTOCOLS_CATALOG` (`constants/native-protocols-catalog.ts`) and the `ProtocolRegistry`'s manifest list to show each available native protocol's workflow and modules before the user creates a project with it — today only the `paisageo` entry exists.
-- `protocol/tutorials.tsx` is the step-by-step tutorial screen, with the same protocol picker (Dialog) as `native-catalog.tsx`, but listing `registry.listProtocols()` **without** filtering out `kind === "custom"` — the generic `"custom"` manifest (`modules/custom/manifest.ts`) shows up as another option, alongside `paisageo`. It reads `PROTOCOL_TUTORIALS` (`constants/protocol-tutorials.ts`), indexed by the same manifest `id`. It accepts `?protocolId=<id>` in the URL to open with a protocol pre-selected; without the parameter, it falls back to the first manifest in the list (same fallback as `native-catalog.tsx`). Three entry points, all passing `protocolId` except the one from the project list:
-  - `projects.tsx` (Protocols tab) → `router.push('/protocol/tutorials')`, with no protocol pre-selected.
-  - `protocol/native-catalog.tsx:228` → `router.push('/protocol/tutorials?protocolId=${selected.id}')`, with the catalog's currently-displayed protocol.
-  - `project-details/[id].tsx:627` → `router.push('/protocol/tutorials?protocolId=${manifestId}')`, where `manifestId = resolveManifestId(project)` — `"paisageo"` for native projects and always `"custom"` for Personalized-protocol projects, so the same button works for both cases with no conditional logic in the screen.
 
 ## End-to-end user flow: create project → collect → export
 
@@ -69,7 +61,41 @@ flowchart LR
     F --> G["7. Share file<br/>writeAndShare() (expo-sharing)"]
 ```
 
-This is the flow that exercises the architecture end to end: the protocol choice in (1) determines, via `resolveManifestId()`, which `ProtocolManifest` the details screen (2) consults to know which modules to show and which exporter to use; the form (4) uses a `ModuleRendererBinding` or `GenericModuleRenderer` depending on whether the module has a specialized renderer or not (see [01_ARCHITECTURE.md](01_ARCHITECTURE.md) and [12_FAQ.md](12_FAQ.md)); and export (6) uses the same generic engine regardless of which protocol was chosen in (1).
+This is the flow that exercises the architecture end to end: the protocol choice in (1) determines, via `resolveManifestId()`, which `ProtocolManifest` the details screen (2) consults to know which modules to show and which exporter to use; the form (4) uses a `ModuleRendererBinding` or `GenericModuleRenderer` depending on whether the module has a specialized renderer or not (see [01_ARCHITECTURE.md](01_ARCHITECTURE.md) and [13_FAQ.md](13_FAQ.md)); and export (6) uses the same generic engine regardless of which protocol was chosen in (1).
+
+## Backup and collaboration screens
+
+These sit alongside the flow above rather than replacing it — a
+collaborator's `survey/form.tsx`/`project-details/[id].tsx` usage is
+identical to the single-device flow. Full model in
+[12_BACKUP_COLLABORATION.md](12_BACKUP_COLLABORATION.md).
+
+```mermaid
+flowchart TD
+    Projects["(projects)/projects.tsx"] -->|"owner: Restaurar Meus Projetos do Drive"| Restore["RestoreProjectsModal<br/>(components/drive-sync/)"]
+    Details["project-details/[id].tsx"] -->|"owner: Ativar/Fazer backup"| GConnect["GoogleConnectionModal<br/>(components/google-account/)"]
+    Projects -->|"owner: same, if not connected"| GConnect
+    Restore -->|"if not connected"| GConnect
+    Details -->|"pending points imported"| Pending["project-pending-approvals/[id].tsx"]
+    Details -->|"rejected points"| Rejected["project-rejected/[id].tsx"]
+    Details -->|"collaborator: export points, no code set yet"| CCode["CollectorCodeModal<br/>(components/local-identity/)"]
+    PointDetails["survey-point-details/[id].tsx"] -->|"collaborator: export single point"| CCode
+    Details -->|"owner: import points package, duplicates found"| Dup["PointDuplicatesModal<br/>(components/project-sharing/)"]
+    Details -->|"owner: backup blocked by media missing on the device"| Discard["Confirm: Descartar mídias não encontradas<br/>(discardMissingMedia, then backup retried)"]
+```
+
+Which of these actions a project shows depends on its `collaboration_role`
+(`getProjectActionVisibility`, see the "Role-based actions" section of
+[12_BACKUP_COLLABORATION.md](12_BACKUP_COLLABORATION.md)); the pending and
+rejected screens also redirect back if the role is not `'owner'`. After an
+import finishes, the screen refreshes immediately instead of waiting for a
+navigation.
+
+`GoogleConnectionModal` and `CollectorCodeModal` are each a single shared
+component with one home base in Settings
+(`app/(tabs)/settings.tsx`) — every other trigger point above opens the
+same instance in place and resumes the action that needed it once
+connected/set, rather than redirecting to Settings.
 
 ## Specialized vs. generic renderer, inside the form
 

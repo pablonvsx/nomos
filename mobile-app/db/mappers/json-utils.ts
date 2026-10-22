@@ -59,3 +59,24 @@ export function parsePhotoUris(rawValue: unknown): string[] {
     .map((item) => (typeof item === "string" ? item : (item as { uri?: unknown })?.uri))
     .filter((uri): uri is string => typeof uri === "string" && uri.length > 0);
 }
+
+export interface AudioNoteEntry {
+  uri: string;
+  duration: number;
+  timestamp: number;
+}
+
+/**
+ * Parses a points.audio_notes TEXT column (JSON array of
+ * {uri, duration, timestamp}) into a typed array. Single source of truth
+ * for this parsing, reused by the points export/import and backup flows.
+ */
+export function parseAudioNotes(rawValue: string | null | undefined): AudioNoteEntry[] {
+  if (!rawValue) return [];
+  try {
+    const parsed = JSON.parse(rawValue);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}

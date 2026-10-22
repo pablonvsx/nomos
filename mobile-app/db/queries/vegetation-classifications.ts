@@ -1,5 +1,6 @@
 import { db } from "../initialize";
 import { VegetationClassification, VegetationClass } from "@/types/database";
+import { generateUuid } from "@/core/utils/uuid";
 
 /**
  * Creates a new vegetation classification in the database
@@ -40,8 +41,9 @@ export async function getVegetationClassificationsByProject(
       classes: string;
       created_at: string;
       last_updated: string;
+      uuid: string | null;
     }>(
-      `SELECT id, project_id, name, classes, created_at, last_updated
+      `SELECT id, project_id, name, classes, created_at, last_updated, uuid
        FROM vegetation_classifications
        WHERE project_id = ?
        ORDER BY created_at DESC`,
@@ -55,11 +57,53 @@ export async function getVegetationClassificationsByProject(
       classes: JSON.parse(row.classes),
       created_at: row.created_at,
       last_updated: row.last_updated,
+      uuid: row.uuid ?? null,
     }));
   } catch (error) {
     console.error("Error fetching vegetation classifications:", error);
     return [];
   }
+}
+
+/**
+ * Gets all vegetation classifications for a project, backfilling a uuid (via
+ * the shared uuid utility) for any row that doesn't have one yet. This is
+ * what the project configuration package export uses.
+ */
+export async function getAllVegetationClassificationsEnsuringUuids(
+  projectId: number,
+): Promise<VegetationClassification[]> {
+  const classifications = await getVegetationClassificationsByProject(projectId);
+  const result: VegetationClassification[] = [];
+
+  for (const classification of classifications) {
+    if (classification.uuid) {
+      result.push(classification);
+    } else {
+      const uuid = await ensureVegetationClassificationUuid(classification.id);
+      result.push({ ...classification, uuid });
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Gets a vegetation classification by its stable cross-device uuid, scoped
+ * to a project (project sharing import dedupe, Fase 0).
+ */
+export async function getVegetationClassificationByUuid(
+  projectId: number,
+  uuid: string,
+): Promise<VegetationClassification | null> {
+  const row = await db.getFirstAsync<{ id: number }>(
+    "SELECT id FROM vegetation_classifications WHERE project_id = ? AND uuid = ?",
+    [projectId, uuid],
+  );
+
+  if (!row) return null;
+
+  return getVegetationClassificationById(row.id);
 }
 
 /**
@@ -76,8 +120,9 @@ export async function getVegetationClassificationById(
       classes: string;
       created_at: string;
       last_updated: string;
+      uuid: string | null;
     }>(
-      `SELECT id, project_id, name, classes, created_at, last_updated
+      `SELECT id, project_id, name, classes, created_at, last_updated, uuid
        FROM vegetation_classifications
        WHERE id = ?`,
       [classificationId],
@@ -92,6 +137,7 @@ export async function getVegetationClassificationById(
       classes: JSON.parse(result.classes),
       created_at: result.created_at,
       last_updated: result.last_updated,
+      uuid: result.uuid ?? null,
     };
   } catch (error) {
     console.error("Error fetching vegetation classification:", error);
@@ -197,4 +243,44 @@ export async function getActiveVegetationClassificationConfig(projectId: number)
     console.error("Error fetching active vegetation classification config:", error);
     return null;
   }
+}
+
+/**
+ * Returns the classification's uuid, generating and persisting one via the
+ * shared uuid utility if it doesn't have one yet. Never regenerates an
+ * existing uuid.
+ */
+export async function ensureVegetationClassificationUuid(
+  classificationId: number,
+): Promise<string> {
+  const row = await db.getFirstAsync<{ uuid: string | null }>(
+    "SELECT uuid FROM vegetation_classifications WHERE id = ?",
+    [classificationId],
+  );
+
+  if (row?.uuid) return row.uuid;
+
+  const uuid = generateUuid();
+  await db.runAsync(
+    "UPDATE vegetation_classifications SET uuid = ? WHERE id = ?",
+    [uuid, classificationId],
+  );
+  return uuid;
+}
+
+/**
+ * Persists a uuid that already exists elsewhere (e.g. imported from a
+ * project configuration package) verbatim onto a classification row. Unlike
+ * ensureVegetationClassificationUuid, this always overwrites - it must only
+ * be called right after creating the row during import, to preserve
+ * cross-device identity instead of generating a new random uuid.
+ */
+export async function setVegetationClassificationUuid(
+  classificationId: number,
+  uuid: string,
+): Promise<void> {
+  await db.runAsync(
+    "UPDATE vegetation_classifications SET uuid = ? WHERE id = ?",
+    [uuid, classificationId],
+  );
 }

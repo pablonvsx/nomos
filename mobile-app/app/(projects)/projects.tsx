@@ -16,6 +16,10 @@ import * as DocumentPicker from "expo-document-picker";
 import * as Sharing from "expo-sharing";
 import { File, Paths } from "expo-file-system";
 import { useAlertDialog } from "@/hooks/use-dialog";
+import { useExclusiveOperation } from "@/hooks/use-exclusive-operation";
+import { OperationProgressBanner } from "@/components/ui/OperationProgressBanner";
+import { closeModalThenShow } from "@/core/ui/close-then-show";
+import { waitForModalClose } from "@/core/ui/wait-for-modal-close";
 import { useI18n } from "@/contexts/i18n-context";
 import { BUTTON_RADIUS, SEGMENTED_BUTTONS_SHAPE_THEME } from "@/constants/shape";
 
@@ -30,6 +34,17 @@ import {
 } from "@/db/queries/custom-protocols";
 import { Project, CustomProtocol } from "@/types/database";
 import { useProtocolRegistry, resolveManifestId } from "@/contexts/protocol-registry-context";
+import {
+  importProjectConfigPackage,
+  InvalidPackageError,
+  UnsupportedPackageVersionError,
+} from "@/core/project-sharing/project-config-package";
+import { getCurrentGoogleAccount } from "@/core/google-auth/google-auth-service";
+import { GoogleConnectionModal } from "@/components/google-account/GoogleConnectionModal";
+import { RestoreProjectsModal } from "@/components/drive-sync/RestoreProjectsModal";
+import type { RestoreResult } from "@/core/drive-sync/restore-service";
+import { refreshAfterImport } from "@/core/project-sharing/refresh-after-import";
+import { validateImportedProtocol } from "@/modules/custom/protocol-validation";
 
 export default function ProjectsScreen() {
   const router = useRouter();
@@ -37,6 +52,8 @@ export default function ProjectsScreen() {
   const insets = useSafeAreaInsets();
   const { alert, confirm } = useAlertDialog();
   const { t, currentLanguage } = useI18n();
+  // One long operation at a time (import/export): shows a banner and ignores re-taps.
+  const { operation, busy, run } = useExclusiveOperation();
   const registry = useProtocolRegistry();
   const lang = (currentLanguage as string) ?? "pt";
 
@@ -52,6 +69,9 @@ export default function ProjectsScreen() {
   const [protocolNames, setProtocolNames] = useState<Record<string, string>>(
     {},
   );
+  const [driveConnectionModalVisible, setDriveConnectionModalVisible] = useState(false);
+  const [pendingDriveIntent, setPendingDriveIntent] = useState<(() => void) | null>(null);
+  const [restoreProjectsModalVisible, setRestoreProjectsModalVisible] = useState(false);
   const [protocolThemes, setProtocolThemes] = useState<Record<string, string>>(
     {},
   );
@@ -156,7 +176,8 @@ export default function ProjectsScreen() {
     );
   };
 
-  const handleExportProtocol = async (protocol: CustomProtocol) => {
+  const handleExportProtocol = (protocol: CustomProtocol) =>
+    run(t("common.exporting"), async () => {
     try {
       const exportData = {
         name: protocol.name,
@@ -195,16 +216,73 @@ export default function ProjectsScreen() {
       console.error("Error exporting protocol:", error);
       alert(t("common.error"), t("protocol.errorExportingProtocol"));
     }
+  });
+
+  const handleImportProject = () =>
+    run(t("common.importing"), async () => {
+    try {
+      const result = await importProjectConfigPackage();
+      if (!result) return;
+
+      const { projectId, created } = result;
+      // Refetch before telling the user it worked: the picker does not change
+      // focus, so nothing else would refresh the list.
+      await refreshAfterImport({ clearMapData: () => {}, reload: loadData });
+      alert(
+        t("common.success"),
+        created
+          ? t("projectsList.projectImported")
+          : t("projectsList.projectAlreadyExists"),
+        () => router.push(`/project-details/${projectId}` as any),
+      );
+    } catch (error) {
+      console.error("Error importing project:", error);
+      if (error instanceof UnsupportedPackageVersionError) {
+        alert(t("common.error"), t("projectsList.configPackageFormatMismatch"));
+      } else if (error instanceof InvalidPackageError) {
+        alert(t("common.error"), t("projectsList.invalidConfigPackageFile"));
+      } else {
+        alert(t("common.error"), t("projectsList.errorImportingProject"));
+      }
+    }
+  });
+
+  const handleRestoreFromDrive = () => {
+    if (!getCurrentGoogleAccount()) {
+      setPendingDriveIntent(() => handleRestoreFromDrive);
+      setDriveConnectionModalVisible(true);
+      return;
+    }
+    setRestoreProjectsModalVisible(true);
   };
 
-  // TODO: implement actual project import (file picker + validation, mirroring
-  // handleImportProtocol below). For now this just surfaces that the action
-  // exists but isn't wired up yet.
-  const handleImportProject = () => {
-    alert(t("projectsList.importProject"), t("projectsList.importProjectComingSoon"));
+  // Called by RestoreProjectsModal AFTER it has closed itself and waited for
+  // its exit animation, so this alert is not stacked behind it. Warnings are
+  // merged into the one alert: showDialog replaces the current dialog, so
+  // consecutive alerts would hide each other.
+  const handleProjectRestored = (result: RestoreResult) => {
+    loadData();
+
+    const summary =
+      t("driveRestore.restoreSummary", {
+        imported: result.imported.toString(),
+        mediaDownloaded: result.mediaDownloaded.toString(),
+      }) +
+      (result.duplicatesSkipped > 0
+        ? "\n" + t("driveRestore.duplicatesSkippedWarning", { count: result.duplicatesSkipped.toString() })
+        : "");
+    const warnings = [
+      result.ownerEmailWarning ? t("driveRestore.ownerEmailWarning") : null,
+      result.activeClassificationWarning ? t("driveRestore.activeClassificationWarning") : null,
+    ].filter((message): message is string => message !== null);
+
+    alert(t("common.success"), [summary, ...warnings].join("\n\n"), () =>
+      router.push(`/project-details/${result.projectId}` as any),
+    );
   };
 
-  const handleImportProtocol = async () => {
+  const handleImportProtocol = () =>
+    run(t("common.importing"), async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ["application/json", "text/plain", "*/*"],
@@ -218,12 +296,10 @@ export default function ProjectsScreen() {
         const content = await response.text();
         const importedData = JSON.parse(content);
 
-        if (
-          !importedData.name ||
-          !importedData.schema ||
-          !importedData.schema.sections
-        ) {
-          alert(t("common.error"), t("protocol.invalidProtocolFile"));
+        // Invalid file shape, or a repeatable group nested inside another one.
+        const validation = validateImportedProtocol(importedData);
+        if (!validation.ok) {
+          alert(t("common.error"), t(validation.error.key, validation.error.params));
           return;
         }
 
@@ -233,22 +309,23 @@ export default function ProjectsScreen() {
             "{{name}}",
             importedData.name,
           ),
-          async () => {
-            try {
-              await createCustomProtocol(
-                importedData.name,
-                importedData.schema,
-                importedData.theme || "",
-                importedData.description || "",
-                importedData.collection_instructions || "",
-              );
-              loadData();
-              alert(t("common.success"), t("protocol.protocolImported"));
-            } catch (error) {
-              console.error("Error creating imported protocol:", error);
-              alert(t("common.error"), t("protocol.errorImportingProtocol"));
-            }
-          },
+          () =>
+            run(t("common.importing"), async () => {
+              try {
+                await createCustomProtocol(
+                  importedData.name,
+                  importedData.schema,
+                  importedData.theme || "",
+                  importedData.description || "",
+                  importedData.collection_instructions || "",
+                );
+                loadData();
+                alert(t("common.success"), t("protocol.protocolImported"));
+              } catch (error) {
+                console.error("Error creating imported protocol:", error);
+                alert(t("common.error"), t("protocol.errorImportingProtocol"));
+              }
+            }),
           () => {},
           t("common.import"),
           t("common.cancel"),
@@ -258,7 +335,7 @@ export default function ProjectsScreen() {
       console.error("Error importing protocol:", error);
       alert(t("common.error"), t("protocol.errorImportingProtocol"));
     }
-  };
+  });
 
   // 3. Component to render each project item in the list
   const renderProjectCard = ({ item }: { item: Project }) => {
@@ -470,6 +547,8 @@ export default function ProjectsScreen() {
         />
       </View>
 
+      <OperationProgressBanner operation={operation} />
+
       {/* Main Content List */}
       <View style={styles.content}>
         {isLoading ? (
@@ -515,24 +594,14 @@ export default function ProjectsScreen() {
             renderItem={renderProtocolCard}
             contentContainerStyle={styles.listContent}
             ListHeaderComponent={
-              <View>
-                <Button
-                  mode="outlined"
-                  icon="compass-outline"
-                  onPress={() => router.push("/protocol/native-catalog" as any)}
-                  style={[styles.nativeProtocolsButton, { borderRadius: BUTTON_RADIUS }]}
-                >
-                  {t("projectsList.nativeProtocolsShowcase")}
-                </Button>
-                <Button
-                  mode="outlined"
-                  icon="school-outline"
-                  onPress={() => router.push("/protocol/tutorials" as any)}
-                  style={[styles.nativeProtocolsButton, { borderRadius: BUTTON_RADIUS }]}
-                >
-                  {t("tutorials.buttonLabel")}
-                </Button>
-              </View>
+              <Button
+                mode="outlined"
+                icon="compass-outline"
+                onPress={() => router.push("/protocol/native-catalog" as any)}
+                style={[styles.nativeProtocolsButton, { borderRadius: BUTTON_RADIUS }]}
+              >
+                {t("projectsList.nativeProtocolsShowcase")}
+              </Button>
             }
             ListEmptyComponent={
               <View style={styles.emptyState}>
@@ -571,8 +640,11 @@ export default function ProjectsScreen() {
         icon={(isProjectsTab ? projectFabOpen : protocolFabOpen) ? "close" : "plus"}
         color={paperTheme.colors.onPrimary}
         fabStyle={{ backgroundColor: paperTheme.colors.primary }}
+        // Hidden while an import/export runs: it is the trigger, so this is what prevents double taps.
         actions={
-          isProjectsTab
+          busy
+            ? []
+            : isProjectsTab
             ? [
                 {
                   icon: "folder-plus",
@@ -586,6 +658,14 @@ export default function ProjectsScreen() {
                   icon: "import",
                   label: t("projectsList.importProject"),
                   onPress: handleImportProject,
+                  color: paperTheme.dark
+                    ? paperTheme.colors.onSurface
+                    : paperTheme.colors.primary,
+                },
+                {
+                  icon: "cloud-download",
+                  label: t("driveRestore.restoreAction"),
+                  onPress: handleRestoreFromDrive,
                   color: paperTheme.dark
                     ? paperTheme.colors.onSurface
                     : paperTheme.colors.primary,
@@ -626,6 +706,32 @@ export default function ProjectsScreen() {
         style={{
           height: insets.bottom,
         }}
+      />
+
+      {/* Google Connection Modal (Fase 7) - triggered when restoring from Drive without a connected account */}
+      <GoogleConnectionModal
+        visible={driveConnectionModalVisible}
+        onDismiss={() => {
+          setDriveConnectionModalVisible(false);
+          setPendingDriveIntent(null);
+        }}
+        onConnected={() => {
+          // The resumed action may open another modal/dialog: wait for this one to be gone.
+          const intent = pendingDriveIntent;
+          setPendingDriveIntent(null);
+          closeModalThenShow({
+            close: () => setDriveConnectionModalVisible(false),
+            wait: waitForModalClose,
+            show: () => intent?.(),
+          });
+        }}
+      />
+
+      {/* Restore Projects Modal (Fase 7) */}
+      <RestoreProjectsModal
+        visible={restoreProjectsModalVisible}
+        onDismiss={() => setRestoreProjectsModalVisible(false)}
+        onRestored={handleProjectRestored}
       />
     </View>
   );
