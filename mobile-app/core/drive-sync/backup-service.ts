@@ -1,7 +1,9 @@
 import { File } from "expo-file-system";
 import {
+  createFolder,
   ensureFolder,
   findChildByName,
+  listChildren,
   updateBinaryFile,
   updateJsonFile,
   uploadBinaryFile,
@@ -14,16 +16,30 @@ import {
   updatePoint,
 } from "@/db/queries/points";
 import { getProjectById } from "@/db/queries/projects";
-import {
-  PACKAGE_MEDIA_PREFIX,
-  buildModuleMediaRelativePath,
-  getModuleMediaFields,
-  mapModuleMediaUris,
-} from "@/core/project-sharing/module-media";
+import { getModuleMediaFields, mapModuleMediaUris } from "@/core/project-sharing/module-media";
 import { parseAudioNotes, parsePhotoUris } from "@/db/mappers/json-utils";
 import type { PointPackageAudioNote, PointPackageEntry } from "@/core/project-sharing/export-points";
 import { isNetworkTimeoutError } from "@/core/net/network-timeout";
 import { isBackupEligibleStatus } from "@/core/drive-sync/backup-eligibility";
+import { getPointDisplayLabel } from "@/core/points/point-label";
+import {
+  APPROVED_FOLDER,
+  POINT_JSON_FILENAME,
+  pointFolderLabel,
+  pointFolderName,
+} from "@/core/drive-sync/drive-layout";
+import {
+  createDriveMediaPathAllocator,
+  loadMediaLabelIndex,
+  splitRelativePath,
+  toDriveMediaMarker,
+} from "@/core/drive-sync/drive-media-paths";
+import {
+  createDriveFolderCache,
+  indexPointFolders,
+  subfolderKey,
+  type DriveFolderCache,
+} from "@/core/drive-sync/drive-folder-cache";
 
 export interface BackupResult {
   success: boolean;
@@ -59,11 +75,6 @@ export interface BackupSummary {
   }>;
 }
 
-function extensionFromUri(uri: string, fallback: string): string {
-  const match = uri.split(".").pop();
-  return match && match.length <= 5 ? match : fallback;
-}
-
 function mimeTypeForUri(uri: string): string {
   const extension = uri.split(".").pop()?.toLowerCase();
   if (extension === "m4a" || extension === "aac") return "audio/m4a";
@@ -73,63 +84,16 @@ function mimeTypeForUri(uri: string): string {
   return "image/jpeg";
 }
 
-// Read-before-write (same discipline as updateManifest, 14.1): a re-backup
-// of an already-synced point must never create a second Drive file with
-// the same name - Drive allows duplicate names, so "just upload again"
-// silently corrupts the folder instead of failing loudly.
-async function putBinaryFile(
-  filename: string,
-  mediaFolderId: string,
-  localUri: string,
-  mimeType: string,
-): Promise<void> {
-  const existing = await findChildByName(mediaFolderId, filename);
-  if (existing) {
-    await updateBinaryFile(existing.id, localUri, mimeType);
-  } else {
-    await uploadBinaryFile(filename, mediaFolderId, localUri, mimeType);
-  }
-}
-
-async function uploadPhoto(
-  uri: string,
-  index: number,
-  mediaFolderId: string,
-): Promise<{ filename: string } | { failure: string; missing?: boolean; timedOut?: boolean }> {
-  const file = new File(uri);
-  if (!file.exists) {
-    return { failure: `Foto ${index + 1} não encontrada no dispositivo.`, missing: true };
-  }
-  const filename = `photo_${index + 1}.${extensionFromUri(uri, "jpg")}`;
-  try {
-    await putBinaryFile(filename, mediaFolderId, uri, "image/jpeg");
-    return { filename };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { failure: `Foto ${index + 1} falhou ao enviar: ${message}`, timedOut: isNetworkTimeoutError(error) };
-  }
-}
-
-async function uploadAudioNote(
-  note: { uri: string; duration: number; timestamp: number },
-  index: number,
-  mediaFolderId: string,
-): Promise<{ entry: PointPackageAudioNote } | { failure: string; missing?: boolean; timedOut?: boolean }> {
-  const file = new File(note.uri);
-  if (!file.exists) {
-    return { failure: `Áudio ${index + 1} não encontrado no dispositivo.`, missing: true };
-  }
-  const filename = `audio_note_${index + 1}.${extensionFromUri(note.uri, "m4a")}`;
-  try {
-    await putBinaryFile(filename, mediaFolderId, note.uri, "audio/m4a");
-    return { entry: { filename, duration: note.duration, timestamp: note.timestamp } };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { failure: `Áudio ${index + 1} falhou ao enviar: ${message}`, timedOut: isNetworkTimeoutError(error) };
-  }
-}
-
-export async function backupPoint(pointId: string): Promise<BackupResult> {
+/**
+ * Backs up one point to approved/point_<label>_<uuid>/ in the owner's Drive:
+ * point.json plus its media under media/ (photos/, audio/, section_<title>/,
+ * group_<title>/item_NN/). Pass the same `cache` for every point of a batch so
+ * approved/ is listed once and known folders are not looked up again.
+ */
+export async function backupPoint(
+  pointId: string,
+  cache: DriveFolderCache = createDriveFolderCache(),
+): Promise<BackupResult> {
   const numericId = parseInt(pointId, 10);
   const result = await getPoint(numericId);
   if (!result) {
@@ -150,9 +114,15 @@ export async function backupPoint(pointId: string): Promise<BackupResult> {
 
   const pointUuid = await ensurePointUuid(point.id);
 
-  let approvedFolderId: string;
+  // Folders created during THIS call are empty: nothing to look up inside
+  // them, so subfolders and files go straight to creation. Everything else
+  // (a retry, a re-backup) is looked up by exact name first, so no folder or
+  // file is ever duplicated.
+  const createdHere = new Set<string>();
+
+  let pointFolderId: string;
   try {
-    approvedFolderId = await ensureFolder("approved", project.drive_folder_id);
+    pointFolderId = await locateOrCreatePointFolder(cache, project.drive_folder_id, pointUuid, point, createdHere);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return { success: false, error: message, timedOut: isNetworkTimeoutError(error) };
@@ -164,94 +134,113 @@ export async function backupPoint(pointId: string): Promise<BackupResult> {
   const mediaProblems: string[] = [];
   let missingMediaCount = 0;
   let timedOut = false;
-  const photoFilenames: string[] = [];
-  const audioEntries: PointPackageAudioNote[] = [];
 
-  const photoUris = parsePhotoUris(point.photos);
-  const audioNotes = parseAudioNotes(point.audio_notes);
-
-  // Created on first use, so a point without any media never gets a folder.
-  let mediaFolderId: string | null = null;
-  let mediaFolderFailed = false;
-  const ensureMediaFolder = async (): Promise<string | null> => {
-    if (mediaFolderId) return mediaFolderId;
-    if (mediaFolderFailed) return null;
+  const failedFolders = new Map<string, Error>();
+  const ensureSubfolder = async (parentId: string, name: string): Promise<string> => {
+    const key = subfolderKey(parentId, name);
+    const known = cache.subfolders.get(key);
+    if (known) return known;
+    const failure = failedFolders.get(key);
+    if (failure) throw failure;
     try {
-      const mediaRootId = await ensureFolder("media", approvedFolderId);
-      mediaFolderId = await ensureFolder(pointUuid, mediaRootId);
-      return mediaFolderId;
+      let id: string | undefined;
+      if (!createdHere.has(parentId)) id = (await findChildByName(parentId, name))?.id;
+      if (!id) {
+        id = (await createFolder(name, parentId)).id;
+        createdHere.add(id);
+      }
+      cache.subfolders.set(key, id);
+      return id;
     } catch (error) {
-      mediaFolderFailed = true;
-      if (isNetworkTimeoutError(error)) timedOut = true;
-      const message = error instanceof Error ? error.message : String(error);
-      mediaProblems.push(`Não foi possível criar a pasta de mídia: ${message}`);
-      return null;
+      failedFolders.set(key, error instanceof Error ? error : new Error(String(error)));
+      throw error;
     }
   };
 
+  /** Sends one local file to `relativePath` under the point folder, creating the subfolders it needs. */
+  const uploadAt = async (relativePath: string, localUri: string): Promise<void> => {
+    const segments = splitRelativePath(relativePath);
+    const filename = segments.pop()!;
+    let parentId = pointFolderId;
+    for (const folderName of segments) parentId = await ensureSubfolder(parentId, folderName);
+
+    const mimeType = mimeTypeForUri(localUri);
+    const existing = createdHere.has(parentId) ? null : await findChildByName(parentId, filename);
+    if (existing) {
+      await updateBinaryFile(existing.id, localUri, mimeType);
+    } else {
+      await uploadBinaryFile(filename, parentId, localUri, mimeType);
+    }
+  };
+
+  const noteFailure = (error: unknown): string => {
+    if (isNetworkTimeoutError(error)) timedOut = true;
+    return error instanceof Error ? error.message : String(error);
+  };
+
+  const labels = await loadMediaLabelIndex(project.protocol_id, project.protocol_source);
+  const paths = createDriveMediaPathAllocator(labels);
+
+  const photoPaths: string[] = [];
+  const audioEntries: PointPackageAudioNote[] = [];
+
+  const photoUris = parsePhotoUris(point.photos);
   for (let i = 0; i < photoUris.length; i++) {
-    const folderId = await ensureMediaFolder();
-    if (!folderId) {
-      mediaProblems.push(`Foto ${i + 1} não pôde ser enviada.`);
+    const relativePath = paths.pointPhoto(photoUris[i], i);
+    if (!new File(photoUris[i]).exists) {
+      mediaProblems.push(`Foto ${i + 1} não encontrada no dispositivo.`);
+      missingMediaCount += 1;
       continue;
     }
-    const outcome = await uploadPhoto(photoUris[i], i, folderId);
-    if ("filename" in outcome) {
-      photoFilenames.push(outcome.filename);
-    } else {
-      mediaProblems.push(outcome.failure);
-      if (outcome.missing) missingMediaCount += 1;
-      if (outcome.timedOut) timedOut = true;
+    try {
+      await uploadAt(relativePath, photoUris[i]);
+      photoPaths.push(relativePath);
+    } catch (error) {
+      mediaProblems.push(`Foto ${i + 1} falhou ao enviar: ${noteFailure(error)}`);
     }
   }
+
+  const audioNotes = parseAudioNotes(point.audio_notes);
   for (let i = 0; i < audioNotes.length; i++) {
-    const folderId = await ensureMediaFolder();
-    if (!folderId) {
-      mediaProblems.push(`Áudio ${i + 1} não pôde ser enviado.`);
+    const note = audioNotes[i];
+    const relativePath = paths.pointAudio(note.uri, i);
+    if (!new File(note.uri).exists) {
+      mediaProblems.push(`Áudio ${i + 1} não encontrado no dispositivo.`);
+      missingMediaCount += 1;
       continue;
     }
-    const outcome = await uploadAudioNote(audioNotes[i], i, folderId);
-    if ("entry" in outcome) {
-      audioEntries.push(outcome.entry);
-    } else {
-      mediaProblems.push(outcome.failure);
-      if (outcome.missing) missingMediaCount += 1;
-      if (outcome.timedOut) timedOut = true;
+    try {
+      await uploadAt(relativePath, note.uri);
+      audioEntries.push({ filename: relativePath, duration: note.duration, timestamp: note.timestamp });
+    } catch (error) {
+      mediaProblems.push(`Áudio ${i + 1} falhou ao enviar: ${noteFailure(error)}`);
     }
   }
 
   // Custom protocols keep photo_input / audio_notes_input media inside the
-  // module data_json: upload those files too and write package markers in
-  // place of this device's paths, so another device can restore them.
+  // module data_json: upload those files too and write markers carrying the
+  // exact Drive-relative path in place of this device's paths, so a restore
+  // follows them literally.
   const moduleMediaFields = await getModuleMediaFields(project.protocol_id, project.protocol_source);
   const modulesRecord: Record<string, string> = {};
   let schemaVersion = "1.0";
-  let moduleMediaCounter = 0;
   for (const mod of modules) {
     const fieldsOfModule = moduleMediaFields.filter((f) => f.moduleId === mod.module_id);
     modulesRecord[mod.module_id] =
       fieldsOfModule.length === 0
         ? mod.data_json
         : await mapModuleMediaUris(mod.data_json, fieldsOfModule, async (uri, location) => {
-            moduleMediaCounter += 1;
-            const relativePath = buildModuleMediaRelativePath(location, moduleMediaCounter, uri);
+            const relativePath = paths.moduleMedia(location, uri);
             if (!new File(uri).exists) {
               mediaProblems.push(`Mídia do módulo ${mod.module_id} não encontrada no dispositivo.`);
               missingMediaCount += 1;
               return null;
             }
-            const folderId = await ensureMediaFolder();
-            if (!folderId) {
-              mediaProblems.push(`Mídia do módulo ${mod.module_id} não pôde ser enviada.`);
-              return null;
-            }
             try {
-              await putBinaryFile(relativePath.replace(/\//g, "__"), folderId, uri, mimeTypeForUri(uri));
-              return `${PACKAGE_MEDIA_PREFIX}${relativePath}`;
+              await uploadAt(relativePath, uri);
+              return toDriveMediaMarker(relativePath);
             } catch (error) {
-              if (isNetworkTimeoutError(error)) timedOut = true;
-              const message = error instanceof Error ? error.message : String(error);
-              mediaProblems.push(`Mídia do módulo ${mod.module_id} falhou ao enviar: ${message}`);
+              mediaProblems.push(`Mídia do módulo ${mod.module_id} falhou ao enviar: ${noteFailure(error)}`);
               return null;
             }
           });
@@ -261,7 +250,8 @@ export async function backupPoint(pointId: string): Promise<BackupResult> {
   if (mediaProblems.length > 0) {
     // Nothing is written to the point's JSON on Drive, and drive_synced_at
     // stays null: an existing Drive JSON must never be rewritten with fewer
-    // media than the point really has.
+    // media than the point really has. The folders created so far stay, and
+    // the next attempt reuses them.
     return { success: false, error: mediaProblems.join(" "), missingMediaCount, timedOut };
   }
 
@@ -279,22 +269,20 @@ export async function backupPoint(pointId: string): Promise<BackupResult> {
     created_by: point.created_by ?? "",
     schema_version: schemaVersion,
     modules: modulesRecord,
-    photos: photoFilenames,
+    photos: photoPaths,
     audio_notes: audioEntries,
   };
 
-  // Uploading the point's data is the one step that still fails the whole
-  // point - unlike media, the scientific data must arrive intact for the
-  // point to count as backed up. Read-before-write: a re-backup (e.g. the
-  // point's data changed after approval, or a retry) updates the existing
-  // Drive file instead of creating a duplicate.
+  // Uploading the point's data is the last step and still fails the whole
+  // point: the scientific data must arrive intact for the point to count as
+  // backed up. In a folder that already existed (retry, re-backup) the JSON is
+  // looked up by exact name and updated, never duplicated.
   let uploaded;
   try {
-    const pointFilename = `${pointUuid}.json`;
-    const existing = await findChildByName(approvedFolderId, pointFilename);
+    const existing = createdHere.has(pointFolderId) ? null : await findChildByName(pointFolderId, POINT_JSON_FILENAME);
     uploaded = existing
       ? await updateJsonFile(existing.id, entry)
-      : await uploadJsonFile(pointFilename, approvedFolderId, entry);
+      : await uploadJsonFile(POINT_JSON_FILENAME, pointFolderId, entry);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return { success: false, error: message, timedOut: isNetworkTimeoutError(error) };
@@ -304,6 +292,37 @@ export async function backupPoint(pointId: string): Promise<BackupResult> {
   await updatePoint(point.id, { drive_synced_at: syncedAt });
 
   return { success: true };
+}
+
+/**
+ * The id of the point's folder inside approved/. approved/ is listed once per
+ * batch and the folder is matched by its `_<uuid>` suffix, so a point that
+ * already has one (a retry, a re-backup, a label edited by hand) reuses it.
+ * Otherwise the folder is created, named with the label as it is today - the
+ * label is never updated afterwards.
+ */
+async function locateOrCreatePointFolder(
+  cache: DriveFolderCache,
+  driveFolderId: string,
+  pointUuid: string,
+  point: { created_by?: string | null; point_number: number },
+  createdHere: Set<string>,
+): Promise<string> {
+  if (!cache.approvedFolderId) {
+    cache.approvedFolderId = await ensureFolder(APPROVED_FOLDER, driveFolderId);
+  }
+  if (!cache.pointFolders) {
+    cache.pointFolders = indexPointFolders(await listChildren(cache.approvedFolderId));
+  }
+
+  const existing = cache.pointFolders.get(pointUuid.toLowerCase());
+  if (existing) return existing.id;
+
+  const name = pointFolderName(pointFolderLabel(point), pointUuid);
+  const created = await createFolder(name, cache.approvedFolderId);
+  cache.pointFolders.set(pointUuid.toLowerCase(), { id: created.id, name });
+  createdHere.add(created.id);
+  return created.id;
 }
 
 export interface BackupProgress {
@@ -317,6 +336,8 @@ export async function backupAllPendingPoints(
   onProgress?: (progress: BackupProgress) => void,
 ): Promise<BackupSummary> {
   const points = await getBackupEligiblePointsByProject(projectId);
+  // One cache for the whole batch: approved/ is listed once, known folders are not looked up again.
+  const cache = createDriveFolderCache();
 
   let backedUp = 0;
   const failed: BackupSummary["failed"] = [];
@@ -328,7 +349,7 @@ export async function backupAllPendingPoints(
     // not as the whole batch aborting with the earlier points' work unreported.
     let result: BackupResult;
     try {
-      result = await backupPoint(point.id.toString());
+      result = await backupPoint(point.id.toString(), cache);
     } catch (error) {
       result = {
         success: false,
@@ -342,7 +363,7 @@ export async function backupAllPendingPoints(
     } else {
       failed.push({
         pointId: point.id,
-        pointLabel: `${point.created_by ?? "?"}-${point.point_number}`,
+        pointLabel: getPointDisplayLabel(point),
         reason: result.error ?? "Erro desconhecido.",
         missingMediaCount: result.missingMediaCount ?? 0,
         timedOut: result.timedOut ?? false,

@@ -11,55 +11,55 @@
 // only line of defense.
 
 import { FakeFile, resetFakeFs, fsState } from "../../project-sharing/__tests__/fixtures/fake-environment";
+import { createInMemoryDrive, FOLDER_MIME_TYPE, ROOT_ID } from "./fixtures/in-memory-drive";
 import { isBackupEligibleStatus } from "../backup-eligibility";
 
 jest.mock("expo-file-system", () => ({ File: FakeFile }));
 
-const ensureFolderMock = jest.fn(async (name: string, parentId: string) => `${parentId}/${name}`);
+// The Drive is the shared in-memory fake; every function is wrapped in a
+// jest.fn so tests can count calls and make one call fail.
+const mockDrive = createInMemoryDrive(fsState);
+const ensureFolderMock = jest.fn(mockDrive.api.ensureFolder);
+const createFolderMock = jest.fn(mockDrive.api.createFolder);
+const findChildByNameMock = jest.fn(mockDrive.api.findChildByName);
+const listChildrenMock = jest.fn(mockDrive.api.listChildren);
+const uploadBinaryFileMock = jest.fn(mockDrive.api.uploadBinaryFile);
+const uploadJsonFileMock = jest.fn(mockDrive.api.uploadJsonFile);
+const updateJsonFileMock = jest.fn(mockDrive.api.updateJsonFile);
+const updateBinaryFileMock = jest.fn(mockDrive.api.updateBinaryFile);
 
-// Fake Drive tree, keyed by "<parentId>::<name>" - lets findChildByName see
-// files created by uploadJsonFile/uploadBinaryFile in this same test, the
-// same way the real Drive folder would for a re-backup.
-let driveFilesByParentAndName = new Map<string, { id: string; name: string; mimeType: string }>();
-
-const uploadBinaryFileMock = jest.fn(
-  async (name: string, parentId: string, localUri: string, mimeType: string) => {
-    const file = { id: `media-${name}`, name, mimeType };
-    driveFilesByParentAndName.set(`${parentId}::${name}`, file);
-    return file;
-  },
-);
-const uploadJsonFileMock = jest.fn(async (name: string, parentId: string, content: unknown) => {
-  const file = { id: `json-${name}`, name, mimeType: "application/json" };
-  driveFilesByParentAndName.set(`${parentId}::${name}`, file);
-  return { ...file, modifiedTime: "2026-01-01T00:00:00.000Z" };
-});
-const findChildByNameMock = jest.fn(async (parentId: string, name: string) =>
-  driveFilesByParentAndName.get(`${parentId}::${name}`) ?? null,
-);
-const updateJsonFileMock = jest.fn(async (fileId: string, content: unknown) => ({
-  id: fileId,
-  name: "updated.json",
-  mimeType: "application/json",
-  modifiedTime: "2026-01-02T00:00:00.000Z",
-}));
-const updateBinaryFileMock = jest.fn(async (fileId: string, localUri: string, mimeType: string) => ({
-  id: fileId,
-  name: "updated",
-  mimeType,
-}));
+function bindDriveMocks() {
+  ensureFolderMock.mockReset().mockImplementation(mockDrive.api.ensureFolder);
+  createFolderMock.mockReset().mockImplementation(mockDrive.api.createFolder);
+  findChildByNameMock.mockReset().mockImplementation(mockDrive.api.findChildByName);
+  listChildrenMock.mockReset().mockImplementation(mockDrive.api.listChildren);
+  uploadBinaryFileMock.mockReset().mockImplementation(mockDrive.api.uploadBinaryFile);
+  uploadJsonFileMock.mockReset().mockImplementation(mockDrive.api.uploadJsonFile);
+  updateJsonFileMock.mockReset().mockImplementation(mockDrive.api.updateJsonFile);
+  updateBinaryFileMock.mockReset().mockImplementation(mockDrive.api.updateBinaryFile);
+}
 
 jest.mock("@/core/drive-sync/drive-api-client", () => ({
-  ensureFolder: (name: string, parentId: string) => ensureFolderMock(name, parentId),
-  findChildByName: (parentId: string, name: string) => findChildByNameMock(parentId, name),
-  uploadBinaryFile: (name: string, parentId: string, localUri: string, mimeType: string) =>
-    uploadBinaryFileMock(name, parentId, localUri, mimeType),
-  uploadJsonFile: (name: string, parentId: string, content: unknown) =>
-    uploadJsonFileMock(name, parentId, content),
-  updateJsonFile: (fileId: string, content: unknown) => updateJsonFileMock(fileId, content),
-  updateBinaryFile: (fileId: string, localUri: string, mimeType: string) =>
-    updateBinaryFileMock(fileId, localUri, mimeType),
+  ensureFolder: (...args: [string, string]) => ensureFolderMock(...args),
+  createFolder: (...args: [string, string]) => createFolderMock(...args),
+  findChildByName: (...args: [string, string]) => findChildByNameMock(...args),
+  listChildren: (...args: [string]) => listChildrenMock(...args),
+  uploadBinaryFile: (...args: [string, string, string, string]) => uploadBinaryFileMock(...args),
+  uploadJsonFile: (...args: [string, string, unknown]) => uploadJsonFileMock(...args),
+  updateJsonFile: (...args: [string, unknown]) => updateJsonFileMock(...args),
+  updateBinaryFile: (...args: [string, string, string]) => updateBinaryFileMock(...args),
 }));
+
+/** A v4-shaped uuid per point id, as ensurePointUuid hands out. */
+const uuidOf = (id: number) => `00000000-0000-4000-8000-${String(id).padStart(12, "0")}`;
+
+/** Makes writing point.json fail for one point only. */
+function failJsonFor(pointId: number, error: Error) {
+  uploadJsonFileMock.mockImplementation(async (name: string, parentId: string, content: unknown) => {
+    if ((content as { point_uuid?: string }).point_uuid === uuidOf(pointId)) throw error;
+    return mockDrive.api.uploadJsonFile(name, parentId, content);
+  });
+}
 
 interface FakePointRow {
   id: number;
@@ -96,14 +96,15 @@ let projects: FakeProjectRow[] = [];
 function resetFakeState() {
   points = [];
   projects = [];
-  driveFilesByParentAndName = new Map();
+  mockDrive.reset();
+  mockDrive.createNode({ name: "approved", parentId: ROOT_ID, mimeType: FOLDER_MIME_TYPE });
 }
 
 function seedProject(overrides: Partial<FakeProjectRow> = {}): FakeProjectRow {
   const row: FakeProjectRow = {
     id: projects.length + 1,
     collaboration_role: "owner",
-    drive_folder_id: "drive-folder-1",
+    drive_folder_id: ROOT_ID,
     protocol_id: "nomos-paisageo-v1",
     protocol_source: "official",
     ...overrides,
@@ -153,7 +154,7 @@ const getBackupEligiblePointsByProjectMock = jest.fn(async (projectId: number) =
 const ensurePointUuidMock = jest.fn(async (id: number) => {
   const row = points.find((p) => p.id === id);
   if (!row) throw new Error("point not found");
-  if (!row.uuid) row.uuid = `point-uuid-${id}`;
+  if (!row.uuid) row.uuid = uuidOf(id);
   return row.uuid;
 });
 const updatePointMock = jest.fn(async (id: number, updates: any) => {
@@ -226,36 +227,10 @@ import { DriveTimeoutError } from "../drive-errors";
 import { ProjectRoleNotAllowedError } from "@/core/project-sharing/action-visibility";
 
 beforeEach(() => {
-  resetFakeState();
   resetFakeFs();
   jest.clearAllMocks();
-  ensureFolderMock.mockImplementation(async (name: string, parentId: string) => `${parentId}/${name}`);
-  uploadBinaryFileMock.mockImplementation(
-    async (name: string, parentId: string, localUri: string, mimeType: string) => {
-      const file = { id: `media-${name}`, name, mimeType };
-      driveFilesByParentAndName.set(`${parentId}::${name}`, file);
-      return file;
-    },
-  );
-  uploadJsonFileMock.mockImplementation(async (name: string, parentId: string, content: unknown) => {
-    const file = { id: `json-${name}`, name, mimeType: "application/json" };
-    driveFilesByParentAndName.set(`${parentId}::${name}`, file);
-    return { ...file, modifiedTime: "2026-01-01T00:00:00.000Z" };
-  });
-  findChildByNameMock.mockImplementation(async (parentId: string, name: string) =>
-    driveFilesByParentAndName.get(`${parentId}::${name}`) ?? null,
-  );
-  updateJsonFileMock.mockImplementation(async (fileId: string, content: unknown) => ({
-    id: fileId,
-    name: "updated.json",
-    mimeType: "application/json",
-    modifiedTime: "2026-01-02T00:00:00.000Z",
-  }));
-  updateBinaryFileMock.mockImplementation(async (fileId: string, localUri: string, mimeType: string) => ({
-    id: fileId,
-    name: "updated",
-    mimeType,
-  }));
+  resetFakeState();
+  bindDriveMocks();
 });
 
 describe("backupPoint - media is part of the point: any media failure fails the backup", () => {
@@ -313,9 +288,9 @@ describe("backupPoint - media is part of the point: any media failure fails the 
     const point = seedPoint(project.id, {
       photos: JSON.stringify([{ uri: "file:///capture/photo1.jpg", timestamp: 1 }]),
     });
-    ensureFolderMock.mockImplementation(async (name: string, parentId: string) => {
+    createFolderMock.mockImplementation(async (name: string, parentId: string) => {
       if (name === "media") throw new Error("could not create media folder");
-      return `${parentId}/${name}`;
+      return mockDrive.api.createFolder(name, parentId);
     });
 
     const result = await backupPoint(point.id.toString());
@@ -328,14 +303,15 @@ describe("backupPoint - media is part of the point: any media failure fails the 
 
   it("a media failure on a RE-backup never rewrites the JSON already on Drive with fewer media", async () => {
     // The point was fully backed up before; its Drive JSON lists the photo.
-    driveFilesByParentAndName.set("drive-folder-1/approved::point-uuid-1.json", {
-      id: "existing-json",
-      name: "point-uuid-1.json",
-      mimeType: "application/json",
+    const existingFolder = mockDrive.createNode({
+      name: `point_ABCD-1_${uuidOf(1)}`,
+      parentId: mockDrive.nodeAt("approved")!.id,
+      mimeType: FOLDER_MIME_TYPE,
     });
+    mockDrive.createNode({ name: "point.json", parentId: existingFolder.id, mimeType: "application/json", json: { photos: ["media/photos/photo_1.jpg"] } });
     const project = seedProject();
     const point = seedPoint(project.id, {
-      uuid: "point-uuid-1",
+      uuid: uuidOf(1),
       photos: JSON.stringify([{ uri: "file:///capture/gone.jpg", timestamp: 1 }]), // file vanished locally
     });
 
@@ -373,13 +349,19 @@ describe("backupPoint - media inside module data (custom protocols)", () => {
 
     expect(result.success).toBe(true);
     const uploadedNames = uploadBinaryFileMock.mock.calls.map((call) => call[0]).sort();
-    expect(uploadedNames).toEqual(["modules__section_1_1.jpg", "modules__section_1_2.m4a"]);
+    expect(uploadedNames).toEqual(["Fotos_1.jpg", "Gravações_1.m4a"]);
+    expect(mockDrive.tree("root")).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/\/media\/section_Seção 1\/Fotos_1\.jpg$/),
+        expect.stringMatching(/\/media\/section_Seção 1\/Gravações_1\.m4a$/),
+      ]),
+    );
     const uploaded = uploadJsonFileMock.mock.calls[0][2] as { modules: Record<string, string> };
     const moduleJson = uploaded.modules["section_1"];
     expect(moduleJson).not.toContain("file://");
-    expect(moduleJson).toContain("package-media:modules/section_1_1.jpg");
-    expect(moduleJson).toContain("package-media:modules/section_1_2.m4a");
-    expect(point.drive_synced_at).toBe("2026-01-01T00:00:00.000Z");
+    expect(moduleJson).toContain("package-media:media/section_Seção 1/Fotos_1.jpg");
+    expect(moduleJson).toContain("package-media:media/section_Seção 1/Gravações_1.m4a");
+    expect(point.drive_synced_at).toBe("2026-05-06T07:08:09.000Z");
   });
 
   it("a module photo missing locally fails the point and uploads no JSON", async () => {
@@ -431,11 +413,11 @@ describe("backupPoint - full success", () => {
       photos: string[];
       audio_notes: Array<{ filename: string }>;
     };
-    expect(uploadedContent.photos).toEqual(["photo_1.jpg"]);
-    expect(uploadedContent.audio_notes.map((a) => a.filename)).toEqual(["audio_note_1.m4a"]);
+    expect(uploadedContent.photos).toEqual(["media/photos/photo_1.jpg"]);
+    expect(uploadedContent.audio_notes.map((a) => a.filename)).toEqual(["media/audio/audio_1.m4a"]);
     // Never the raw local paths.
     expect(JSON.stringify(uploadedContent)).not.toContain("file:///capture");
-    expect(point.drive_synced_at).toBe("2026-01-01T00:00:00.000Z");
+    expect(point.drive_synced_at).toBe("2026-05-06T07:08:09.000Z");
   });
 
   it("refuses when the project isn't Drive-backup enabled", async () => {
@@ -456,10 +438,7 @@ describe("backupAllPendingPoints", () => {
     const point2 = seedPoint(project.id);
     const point3 = seedPoint(project.id);
 
-    uploadJsonFileMock.mockImplementation(async (name: string) => {
-      if (name === `point-uuid-${point2.id}.json`) throw new Error("network error");
-      return { id: `json-${name}`, name, mimeType: "application/json", modifiedTime: "2026-01-01T00:00:00.000Z" };
-    });
+    failJsonFor(point2.id, new Error("network error"));
 
     const summary = await backupAllPendingPoints(project.id);
 
@@ -571,10 +550,7 @@ describe("backupAllPendingPoints - progress callback", () => {
     const point1 = seedPoint(project.id);
     const point2 = seedPoint(project.id);
     const point3 = seedPoint(project.id);
-    uploadJsonFileMock.mockImplementation(async (name: string) => {
-      if (name === `point-uuid-${point2.id}.json`) throw new Error("network error");
-      return { id: `json-${name}`, name, mimeType: "application/json", modifiedTime: "2026-01-01T00:00:00.000Z" };
-    });
+    failJsonFor(point2.id, new Error("network error"));
     const onProgress = jest.fn();
 
     const summary = await backupAllPendingPoints(project.id, onProgress);
@@ -678,10 +654,7 @@ describe("backupPoint - network timeouts", () => {
     const project = seedProject();
     const point1 = seedPoint(project.id);
     const point2 = seedPoint(project.id);
-    uploadJsonFileMock.mockImplementation(async (name: string) => {
-      if (name === `point-uuid-${point1.id}.json`) throw new DriveTimeoutError(30_000);
-      return { id: `json-${name}`, name, mimeType: "application/json", modifiedTime: "2026-01-01T00:00:00.000Z" };
-    });
+    failJsonFor(point1.id, new DriveTimeoutError(30_000));
 
     const summary = await backupAllPendingPoints(project.id);
 
@@ -702,15 +675,10 @@ describe("backupPoint - idempotent re-backup (audit finding CRÍTICO 1)", () => 
     expect(result.success).toBe(true);
     expect(uploadJsonFileMock).toHaveBeenCalledTimes(1); // only the first call created the file
     expect(updateJsonFileMock).toHaveBeenCalledTimes(1); // the second call updated it in place
-    expect(updateJsonFileMock).toHaveBeenCalledWith(
-      `json-point-uuid-${point.id}.json`,
-      expect.anything(),
-    );
-    // Still exactly one file under that name in the simulated Drive folder.
-    const matchingEntries = [...driveFilesByParentAndName.keys()].filter((key) =>
-      key.endsWith(`::point-uuid-${point.id}.json`),
-    );
-    expect(matchingEntries).toHaveLength(1);
+    expect(updateJsonFileMock).toHaveBeenCalledWith(expect.any(String), expect.anything());
+    // Still exactly one point.json and one point folder in the simulated Drive.
+    expect(mockDrive.tree("root").filter((path) => path.endsWith("point.json"))).toHaveLength(1);
+    expect(mockDrive.childrenOf(mockDrive.nodeAt("approved")!.id)).toHaveLength(1);
   });
 
   it("backing up the same photo twice updates the existing Drive file instead of creating a duplicate", async () => {
@@ -729,7 +697,7 @@ describe("backupPoint - idempotent re-backup (audit finding CRÍTICO 1)", () => 
     expect(uploadBinaryFileMock).toHaveBeenCalledTimes(1);
     expect(updateBinaryFileMock).toHaveBeenCalledTimes(1);
     expect(updateBinaryFileMock).toHaveBeenCalledWith(
-      "media-photo_1.jpg",
+      expect.any(String),
       "file:///capture/photo1.jpg",
       "image/jpeg",
     );
@@ -898,7 +866,7 @@ describe("discardMissingMedia", () => {
 
     expect(retry.success).toBe(true);
     const uploaded = uploadJsonFileMock.mock.calls[0][2] as { photos: string[] };
-    expect(uploaded.photos).toEqual(["photo_1.jpg"]);
+    expect(uploaded.photos).toEqual(["media/photos/photo_1.jpg"]);
     expect(point.drive_synced_at).toBeTruthy();
   });
 });
@@ -937,14 +905,14 @@ describe("backup and discard - media inside repeatable_group items (custom proto
     const result = await backupPoint(point.id.toString());
 
     expect(result.success).toBe(true);
-    const names = uploadBinaryFileMock.mock.calls.map((call) => call[0]);
-    expect(names).toHaveLength(4);
-    expect(new Set(names).size).toBe(4);
-    expect(names.every((n) => n.startsWith("modules__section_1_grupo_"))).toBe(true);
+    const mediaPaths = mockDrive.tree("root").filter((path) => path.includes("/media/") && !path.endsWith("/"));
+    expect(mediaPaths).toHaveLength(4);
+    expect(mediaPaths.every((path) => path.includes("/media/group_Grupo/item_0"))).toBe(true);
+    expect(new Set(mediaPaths).size).toBe(4);
     const uploaded = uploadJsonFileMock.mock.calls[0][2] as { modules: Record<string, string> };
     const moduleJson = uploaded.modules["section_1"];
     expect(moduleJson).not.toContain("file://");
-    expect(moduleJson.match(/package-media:modules\//g)).toHaveLength(4);
+    expect(moduleJson.match(/package-media:media\/group_Grupo\/item_0/g)).toHaveLength(4);
     expect(JSON.parse(moduleJson).grupo.map((i: { nome: string }) => i.nome)).toEqual(["item 0", "item 1"]);
     expect(point.drive_synced_at).toBeTruthy();
   });
@@ -953,9 +921,9 @@ describe("backup and discard - media inside repeatable_group items (custom proto
     fsState.set("file:///capture/i0.jpg", { isDir: false, content: "bytes" });
     fsState.set("file:///capture/i1.jpg", { isDir: false, content: "bytes" });
     const point = seedGroupPoint([{ photo: "file:///capture/i0.jpg" }, { photo: "file:///capture/i1.jpg" }]);
-    uploadBinaryFileMock.mockImplementation(async (name: string, parentId: string, _uri: string, mimeType: string) => {
-      if (name.includes("_1_foto_item_")) throw new Error("network error");
-      return { id: `media-${name}`, name, mimeType };
+    uploadBinaryFileMock.mockImplementation(async (name: string, parentId: string, uri: string, mimeType: string) => {
+      if (name.startsWith("Foto do item_1") && uri.endsWith("i1.jpg")) throw new Error("network error");
+      return mockDrive.api.uploadBinaryFile(name, parentId, uri, mimeType);
     });
 
     const result = await backupPoint(point.id.toString());

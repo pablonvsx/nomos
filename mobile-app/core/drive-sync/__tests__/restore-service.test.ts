@@ -289,10 +289,14 @@ function baseManifest(overrides: Partial<Record<string, unknown>> = {}) {
   };
 }
 
+const P1 = "00000000-0000-4000-8000-000000000001";
+const P2 = "00000000-0000-4000-8000-000000000002";
+
 function samplePointEntry(overrides: Partial<Record<string, unknown>> = {}) {
   return {
-    point_uuid: "point-uuid-1",
+    point_uuid: P1,
     point_number: 1,
+    created_at: "2026-01-01T00:00:00.000Z",
     lat: -8.05,
     lon: -34.9,
     created_by: "ABCD",
@@ -460,19 +464,33 @@ describe("restoreOwnProjectFromDrive - active vegetation classification resoluti
   });
 });
 
-function addPointMedia(pointUuid: string, driveFileNames: string[]) {
-  if (!childByParentAndName.has("approved-id::media")) addFolder("approved-id", "media-root-id", "media");
-  addFolder("media-root-id", `${pointUuid}-media-id`, pointUuid);
-  childrenByParent.set(
-    `${pointUuid}-media-id`,
-    driveFileNames.map((name) => ({ id: `drive-${pointUuid}-${name}`, name, mimeType: "application/octet-stream" })),
-  );
-  for (const name of driveFileNames) {
-    childByParentAndName.set(`${pointUuid}-media-id::${name}`, {
-      id: `drive-${pointUuid}-${name}`,
-      name,
-      mimeType: "application/octet-stream",
-    });
+/**
+ * Puts approved/point_<label>_<uuid>/point.json on the fake Drive, plus one
+ * media file per relative path (nested folders are created as needed).
+ */
+function addPointFolder(
+  uuid: string,
+  entry: unknown,
+  mediaPaths: string[] = [],
+  modifiedTime = "2026-01-01T00:00:00.000Z",
+  folderName = `point_ABCD-1_${uuid}`,
+) {
+  if (!childByParentAndName.has("folder-1::approved")) addFolder("folder-1", "approved-id", "approved");
+  const folderId = `${folderName}-id`;
+  addFolder("approved-id", folderId, folderName);
+  addJsonFile(folderId, `${folderName}-json`, "point.json", entry, modifiedTime);
+
+  for (const path of mediaPaths) {
+    const segments = path.split("/");
+    const fileName = segments.pop()!;
+    let parentId = folderId;
+    for (const segment of segments) {
+      const existing = childByParentAndName.get(`${parentId}::${segment}`);
+      parentId = existing ? existing.id : addFolder(parentId, `${parentId}/${segment}`, segment).id;
+    }
+    const file: DriveFile = { id: `drive-${uuid}-${path}`, name: fileName, mimeType: "application/octet-stream" };
+    childByParentAndName.set(`${parentId}::${fileName}`, file);
+    childrenByParent.set(parentId, [...(childrenByParent.get(parentId) ?? []), file]);
   }
 }
 
@@ -483,18 +501,15 @@ function importedMediaKeys(): string[] {
 describe("restoreOwnProjectFromDrive - points and media (always a full restore)", () => {
   it("always downloads photos and audio, saves persisted paths that still exist after the restore returned, and marks the point as already backed up", async () => {
     getManifestMock.mockResolvedValue(baseManifest());
-    addFolder("folder-1", "approved-id", "approved");
-    addJsonFile(
-      "approved-id",
-      "point1-file-id",
-      "point-uuid-1.json",
+    addPointFolder(
+      P1,
       samplePointEntry({
-        photos: ["photo_1.jpg"],
-        audio_notes: [{ filename: "audio_note_1.m4a", duration: 5, timestamp: 1 }],
+        photos: ["media/photos/photo_1.jpg"],
+        audio_notes: [{ filename: "media/audio/audio_1.m4a", duration: 5, timestamp: 1 }],
       }),
+      ["media/photos/photo_1.jpg", "media/audio/audio_1.m4a"],
       "2026-03-04T05:06:07.000Z",
     );
-    addPointMedia("point-uuid-1", ["photo_1.jpg", "audio_note_1.m4a"]);
 
     const result = await restore("folder-1");
 
@@ -503,7 +518,8 @@ describe("restoreOwnProjectFromDrive - points and media (always a full restore)"
     const created = createPointMock.mock.calls[0][0] as any;
     const [photo] = JSON.parse(created.photos) as Array<{ uri: string }>;
     const [audio] = JSON.parse(created.audio_notes) as Array<{ uri: string }>;
-    expect(photo.uri).toContain("/imported_points_media/point-uuid-1/photo_1.jpg");
+    expect(photo.uri).toContain(`/imported_points_media/${P1}/`);
+    expect(photo.uri.endsWith("photo_1.jpg")).toBe(true);
     expect(new FakeFile(photo.uri).exists).toBe(true);
     expect(new FakeFile(audio.uri).exists).toBe(true);
     // Already on Drive, so it must not be offered for a new backup.
@@ -512,17 +528,11 @@ describe("restoreOwnProjectFromDrive - points and media (always a full restore)"
 
   it("a failed download aborts the whole restore and undoes it: project deleted, downloaded files removed", async () => {
     getManifestMock.mockResolvedValue(baseManifest());
-    addFolder("folder-1", "approved-id", "approved");
-    addJsonFile(
-      "approved-id",
-      "point1-file-id",
-      "point-uuid-1.json",
-      samplePointEntry({ point_uuid: "point-uuid-1", photos: ["photo_1.jpg", "photo_2.jpg"] }),
-    );
-    addJsonFile("approved-id", "point2-file-id", "point-uuid-2.json", samplePointEntry({ point_uuid: "point-uuid-2" }));
-    addPointMedia("point-uuid-1", ["photo_1.jpg", "photo_2.jpg"]);
+    const photos = ["media/photos/photo_1.jpg", "media/photos/photo_2.jpg"];
+    addPointFolder(P1, samplePointEntry({ photos }), photos);
+    addPointFolder(P2, samplePointEntry({ point_uuid: P2, created_at: "2026-02-01T00:00:00.000Z" }));
     downloadBinaryFileMock.mockImplementation(async (fileId: string, destinationUri: string) => {
-      if (fileId === "drive-point-uuid-1-photo_2.jpg") throw new Error("network error");
+      if (fileId === `drive-${P1}-media/photos/photo_2.jpg`) throw new Error("network error");
       fsState.set(destinationUri, { isDir: false, content: "downloaded-bytes" });
     });
 
@@ -535,16 +545,10 @@ describe("restoreOwnProjectFromDrive - points and media (always a full restore)"
 
   it("a download that times out undoes the whole restore and surfaces the timeout itself (not a generic media error)", async () => {
     getManifestMock.mockResolvedValue(baseManifest());
-    addFolder("folder-1", "approved-id", "approved");
-    addJsonFile(
-      "approved-id",
-      "point1-file-id",
-      "point-uuid-1.json",
-      samplePointEntry({ point_uuid: "point-uuid-1", photos: ["photo_1.jpg", "photo_2.jpg"] }),
-    );
-    addPointMedia("point-uuid-1", ["photo_1.jpg", "photo_2.jpg"]);
+    const photos = ["media/photos/photo_1.jpg", "media/photos/photo_2.jpg"];
+    addPointFolder(P1, samplePointEntry({ photos }), photos);
     downloadBinaryFileMock.mockImplementation(async (fileId: string, destinationUri: string) => {
-      if (fileId === "drive-point-uuid-1-photo_2.jpg") throw new DriveTimeoutError(180_000);
+      if (fileId === `drive-${P1}-media/photos/photo_2.jpg`) throw new DriveTimeoutError(180_000);
       fsState.set(destinationUri, { isDir: false, content: "downloaded-bytes" });
     });
 
@@ -557,16 +561,9 @@ describe("restoreOwnProjectFromDrive - points and media (always a full restore)"
     expect(importedMediaKeys()).toEqual([]);
   });
 
-  it("aborts and undoes when a point lists media but the point's media folder is missing in Drive", async () => {
+  it("aborts and undoes when a point lists media but its media folder is missing in Drive", async () => {
     getManifestMock.mockResolvedValue(baseManifest());
-    addFolder("folder-1", "approved-id", "approved");
-    addJsonFile(
-      "approved-id",
-      "point1-file-id",
-      "point-uuid-1.json",
-      samplePointEntry({ photos: ["photo_1.jpg"] }),
-    );
-    // No approved/media folder at all.
+    addPointFolder(P1, samplePointEntry({ photos: ["media/photos/photo_1.jpg"] })); // no media/ folder at all
 
     await expect(restore("folder-1")).rejects.toBeInstanceOf(MediaRestoreError);
 
@@ -575,16 +572,13 @@ describe("restoreOwnProjectFromDrive - points and media (always a full restore)"
     expect(createPointMock).not.toHaveBeenCalled();
   });
 
-  it("aborts and undoes when a listed file is not in the point's Drive media folder", async () => {
+  it("aborts and undoes when a listed file is not in the folder the path leads to", async () => {
     getManifestMock.mockResolvedValue(baseManifest());
-    addFolder("folder-1", "approved-id", "approved");
-    addJsonFile(
-      "approved-id",
-      "point1-file-id",
-      "point-uuid-1.json",
-      samplePointEntry({ photos: ["photo_1.jpg", "photo_2.jpg"] }),
+    addPointFolder(
+      P1,
+      samplePointEntry({ photos: ["media/photos/photo_1.jpg", "media/photos/photo_2.jpg"] }),
+      ["media/photos/photo_1.jpg"], // photo_2.jpg never made it to Drive
     );
-    addPointMedia("point-uuid-1", ["photo_1.jpg"]); // photo_2.jpg never made it to Drive
 
     await expect(restore("folder-1")).rejects.toBeInstanceOf(MediaRestoreError);
 
@@ -594,8 +588,7 @@ describe("restoreOwnProjectFromDrive - points and media (always a full restore)"
 
   it("any non-media failure after the project was created also undoes the half-restored project", async () => {
     getManifestMock.mockResolvedValue(baseManifest());
-    addFolder("folder-1", "approved-id", "approved");
-    addJsonFile("approved-id", "point1-file-id", "point-uuid-1.json", samplePointEntry());
+    addPointFolder(P1, samplePointEntry());
     createPointMock.mockRejectedValueOnce(new Error("disk full"));
 
     await expect(restore("folder-1")).rejects.toThrow("disk full");
@@ -603,7 +596,7 @@ describe("restoreOwnProjectFromDrive - points and media (always a full restore)"
     expect(projects).toHaveLength(0);
   });
 
-  it("custom protocol: module photo/audio are downloaded and the saved data_json points at persisted local files", async () => {
+  function customManifest() {
     getManifestMock.mockResolvedValue(baseManifest({ protocol_source: "custom", protocol_id: "placeholder" }));
     addJsonFile("folder-1", "protocol-file-id", "protocol-package.json", {
       uuid: "protocol-uuid-1",
@@ -611,23 +604,24 @@ describe("restoreOwnProjectFromDrive - points and media (always a full restore)"
       theme: "fauna",
       schema: { sections: [] },
     });
-    addFolder("folder-1", "approved-id", "approved");
-    addJsonFile(
-      "approved-id",
-      "point1-file-id",
-      "point-uuid-1.json",
+  }
+
+  it("custom protocol: module photo/audio are downloaded by the paths in the markers and the saved data_json points at persisted local files", async () => {
+    customManifest();
+    addPointFolder(
+      P1,
       samplePointEntry({
         modules: {
           section_1: JSON.stringify({
-            fotos: JSON.stringify([{ uri: "package-media:modules/section_1_1.jpg", timestamp: 1 }]),
+            fotos: JSON.stringify([{ uri: "package-media:media/section_Seção 1/Fotos_1.jpg", timestamp: 1 }]),
             gravacoes: JSON.stringify([
-              { uri: "package-media:modules/section_1_2.m4a", duration: 3, timestamp: 2 },
+              { uri: "package-media:media/section_Seção 1/Gravações_1.m4a", duration: 3, timestamp: 2 },
             ]),
           }),
         },
       }),
+      ["media/section_Seção 1/Fotos_1.jpg", "media/section_Seção 1/Gravações_1.m4a"],
     );
-    addPointMedia("point-uuid-1", ["modules__section_1_1.jpg", "modules__section_1_2.m4a"]);
 
     const result = await restore("folder-1");
 
@@ -638,10 +632,16 @@ describe("restoreOwnProjectFromDrive - points and media (always a full restore)"
     const data = JSON.parse(moduleJson);
     const [photo] = JSON.parse(data.fotos) as Array<{ uri: string }>;
     const [audio] = JSON.parse(data.gravacoes) as Array<{ uri: string }>;
-    expect(photo.uri).toContain("/imported_points_media/point-uuid-1/modules/section_1_1.jpg");
+    expect(photo.uri).toContain(`/imported_points_media/${P1}/`);
     expect(new FakeFile(photo.uri).exists).toBe(true);
     expect(new FakeFile(audio.uri).exists).toBe(true);
   });
+
+  const GROUP_PATHS = [
+    "media/group_Grupo/item_01/Foto_1.jpg",
+    "media/group_Grupo/item_01/Audio_1.m4a",
+    "media/group_Grupo/item_02/Foto_1.jpg",
+  ];
 
   function groupPointEntry() {
     return samplePointEntry({
@@ -649,14 +649,12 @@ describe("restoreOwnProjectFromDrive - points and media (always a full restore)"
         section_1: JSON.stringify({
           grupo: [
             {
-              foto_item: JSON.stringify([{ uri: "package-media:modules/section_1_grupo_0_foto_item_1.jpg", timestamp: 1 }]),
-              audio_item: JSON.stringify([
-                { uri: "package-media:modules/section_1_grupo_0_audio_item_2.m4a", duration: 3, timestamp: 2 },
-              ]),
+              foto_item: JSON.stringify([{ uri: `package-media:${GROUP_PATHS[0]}`, timestamp: 1 }]),
+              audio_item: JSON.stringify([{ uri: `package-media:${GROUP_PATHS[1]}`, duration: 3, timestamp: 2 }]),
               nome: "item 0",
             },
             {
-              foto_item: JSON.stringify([{ uri: "package-media:modules/section_1_grupo_1_foto_item_3.jpg", timestamp: 3 }]),
+              foto_item: JSON.stringify([{ uri: `package-media:${GROUP_PATHS[2]}`, timestamp: 3 }]),
               audio_item: "[]",
               nome: "item 1",
             },
@@ -666,25 +664,9 @@ describe("restoreOwnProjectFromDrive - points and media (always a full restore)"
     });
   }
 
-  function setUpCustomGroupRestore(driveFileNames: string[]) {
-    getManifestMock.mockResolvedValue(baseManifest({ protocol_source: "custom", protocol_id: "placeholder" }));
-    addJsonFile("folder-1", "protocol-file-id", "protocol-package.json", {
-      uuid: "protocol-uuid-1",
-      name: "Fauna Survey",
-      theme: "fauna",
-      schema: { sections: [] },
-    });
-    addFolder("folder-1", "approved-id", "approved");
-    addJsonFile("approved-id", "point1-file-id", "point-uuid-1.json", groupPointEntry());
-    addPointMedia("point-uuid-1", driveFileNames);
-  }
-
   it("custom protocol: media inside repeatable_group items is downloaded and the saved data_json points at persisted local files", async () => {
-    setUpCustomGroupRestore([
-      "modules__section_1_grupo_0_foto_item_1.jpg",
-      "modules__section_1_grupo_0_audio_item_2.m4a",
-      "modules__section_1_grupo_1_foto_item_3.jpg",
-    ]);
+    customManifest();
+    addPointFolder(P1, groupPointEntry(), GROUP_PATHS);
 
     const result = await restore("folder-1");
 
@@ -698,17 +680,16 @@ describe("restoreOwnProjectFromDrive - points and media (always a full restore)"
     const [audio0] = JSON.parse(data.grupo[0].audio_item) as Array<{ uri: string }>;
     const [photo1] = JSON.parse(data.grupo[1].foto_item) as Array<{ uri: string }>;
     for (const { uri } of [photo0, audio0, photo1]) {
-      expect(uri).toContain("/imported_points_media/point-uuid-1/modules/");
+      expect(uri).toContain(`/imported_points_media/${P1}/`);
       expect(new FakeFile(uri).exists).toBe(true);
     }
+    // Two different files with the same Drive name (item_01/Foto_1.jpg, item_02/Foto_1.jpg) must not overwrite each other.
+    expect(photo0.uri).not.toBe(photo1.uri);
   });
 
   it("a missing group media file in Drive aborts and undoes the whole restore", async () => {
-    setUpCustomGroupRestore([
-      "modules__section_1_grupo_0_foto_item_1.jpg",
-      // modules__section_1_grupo_0_audio_item_2.m4a never made it to Drive
-      "modules__section_1_grupo_1_foto_item_3.jpg",
-    ]);
+    customManifest();
+    addPointFolder(P1, groupPointEntry(), [GROUP_PATHS[0], GROUP_PATHS[2]]); // the audio never made it to Drive
 
     await expect(restore("folder-1")).rejects.toBeInstanceOf(MediaRestoreError);
 
@@ -718,23 +699,10 @@ describe("restoreOwnProjectFromDrive - points and media (always a full restore)"
     expect(importedMediaKeys()).toEqual([]); // the group files already downloaded were removed too
   });
 
-  it("a stray duplicate <point_uuid>.json in Drive (e.g. from before backupPoint was idempotent) is only imported once (audit finding CRÍTICO 1)", async () => {
+  it("two folders holding the same point_uuid are only imported once (audit finding CRÍTICO 1)", async () => {
     getManifestMock.mockResolvedValue(baseManifest());
-    addFolder("folder-1", "approved-id", "approved");
-    // Two distinct Drive files, same point_uuid inside - the exact
-    // corruption a pre-fix repeated single-point backup could produce.
-    addJsonFile(
-      "approved-id",
-      "point1-file-id-a",
-      "point-uuid-1-copy-a.json",
-      samplePointEntry({ point_uuid: "point-uuid-1" }),
-    );
-    addJsonFile(
-      "approved-id",
-      "point1-file-id-b",
-      "point-uuid-1-copy-b.json",
-      samplePointEntry({ point_uuid: "point-uuid-1" }),
-    );
+    addPointFolder(P1, samplePointEntry(), [], undefined, `point_ABCD-1_${P1}`);
+    addPointFolder(P1, samplePointEntry(), [], undefined, `point_COPY-1_${P1}`);
 
     const result = await restore("folder-1");
 

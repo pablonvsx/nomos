@@ -32,12 +32,18 @@ import {
 } from "@/core/project-sharing/project-config-package";
 import { IMPORTED_MEDIA_DIR } from "@/core/project-sharing/import-points";
 import {
-  MODULE_MEDIA_SUBDIR,
   PACKAGE_MEDIA_PREFIX,
   getModuleMediaFields,
   mapModuleMediaUris,
   type ModuleMediaField,
 } from "@/core/project-sharing/module-media";
+import {
+  APPROVED_FOLDER,
+  FOLDER_MIME_TYPE,
+  POINT_JSON_FILENAME,
+  parsePointFolderUuid,
+} from "@/core/drive-sync/drive-layout";
+import { fromDriveMediaMarker, splitRelativePath } from "@/core/drive-sync/drive-media-paths";
 import { MediaRestoreError } from "@/core/drive-sync/restore-errors";
 import { isNetworkTimeoutError } from "@/core/net/network-timeout";
 import type { PointPackageEntry } from "@/core/project-sharing/export-points";
@@ -201,28 +207,50 @@ export async function restoreOwnProjectFromDrive(driveFolderId: string): Promise
       await setActiveVegetationClassification(newProjectId, null, "standard");
     }
 
-    // approved/ - every point.
+    // approved/ - every point folder.
     let imported = 0;
     let mediaDownloaded = 0;
     let duplicatesSkipped = 0;
 
-    const approvedFolder = await findChildByName(driveFolderId, "approved");
+    const approvedFolder = await findChildByName(driveFolderId, APPROVED_FOLDER);
     if (approvedFolder) {
-      const approvedFiles = (await listChildren(approvedFolder.id)).filter((f) =>
-        f.name.endsWith(".json"),
+      const moduleMediaFields = await getModuleMediaFields(localProtocolId, manifest.protocol_source);
+      const folders = createFolderListings();
+
+      // Only point_<label>_<uuid> folders count; anything else somebody left
+      // in approved/ (loose files, other folders) is ignored. The label part
+      // may have been renamed by hand - only the uuid suffix is read.
+      const candidates: Array<{ folder: DriveFile; entry: PointPackageEntry; modifiedTime?: string }> = [];
+      for (const folder of await folders.list(approvedFolder.id)) {
+        const folderUuid = folder.mimeType === FOLDER_MIME_TYPE ? parsePointFolderUuid(folder.name) : null;
+        if (!folderUuid) continue;
+
+        // A folder without point.json is a backup that never finished
+        // (point.json is written last): it is not a point yet.
+        const jsonFile = (await folders.list(folder.id)).find(
+          (child) => child.name === POINT_JSON_FILENAME && child.mimeType !== FOLDER_MIME_TYPE,
+        );
+        if (!jsonFile) continue;
+
+        const entry = await readJsonFile<PointPackageEntry>(jsonFile.id);
+        if (entry.point_uuid?.toLowerCase() !== folderUuid.toLowerCase()) continue;
+        candidates.push({ folder, entry, modifiedTime: jsonFile.modifiedTime });
+      }
+
+      // Local point numbers are handed out in insertion order, and Drive lists
+      // children in no defined order: restore oldest first, ties by folder
+      // name, so the numbering is the same every time.
+      candidates.sort(
+        (x, y) =>
+          (x.entry.created_at ?? "").localeCompare(y.entry.created_at ?? "") ||
+          x.folder.name.localeCompare(y.folder.name),
       );
 
-      const mediaRootFolder = await findChildByName(approvedFolder.id, "media");
-      const moduleMediaFields = await getModuleMediaFields(localProtocolId, manifest.protocol_source);
-
-      // Defensive dedupe: a stray duplicate `<uuid>.json` in Drive (e.g. from
-      // before backupPoint became idempotent) must not produce two local
-      // points with the same uuid - points.uuid is now unique per project.
+      // Defensive dedupe: two folders claiming one uuid must not produce two
+      // local points - points.uuid is unique per project.
       const seenPointUuids = new Set<string>();
 
-      for (const file of approvedFiles) {
-        const entry = await readJsonFile<PointPackageEntry>(file.id);
-
+      for (const { folder, entry, modifiedTime } of candidates) {
         if (seenPointUuids.has(entry.point_uuid)) {
           duplicatesSkipped += 1;
           continue;
@@ -233,7 +261,7 @@ export async function restoreOwnProjectFromDrive(driveFolderId: string): Promise
 
         // Every photo/audio the point lists must come down, or the whole
         // restore is undone (MediaRestoreError).
-        const downloaded = await downloadPointMedia(mediaRootFolder, entry, moduleMediaFields);
+        const downloaded = await downloadPointMedia(folders, folder, entry, moduleMediaFields);
         mediaDownloaded += downloaded.count;
 
         await createPoint({
@@ -252,7 +280,7 @@ export async function restoreOwnProjectFromDrive(driveFolderId: string): Promise
           uuid: entry.point_uuid,
           approval_status: "approved",
           created_by: entry.created_by,
-          drive_synced_at: file.modifiedTime ?? new Date().toISOString(),
+          drive_synced_at: modifiedTime ?? new Date().toISOString(),
         });
         imported += 1;
       }
@@ -277,18 +305,35 @@ export async function restoreOwnProjectFromDrive(driveFolderId: string): Promise
   }
 }
 
-/** Drive stores module media flat, as `modules__<file>` inside the point's media folder. */
-function driveNameForModuleMedia(relativePath: string): string {
-  return relativePath.replace(/\//g, "__");
+/** Folder listings fetched at most once each during one restore. */
+function createFolderListings() {
+  const listings = new Map<string, Promise<DriveFile[]>>();
+  return {
+    list(folderId: string): Promise<DriveFile[]> {
+      let listing = listings.get(folderId);
+      if (!listing) listings.set(folderId, (listing = listChildren(folderId)));
+      return listing;
+    },
+  };
+}
+
+/** A name that is safe as a local file name whatever the Drive name held. */
+function localFileName(counter: number, relativePath: string): string {
+  const base = splitRelativePath(relativePath).pop() ?? "media";
+  return `${counter}_${base.replace(/[^A-Za-z0-9._-]/g, "_").slice(-60)}`;
 }
 
 /**
  * Downloads every photo, audio note and module-data media file a point lists
- * into persistent app storage. Throws MediaRestoreError on the first thing
+ * into persistent app storage. Each media is found by following the exact
+ * relative path written in point.json, folder by folder - names are never
+ * recomputed, so a path that no longer exists (something renamed or moved
+ * inside media/) is an error. Throws MediaRestoreError on the first thing
  * that is missing or fails - never returns a partial result.
  */
 async function downloadPointMedia(
-  mediaRootFolder: DriveFile | null,
+  folders: ReturnType<typeof createFolderListings>,
+  pointFolder: DriveFile,
   entry: PointPackageEntry,
   moduleMediaFields: ModuleMediaField[],
 ): Promise<{
@@ -309,30 +354,30 @@ async function downloadPointMedia(
     return { photoUris, audioEntries, modules: entry.modules, count };
   }
 
-  const pointMediaFolder = mediaRootFolder
-    ? await findChildByName(mediaRootFolder.id, entry.point_uuid)
-    : null;
-  if (!pointMediaFolder) {
-    throw new MediaRestoreError(
-      `A pasta de mídia do ponto ${entry.point_uuid} não foi encontrada no Drive.`,
-    );
-  }
-
-  const filesByName = new Map<string, DriveFile>();
-  for (const file of await listChildren(pointMediaFolder.id)) {
-    filesByName.set(file.name, file);
-  }
-
   const destDir = new Directory(Paths.document, `${IMPORTED_MEDIA_DIR}/${entry.point_uuid}`);
   if (!destDir.exists) await destDir.create({ intermediates: true });
 
-  const downloadInto = async (driveName: string, destFile: File): Promise<void> => {
-    const driveFile = filesByName.get(driveName);
-    if (!driveFile) {
-      throw new MediaRestoreError(
-        `O arquivo ${driveName} do ponto ${entry.point_uuid} não foi encontrado no Drive.`,
+  const findByPath = async (relativePath: string): Promise<DriveFile> => {
+    const segments = splitRelativePath(relativePath);
+    let current: DriveFile = pointFolder;
+    for (const [index, segment] of segments.entries()) {
+      const isLast = index === segments.length - 1;
+      const next: DriveFile | undefined = (await folders.list(current.id)).find(
+        (child) => child.name === segment && (child.mimeType === FOLDER_MIME_TYPE) !== isLast,
       );
+      if (!next) {
+        throw new MediaRestoreError(
+          `O ${isLast ? "arquivo" : "diretório"} ${segment} (${relativePath}) do ponto ${entry.point_uuid} não foi encontrado no Drive.`,
+        );
+      }
+      current = next;
     }
+    return current;
+  };
+
+  const downloadInto = async (relativePath: string): Promise<string> => {
+    const driveFile = await findByPath(relativePath);
+    const destFile = new File(destDir, localFileName(count + 1, relativePath));
     try {
       await downloadBinaryFile(driveFile.id, destFile.uri);
     } catch (error) {
@@ -341,26 +386,23 @@ async function downloadPointMedia(
       if (isNetworkTimeoutError(error)) throw error;
       const message = error instanceof Error ? error.message : String(error);
       throw new MediaRestoreError(
-        `O arquivo ${driveName} do ponto ${entry.point_uuid} não pôde ser baixado: ${message}`,
+        `O arquivo ${relativePath} do ponto ${entry.point_uuid} não pôde ser baixado: ${message}`,
       );
     }
     count += 1;
+    return destFile.uri;
   };
 
-  for (const filename of entry.photos) {
-    const destFile = new File(destDir, filename);
-    await downloadInto(filename, destFile);
-    photoUris.push(destFile.uri);
+  for (const relativePath of entry.photos) {
+    photoUris.push(await downloadInto(relativePath));
   }
 
   for (const note of entry.audio_notes) {
-    const destFile = new File(destDir, note.filename);
-    await downloadInto(note.filename, destFile);
-    audioEntries.push({ uri: destFile.uri, duration: note.duration, timestamp: note.timestamp });
+    audioEntries.push({ uri: await downloadInto(note.filename), duration: note.duration, timestamp: note.timestamp });
   }
 
-  // Media referenced from module data (custom protocols): the exported JSON
-  // carries `package-media:modules/<file>` markers; swap each for the local
+  // Media referenced from module data (custom protocols): the JSON carries
+  // `package-media:<relative path>` markers; swap each for the local
   // persisted copy.
   const modules: Record<string, string> = {};
   for (const [moduleId, dataJson] of Object.entries(entry.modules)) {
@@ -370,13 +412,8 @@ async function downloadPointMedia(
       continue;
     }
     modules[moduleId] = await mapModuleMediaUris(dataJson, fieldsOfModule, async (uri) => {
-      if (!uri.startsWith(PACKAGE_MEDIA_PREFIX)) return uri;
-      const relativePath = uri.slice(PACKAGE_MEDIA_PREFIX.length);
-      const modulesDir = new Directory(destDir, MODULE_MEDIA_SUBDIR);
-      if (!modulesDir.exists) await modulesDir.create({ intermediates: true });
-      const destFile = new File(destDir, relativePath);
-      await downloadInto(driveNameForModuleMedia(relativePath), destFile);
-      return destFile.uri;
+      const relativePath = fromDriveMediaMarker(uri);
+      return relativePath === null ? uri : downloadInto(relativePath);
     });
   }
 

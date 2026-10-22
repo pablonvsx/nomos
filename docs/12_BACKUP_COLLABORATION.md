@@ -372,22 +372,32 @@ aborted the whole batch and lost the report of the points already done.
 Media is part of the collection, so a point is **all-or-nothing**:
 
 - The point's data and **all** of its media must reach Drive: point-level
-  photos and audio (`photo_N.<ext>`, `audio_note_N.<ext>`) and, for custom
-  protocols, the `photo_input` / `audio_notes_input` files that live inside
-  module data, including those inside `repeatable_group` items. Module
-  files are stored flat in the point's media folder as `modules__<file>`
-  (same names as in the points package), and the uploaded JSON references
-  them with `package-media:modules/<file>` markers — never a device path.
+  photos and audio (`media/photos/photo_N.<ext>`, `media/audio/audio_N.<ext>`)
+  and, for custom protocols, the `photo_input` / `audio_notes_input` files
+  that live inside module data, including those inside `repeatable_group`
+  items (see "Drive folder structure" for where each one goes). Every media
+  is referenced from `point.json` by its **exact path relative to the point's
+  folder**, with forward slashes — in `photos`, in `audio_notes[].filename`
+  and, for module data, in `package-media:<relative path>` markers — never a
+  `file://` uri or a device path. The collaborators' zip is a different
+  format and is not affected.
 - If any file is missing locally or fails to upload, the whole point
   fails: its JSON on Drive is **not** written (an existing Drive JSON is
   never rewritten with fewer media than the point has), and
   `drive_synced_at` stays `NULL`. All failures are collected and returned
   together in `BackupResult.error`.
-- Every write is read-before-write (`findChildByName` first): re-backing
-  up an already-synced point calls `updateJsonFile`/`updateBinaryFile`
-  against the existing Drive file instead of creating a duplicate — this
-  is what the app-level UI also enforces by disabling the per-point backup
-  action once `drive_synced_at` is set (`project-details/[id].tsx`).
+- Folders and files are never duplicated. `approved/` is listed **once per
+  batch** (paginated) and the point's folder is found by its `_<uuid>`
+  suffix; the folder ids met on the way are cached for the batch
+  (`drive-folder-cache.ts`). Inside a folder that already existed (a retry
+  or a re-backup) every subfolder and file is looked up by exact name and
+  updated in place. Inside a folder created **in this same call** there is
+  nothing to find, so subfolders and files are created directly — which is
+  also what keeps a first backup cheap. The per-point backup action is
+  disabled once `drive_synced_at` is set (`project-details/[id].tsx`).
+- `point.json` is written **last**. A failure of any folder or media leaves
+  the point without `point.json` and without `drive_synced_at`; the folders
+  already created stay, and the next attempt reuses them.
 
 ### Discarding media that no longer exists on the device
 
@@ -426,9 +436,46 @@ graph TD
     Proj --> Protocol["protocol-package.json<br/>(only if protocol_source = custom)"]
     Proj --> SpeciesCat["species-catalog/<br/>&lt;species_uuid&gt;.json"]
     Proj --> VegClasses["vegetation-classes/<br/>&lt;classification_uuid&gt;.json"]
-    Proj --> Approved["approved/<br/>&lt;point_uuid&gt;.json"]
-    Approved --> Media["approved/media/&lt;point_uuid&gt;/<br/>photo_N.jpg · audio_note_N.m4a<br/>modules__&lt;file&gt; (custom-protocol module media)"]
+    Proj --> Approved["approved/"]
+    Approved --> Point["point_&lt;label&gt;_&lt;uuid&gt;/"]
+    Point --> PointJson["point.json"]
+    Point --> Media["media/"]
+    Media --> Photos["photos/<br/>photo_1.jpg …"]
+    Media --> Audio["audio/<br/>audio_1.m4a …"]
+    Media --> Section["section_&lt;title&gt;/<br/>&lt;field label&gt;_1.jpg …"]
+    Media --> Group["group_&lt;title&gt;/"]
+    Group --> Item["item_01/ · item_02/ …<br/>&lt;field label&gt;_1.jpg …"]
 ```
+
+All the fixed names live in one file, `core/drive-sync/drive-layout.ts`
+(lowercase English, like `species-catalog` or `manifest.json`):
+
+- **`point_<label>_<uuid>`** — one folder per point. The **uuid is the
+  identity**; the label is only there for the person browsing Drive: the
+  collector code and the point number (`ABCD-3`), or just the number
+  (`point_3_<uuid>`) when the point has no collector code. A placeholder such
+  as `?` is never written. The folder is **not** named after the landscape's
+  generated name (it changes when the point is edited).
+- **`point.json`** — the point's data (`PointPackageEntry`), with the media
+  referenced by relative path, e.g. `media/photos/photo_1.jpg` or
+  `package-media:media/group_Amostras/item_01/Foto_1.jpg`.
+- **`media/photos/`**, **`media/audio/`** — the point's own photos and audio
+  notes.
+- **`media/section_<title>/`** — media fields of a section of a custom
+  protocol; **`media/group_<title>/item_NN/`** — media fields of one item of
+  a repeatable group. `<title>` is the section title or the group's label in
+  the protocol, untranslated; files are named `<field label>_<n>.<ext>`.
+- Subfolders exist **only when they hold at least one file**.
+
+Every name that comes from data is sanitized by `drive-layout.ts`: `/ \ : * ?
+" < > |` and control characters are removed, repeated spaces collapse, and
+titles and file base names are cut at 40 characters so full paths stay well
+under Windows' 260-character limit when the tree is downloaded. Two siblings
+that would end up with the same name are told apart by appending the field or
+group key and then a counter, because Drive accepts repeated names and a
+lookup by name would be ambiguous. The Drive paths come from
+`core/drive-sync/drive-media-paths.ts`, a Drive-only mapper: the points
+package (`module-media.ts`) keeps its own naming.
 
 `manifest.json` (`ProjectManifest`, `project-drive-service.ts`) holds
 `format_version`, `project_uuid`, `project_name`, `protocol_id`,
@@ -494,12 +541,24 @@ The restore is **always complete and all-or-nothing**; there is no "data
 only" mode, because media is part of the collection and a point restored
 without it would be re-uploaded without it by the next backup:
 
+- `approved/` is listed (paginated) and only folders named
+  `point_<label>_<uuid>` are read: anything else in it is ignored. Only the
+  `_<uuid>` suffix matters, so editing the label part of a folder name does
+  not stop a restore. A folder without `point.json` (a backup that never
+  finished) is skipped, and so is one whose `point.json` carries another uuid.
+- Points are restored **oldest first** (`created_at` in `point.json`, ties by
+  folder name). Local point numbers are handed out in insertion order and
+  Drive lists children in no defined order, so this keeps the numbering the
+  same on every restore.
 - Every photo and audio note a point lists, including custom-protocol
   module media (`package-media:` markers swapped for local files), is
   downloaded into `Paths.document/imported_points_media/<point_uuid>/` —
   the same persistent directory convention `import-points.ts` uses, never
-  a temporary one.
-- A missing media folder, a file absent from Drive, or a failed download
+  a temporary one. Each file is found by **following the path written in
+  `point.json`**, folder by folder (listings are cached per folder); names
+  are never recomputed. Local file names are safe ASCII with a counter.
+- A folder or file of that path missing from Drive (for instance something
+  renamed or moved inside `media/`), or a failed download,
   raises `MediaRestoreError` (`core/drive-sync/restore-errors.ts`). Any
   failure after the local project was created — media or otherwise —
   deletes the partial project (`deleteProject`) and the media already
@@ -517,8 +576,8 @@ without it would be re-uploaded without it by the next backup:
   and Modals"); on **error** nothing closes and the message stays visible
   in the dialog.
 
-A defensive `Set` of seen `point_uuid`s also protects against a stray
-duplicate file in `approved/` producing two local rows for the same point
+A defensive `Set` of seen `point_uuid`s also protects against two folders in
+`approved/` claiming the same point, which would produce two local rows for the same point
 (`points` has a partial unique index on `(project_id, uuid)` — see
 [05_DATA_MODEL.md](05_DATA_MODEL.md) — that would otherwise reject the
 second insert outright).
@@ -712,13 +771,22 @@ merged into one message rather than alerted one after another.
   and reports.
 - **Restore needs connectivity for every file.** A single failed download
   undoes the whole restore; there is no partial or resumable restore.
-- **Older custom-protocol backups lack module media.** Points backed up to
-  Drive before module media was included (top-level fields) or before
-  repeatable-group media was included keep device paths in those JSON
-  fields and have no matching `modules__*` files, so restoring them brings
-  back the data but not that media. Backing the points up again from the
-  original device fixes it. Older points packages are still read as before:
-  only `package-media:` markers are rewritten, plain uris pass through.
+- **Do not rename or move folders or files inside `media/`.** The restore
+  follows the exact paths written in `point.json`; if something on the path
+  no longer exists it fails with `MediaRestoreError` and undoes everything.
+  (Editing only the label part of the point folder's name is safe.)
+- **The label in a point folder's name is frozen at the first backup.** If
+  the point is renumbered (deleting another point renumbers the later ones)
+  or its collector code is set afterwards, the folder keeps the old label;
+  renaming it would cost one extra Drive call per point. The uuid suffix is
+  what identifies the point, and a re-backup finds the folder through it.
+- **No migration from the earlier Drive layout.** Backups made with
+  `approved/<uuid>.json` and `approved/media/<uuid>/` are not read: the
+  restore ignores them. Back the points up again from the original device.
+- **A first backup makes more Drive calls than before for points with
+  several kinds of media**, because each subfolder is its own call (with
+  photos, audio, a section field and group items, up to a dozen). Each call
+  has its own timeout, so a batch of many points takes longer.
 - **Groups are one level deep.** Media is handled for sub-fields of a
   `repeatable_group`, not of a group nested inside another one. The
   builder UI does not offer that, and both the protocol builder's save

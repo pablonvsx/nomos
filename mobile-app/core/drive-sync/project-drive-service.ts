@@ -7,6 +7,7 @@ import {
   uploadJsonFile,
   type DriveFile,
 } from "@/core/drive-sync/drive-api-client";
+import { APPROVED_FOLDER } from "@/core/drive-sync/drive-layout";
 import { getCurrentGoogleAccount } from "@/core/google-auth/google-auth-service";
 import { getAllDriveFolderIds, getProjectById, setProjectAsOwner } from "@/db/queries/projects";
 import { buildProjectConfigPackage } from "@/core/project-sharing/project-config-package";
@@ -124,7 +125,7 @@ export async function activateDriveBackup(projectId: number): Promise<void> {
     rootFolderId,
   );
 
-  await ensureFolder("approved", projectFolderId);
+  await ensureFolder(APPROVED_FOLDER, projectFolderId);
 
   if (pkg.protocol_source === "custom" && pkg.custom_protocol) {
     await uploadJsonFile("protocol-package.json", projectFolderId, pkg.custom_protocol);

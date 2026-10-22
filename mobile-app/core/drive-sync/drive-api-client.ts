@@ -194,16 +194,35 @@ export async function readJsonFile<T = unknown>(fileId: string): Promise<T> {
   );
 }
 
+/** Safety cap on pages followed by listChildren (1000 children each). */
+export const LIST_CHILDREN_MAX_PAGES = 50;
+
+/**
+ * Every child of a folder. Follows nextPageToken and accumulates the pages -
+ * a folder with more than one page of children used to be read only up to the
+ * first page, silently dropping the rest. Each page is its own request under
+ * the metadata timeout; the page cap only guards against a token that never
+ * ends.
+ */
 export async function listChildren(parentId: string): Promise<DriveFile[]> {
   const headers = await authHeaders();
   const query = encodeURIComponent(`'${parentId}' in parents and trashed = false`);
-  const data = await driveRequest(
-    `${DRIVE_API_BASE}/files?q=${query}&fields=files(id,name,mimeType,modifiedTime)&pageSize=1000`,
-    { headers },
-    DRIVE_METADATA_TIMEOUT_MS,
-    readJson<{ files?: DriveFile[] }>,
-  );
-  return data.files ?? [];
+  const children: DriveFile[] = [];
+  let pageToken: string | undefined;
+
+  for (let pageCount = 0; pageCount < LIST_CHILDREN_MAX_PAGES; pageCount++) {
+    const tokenParam = pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '';
+    const data = await driveRequest(
+      `${DRIVE_API_BASE}/files?q=${query}&fields=nextPageToken,files(id,name,mimeType,modifiedTime)&pageSize=1000${tokenParam}`,
+      { headers },
+      DRIVE_METADATA_TIMEOUT_MS,
+      readJson<{ files?: DriveFile[]; nextPageToken?: string }>,
+    );
+    children.push(...(data.files ?? []));
+    pageToken = data.nextPageToken;
+    if (!pageToken) break;
+  }
+  return children;
 }
 
 export async function downloadBinaryFile(fileId: string, destinationUri: string): Promise<void> {

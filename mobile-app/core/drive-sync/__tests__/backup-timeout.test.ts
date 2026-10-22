@@ -116,7 +116,7 @@ beforeEach(() => {
     created_by: "ABCD",
     approval_status: "approved",
     drive_synced_at: null,
-    uuid: "point-uuid-1",
+    uuid: "3f2b8c1e-5d4a-4b6e-9a1f-0c7d2e8b4a56",
   };
   global.fetch = fetchMock as unknown as typeof fetch;
   installStalledMediaUpload();

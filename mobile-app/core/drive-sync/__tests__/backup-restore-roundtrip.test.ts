@@ -6,58 +6,13 @@
 // of a custom protocol.
 
 import { FakeFile, FakeDirectory, FakePaths, resetFakeFs, fsState } from "../../project-sharing/__tests__/fixtures/fake-environment";
+import { createInMemoryDrive, FOLDER_MIME_TYPE, ROOT_ID } from "./fixtures/in-memory-drive";
 
 jest.mock("expo-file-system", () => ({ File: FakeFile, Directory: FakeDirectory, Paths: FakePaths }));
 
 // ---- One shared fake Drive ----
-interface DriveNode {
-  id: string;
-  name: string;
-  parentId: string;
-  mimeType: string;
-  json?: unknown;
-  bytes?: string;
-  modifiedTime: string;
-}
-let nodes = new Map<string, DriveNode>();
-let nextNodeId = 1;
-
-const childrenOf = (parentId: string) => [...nodes.values()].filter((n) => n.parentId === parentId);
-const toDriveFile = (n: DriveNode) => ({ id: n.id, name: n.name, mimeType: n.mimeType, modifiedTime: n.modifiedTime });
-
-function createNode(partial: Omit<DriveNode, "id" | "modifiedTime">): DriveNode {
-  const node: DriveNode = { id: `node-${nextNodeId++}`, modifiedTime: "2026-05-06T07:08:09.000Z", ...partial };
-  nodes.set(node.id, node);
-  return node;
-}
-
-jest.mock("@/core/drive-sync/drive-api-client", () => ({
-  ensureFolder: async (name: string, parentId: string) => {
-    const existing = childrenOf(parentId).find((n) => n.name === name);
-    return existing ? existing.id : createNode({ name, parentId, mimeType: "application/vnd.google-apps.folder" }).id;
-  },
-  findChildByName: async (parentId: string, name: string) => {
-    const found = childrenOf(parentId).find((n) => n.name === name);
-    return found ? toDriveFile(found) : null;
-  },
-  listChildren: async (parentId: string) => childrenOf(parentId).map(toDriveFile),
-  uploadBinaryFile: async (name: string, parentId: string, localUri: string, mimeType: string) =>
-    toDriveFile(createNode({ name, parentId, mimeType, bytes: fsState.get(localUri)?.content })),
-  updateBinaryFile: async (fileId: string, localUri: string) => {
-    nodes.get(fileId)!.bytes = fsState.get(localUri)?.content;
-    return toDriveFile(nodes.get(fileId)!);
-  },
-  uploadJsonFile: async (name: string, parentId: string, content: unknown) =>
-    toDriveFile(createNode({ name, parentId, mimeType: "application/json", json: JSON.parse(JSON.stringify(content)) })),
-  updateJsonFile: async (fileId: string, content: unknown) => {
-    nodes.get(fileId)!.json = JSON.parse(JSON.stringify(content));
-    return toDriveFile(nodes.get(fileId)!);
-  },
-  readJsonFile: async (fileId: string) => nodes.get(fileId)!.json,
-  downloadBinaryFile: async (fileId: string, destinationUri: string) => {
-    fsState.set(destinationUri, { isDir: false, content: nodes.get(fileId)!.bytes });
-  },
-}));
+const mockDrive = createInMemoryDrive(fsState);
+jest.mock("@/core/drive-sync/drive-api-client", () => mockDrive.api);
 
 jest.mock("@/core/drive-sync/project-drive-service", () => ({
   getManifest: async () => ({
@@ -112,6 +67,7 @@ jest.mock("@/db/queries/custom-protocols", () => {
   };
 });
 
+const POINT_UUID = "3f2b8c1e-5d4a-4b6e-9a1f-0c7d2e8b4a56";
 const createdPoints: any[] = [];
 const pointRow: any = {
   id: 1,
@@ -131,7 +87,7 @@ const pointRow: any = {
   created_by: "ABCD",
   approval_status: "approved",
   drive_synced_at: null,
-  uuid: "point-uuid-1",
+  uuid: POINT_UUID,
 };
 const moduleRow = {
   module_id: "section_1",
@@ -155,7 +111,7 @@ const moduleRow = {
 };
 jest.mock("@/db/queries/points", () => ({
   getPoint: async () => ({ point: pointRow, modules: [moduleRow] }),
-  ensurePointUuid: async () => "point-uuid-1",
+  ensurePointUuid: async () => POINT_UUID,
   getBackupEligiblePointsByProject: async () => [],
   updatePoint: async (_id: number, updates: any) => {
     if (updates.drive_synced_at !== undefined) pointRow.drive_synced_at = updates.drive_synced_at;
@@ -205,16 +161,15 @@ const MEDIA: Record<string, string> = {
 
 beforeEach(() => {
   resetFakeFs();
-  nodes = new Map();
-  nextNodeId = 1;
+  mockDrive.reset();
   createdPoints.length = 0;
   pointRow.drive_synced_at = null;
   for (const [uri, content] of Object.entries(MEDIA)) fsState.set(uri, { isDir: false, content });
-  // The project folder on Drive already holds protocol-package.json (written at backup activation).
-  nodes.set("root", { id: "root", name: "Projeto", parentId: "", mimeType: "application/vnd.google-apps.folder", modifiedTime: "x" });
-  createNode({
+  // The project folder on Drive already holds approved/ and protocol-package.json (written at backup activation).
+  mockDrive.createNode({ name: "approved", parentId: ROOT_ID, mimeType: FOLDER_MIME_TYPE });
+  mockDrive.createNode({
     name: "protocol-package.json",
-    parentId: "root",
+    parentId: ROOT_ID,
     mimeType: "application/json",
     json: { uuid: "protocol-uuid-1", name: "Custom", theme: "t", schema: { sections: [] } },
   });
