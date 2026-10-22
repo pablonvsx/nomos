@@ -37,7 +37,6 @@ app/
 │   ├── project-rejected/[id].tsx       rejected points area (permanent delete)
 │   ├── protocol/builder.tsx    the "Personalized" protocol builder
 │   ├── protocol/native-catalog.tsx  catalog/picker of native scientific protocols (today only paisageo)
-│   ├── protocol/tutorials.tsx  tutorials screen (protocol picker + step-by-step guide), reads constants/protocol-tutorials.ts
 │   ├── species-catalog/[id].tsx
 │   └── view-map.tsx
 └── (survey)/
@@ -252,7 +251,7 @@ hooks/
 ## `types/`, `utils/`, `constants/`, `locales/`, `assets/`
 
 - **`types/database.ts`**: domain interfaces (Point, Project, Species, Protocol, CustomProtocol, CustomSection, CustomFieldConfig, etc.) used by `db/` and the UI. **`types/index.ts`** is a barrel re-exporting `database.ts`.
-- **`utils/`**: `i18n.ts` (`locales/*.json` loading + language persistence), `azimuth.ts` (azimuth conversion/formatting), `date-time-input.ts` (date/time digit validation and formatting, used by `FieldRenderer.tsx`).
-- **`constants/theme.ts`**: palette and typography (Material Design 3, RN Paper). **`constants/shape.ts`**: shared rounded-rectangle button-shape tokens. **`constants/native-protocols-catalog.ts`**: `NATIVE_PROTOCOLS_CATALOG`, descriptive text (workflow + per-module description) for the native scientific protocol catalog shown in `app/(projects)/protocol/native-catalog.tsx` — today only has the `paisageo` entry; purely presentational, doesn't affect `ProtocolRegistry`. **`constants/protocol-tutorials.ts`**: `PROTOCOL_TUTORIALS`, the step-by-step tutorial content (sections → steps, each with icon/title/description) shown in `app/(projects)/protocol/tutorials.tsx`, with one entry per manifest `id` (`paisageo` and `custom` — the latter documents the generic custom-protocol mechanism, not one specific user instance). Same presentational pattern as `native-protocols-catalog.ts`: content only in `pt` for now, with `pt` fallback in other languages.
+- **`utils/`**: `i18n.ts` (`locales/*.json` loading + language persistence), `azimuth.ts` (azimuth conversion/formatting), `date-time-input.ts` (date/time digit validation and formatting, used by `FieldRenderer.tsx`), `open-external-url.ts` (opens an external link without throwing; used by the Help tab).
+- **`constants/theme.ts`**: palette and typography (Material Design 3, RN Paper). **`constants/shape.ts`**: shared rounded-rectangle button-shape tokens. **`constants/links.ts`**: `PROJECT_PAGE_URL`, the single definition of the project page URL (GitHub Pages) opened from the Help tab. **`constants/native-protocols-catalog.ts`**: `NATIVE_PROTOCOLS_CATALOG`, descriptive text (workflow + per-module description) for the native scientific protocol catalog shown in `app/(projects)/protocol/native-catalog.tsx` — today only has the `paisageo` entry; purely presentational, doesn't affect `ProtocolRegistry`.
 - **`locales/{pt,en,es,fr}.json`**: static UI strings (not protocol strings — see [08_I18N.md](08_I18N.md)).
 - **`assets/protocols/paisageo/`**: `paisageo_protocol.json` and `vegetation_classes.json`, legacy static protocol JSON (referenced by the `protocols` table in the database, see [05_DATA_MODEL.md](05_DATA_MODEL.md)); `assets/images/`: icons and logos.

@@ -20,18 +20,10 @@ export interface NativeProtocolCatalogEntry {
   workflow: LocalizedString;
   /** Short per-module description, matched by the ModuleDescriptor's `id`. */
   modules: { id: string; description: LocalizedString }[];
-  /**
-   * Link (Google Drive) to the structured practical guide document, if one
-   * exists for this protocol. The "Acessar Guia Prático" button on
-   * native-catalog.tsx only renders when this is set.
-   */
-  structuredTutorialUrl?: string;
 }
 
 export const NATIVE_PROTOCOLS_CATALOG: Record<string, NativeProtocolCatalogEntry> = {
   paisageo: {
-    structuredTutorialUrl:
-      "https://docs.google.com/document/d/14M19dZIUNGjFN2J7mU_xN3LT13nbuIot/edit?usp=sharing&ouid=108514355750288846507&rtpof=true&sd=true",
     workflow: {
       pt: "A coleta é organizada por pontos amostrais em campo. As coordenadas de cada ponto são obtidas no mapa e, em seguida, o formulário é preenchido na ordem descrita a seguir.\n\nPrimeiro é feita a verificação de homogeneidade da área na escala de coleta e o registro do tamanho da parcela observada. Depois é avaliado o estado de conservação da vegetação (nativa, em regeneração ou substituída) e sua estrutura, classificada pela matriz fisionômica de Küchler (1988) — ou por uma classificação de vegetação personalizada, criada e gerenciada por projeto —, complementada pelo levantamento florístico das espécies identificadas. Em seguida são registrados a cobertura da superfície e os atributos geomorfológicos do relevo (exposição, declividade, forma e posição topográfica) e do solo, seguidos dos impactos ambientais observados no entorno. Com base na vegetação, no ambiente geomorfológico e nos impactos registrados, o aplicativo gera automaticamente um nome sintético para a paisagem do ponto (por exemplo, \"[vegetação] sobre [ambiente], influenciada por [impactos]\"), exibido no detalhe do ponto como \"Nome da Paisagem\". Por fim, são anexadas fotos do ponto e notas complementares em texto ou áudio.\n\nOs nomes de paisagem gerados para cada ponto também alimentam a classificação do projeto: ao classificar a coleta, pontos com o mesmo nome de paisagem são agrupados automaticamente no mesmo tipo de paisagem, na ordem de campo.",
       en: "Data collection is organized by field sampling points. Each point's coordinates are captured on the map, and the form is then filled in the order described below.\n\nFirst, the homogeneity of the area is checked at the collection scale, and the size of the observed plot is recorded. Next, the vegetation's conservation status (native, regenerating, or substituted) is assessed, along with its structure, classified using the Küchler (1988) physiognomic formula — or a custom vegetation classification created and managed per project — complemented by a floristic survey of the identified species. Surface cover and the terrain's geomorphological attributes (exposure, slope, shape, and topographic position) and soil profile are recorded next, followed by the environmental impacts observed nearby. Based on the vegetation, the geomorphological environment, and the recorded impacts, the app automatically generates a synthetic landscape name for the point (e.g., \"[vegetation] over [environment], influenced by [impacts]\"), shown in the point's details as \"Landscape Name\". Finally, photos of the point and additional notes (text or audio) are attached.\n\nThe landscape names generated for each point also feed the project's classification: when classifying the collection, points sharing the same landscape name are automatically grouped into the same landscape type, in field order.",

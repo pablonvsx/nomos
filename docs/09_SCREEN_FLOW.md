@@ -26,11 +26,7 @@ flowchart TD
     Projects -->|"create project"| NewProject["project/new.tsx"]
     Projects -->|"create/edit custom protocol"| Builder["protocol/builder.tsx"]
     Projects -->|"browse native scientific protocols"| NativeCatalog["protocol/native-catalog.tsx<br/>catalog/picker (today only paisageo)"]
-    Projects -->|"router.push('/protocol/tutorials')"| Tutorials["protocol/tutorials.tsx<br/>step-by-step tutorial (protocol picker)"]
     Projects -->|"router.push('/project-details/[id]')"| Details["project-details/[id].tsx<br/>THE SINGLE, manifest-driven screen"]
-
-    NativeCatalog -->|"'View Tutorial' (protocol pre-selected)"| Tutorials
-    Details -->|"tutorial icon (project's protocol pre-selected)"| Tutorials
 
     Details -->|"view map"| ViewMap["view-map.tsx"]
     Details -->|"species catalog"| SpeciesCatalog["species-catalog/[id].tsx"]
@@ -51,10 +47,6 @@ Verified points (file:line):
 - `survey-point-details/[id].tsx:410-416` builds the same URL when editing an existing point, branching on `isOfficial` (paisageo) vs. custom.
 - `survey/form.tsx:498` navigates back to `project-details/${projectId}` after saving.
 - `projects.tsx:522` → `router.push('/protocol/native-catalog')` — a recommendation card in the project list leads to the native scientific protocol catalog (`protocol/native-catalog.tsx`), which reads `NATIVE_PROTOCOLS_CATALOG` (`constants/native-protocols-catalog.ts`) and the `ProtocolRegistry`'s manifest list to show each available native protocol's workflow and modules before the user creates a project with it — today only the `paisageo` entry exists.
-- `protocol/tutorials.tsx` is the step-by-step tutorial screen, with the same protocol picker (Dialog) as `native-catalog.tsx`, but listing `registry.listProtocols()` **without** filtering out `kind === "custom"` — the generic `"custom"` manifest (`modules/custom/manifest.ts`) shows up as another option, alongside `paisageo`. It reads `PROTOCOL_TUTORIALS` (`constants/protocol-tutorials.ts`), indexed by the same manifest `id`. It accepts `?protocolId=<id>` in the URL to open with a protocol pre-selected; without the parameter, it falls back to the first manifest in the list (same fallback as `native-catalog.tsx`). Three entry points, all passing `protocolId` except the one from the project list:
-  - `projects.tsx` (Protocols tab) → `router.push('/protocol/tutorials')`, with no protocol pre-selected.
-  - `protocol/native-catalog.tsx:228` → `router.push('/protocol/tutorials?protocolId=${selected.id}')`, with the catalog's currently-displayed protocol.
-  - `project-details/[id].tsx:627` → `router.push('/protocol/tutorials?protocolId=${manifestId}')`, where `manifestId = resolveManifestId(project)` — `"paisageo"` for native projects and always `"custom"` for Personalized-protocol projects, so the same button works for both cases with no conditional logic in the screen.
 
 ## End-to-end user flow: create project → collect → export
 

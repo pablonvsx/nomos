@@ -1040,10 +1040,6 @@ function UnifiedProjectDetailsScreen() {
           <Card.Content>
             <View style={styles.cardHeader}>
               <Text variant="titleMedium" style={styles.cardTitle}>{t("projectView.projectInfo")}</Text>
-              <CardHeaderIconButton
-                icon="school-outline"
-                onPress={() => router.push(`/protocol/tutorials?protocolId=${manifestId}` as any)}
-              />
             </View>
             <Divider style={{ marginVertical: 12 }} />
             <View style={styles.infoGrid}>

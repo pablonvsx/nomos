@@ -1,9 +1,8 @@
 // mobile-app/app/(projects)/protocol/native-catalog.tsx
 import React, { useState } from "react";
 import { View, ScrollView, StyleSheet, Pressable } from "react-native";
-import { Text, Card, Button, Portal, Dialog, Icon, Divider, Surface, useTheme } from "react-native-paper";
-import { Stack, useRouter } from "expo-router";
-import * as Clipboard from "expo-clipboard";
+import { Text, Card, Button, Portal, Dialog, Icon, Divider, useTheme } from "react-native-paper";
+import { Stack } from "expo-router";
 import { useI18n } from "@/contexts/i18n-context";
 import { useProtocolRegistry } from "@/contexts/protocol-registry-context";
 import { NATIVE_PROTOCOLS_CATALOG } from "@/constants/native-protocols-catalog";
@@ -82,97 +81,16 @@ function ProtocolSelectionDialog({
   );
 }
 
-// Own Dialog + own Portal, mounted only while open - same convention as
-// ProtocolSelectionDialog above. The "copied" confirmation is a local state
-// swap on the button itself, not a Snackbar - a Paper Snackbar rendered at
-// the app root (its own Portal) would end up behind this Dialog's Portal
-// layer (see the same pitfall documented in components/survey/SpeciesInput.tsx).
-function PracticalGuideDialog({
-  visible,
-  onDismiss,
-  url,
-  theme,
-  t,
-}: {
-  visible: boolean;
-  onDismiss: () => void;
-  url: string;
-  theme: any;
-  t: (key: string) => string;
-}) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    await Clipboard.setStringAsync(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <Portal>
-      <Dialog visible={visible} onDismiss={onDismiss}>
-        <Dialog.Title>{t("tutorials.practicalGuideTitle")}</Dialog.Title>
-        <Dialog.Content>
-          <Text variant="bodyMedium" style={{ marginBottom: 16, textAlign: "justify" }}>
-            {t("tutorials.practicalGuideDescription")}
-          </Text>
-
-          <Surface
-            style={[styles.linkBox, { backgroundColor: theme.colors.surfaceVariant }]}
-            elevation={0}
-          >
-            <Text variant="bodySmall" selectable style={{ color: theme.colors.onSurfaceVariant }}>
-              {url}
-            </Text>
-          </Surface>
-
-          <Button
-            mode="outlined"
-            icon={copied ? "check" : "content-copy"}
-            style={[styles.copyButton, { borderRadius: BUTTON_RADIUS }]}
-            onPress={handleCopy}
-          >
-            {copied ? t("tutorials.linkCopied") : t("tutorials.copyLink")}
-          </Button>
-
-          <Surface
-            style={[styles.tipBox, { backgroundColor: theme.colors.tertiaryContainer }]}
-            elevation={0}
-          >
-            <Icon source="information-outline" size={20} color={theme.colors.onTertiaryContainer} />
-            <Text
-              variant="bodySmall"
-              style={{
-                color: theme.colors.onTertiaryContainer,
-                flex: 1,
-                marginLeft: 8,
-                textAlign: "justify",
-              }}
-            >
-              {t("tutorials.openOnDesktopTip")}
-            </Text>
-          </Surface>
-        </Dialog.Content>
-        <Dialog.Actions>
-          <Button onPress={onDismiss}>{t("common.close")}</Button>
-        </Dialog.Actions>
-      </Dialog>
-    </Portal>
-  );
-}
-
 export default function NativeProtocolCatalogScreen() {
   const theme = useTheme();
   const { t, currentLanguage } = useI18n();
   const bottomPadding = useBottomContentPadding();
-  const router = useRouter();
   const registry = useProtocolRegistry();
   const lang = (currentLanguage as string) ?? "pt";
 
   const manifests = registry.listProtocols().filter((p) => p.kind !== "custom");
   const [selectedId, setSelectedId] = useState(manifests[0]?.id);
   const [selectionDialogVisible, setSelectionDialogVisible] = useState(false);
-  const [practicalGuideVisible, setPracticalGuideVisible] = useState(false);
 
   const selected = manifests.find((m) => m.id === selectedId);
   const catalogEntry = selected ? NATIVE_PROTOCOLS_CATALOG[selected.id] : undefined;
@@ -213,42 +131,6 @@ export default function NativeProtocolCatalogScreen() {
                   setSelectionDialogVisible(false);
                 }}
                 lang={lang}
-                theme={theme}
-                t={t}
-              />
-            )}
-
-            {selected && (
-              <View style={styles.tutorialButtonsRow}>
-                <Button
-                  mode="contained-tonal"
-                  icon="school-outline"
-                  style={[styles.tutorialButton, { borderRadius: BUTTON_RADIUS }]}
-                  onPress={() =>
-                    router.push(`/protocol/tutorials?protocolId=${selected.id}` as any)
-                  }
-                >
-                  {t("tutorials.howToUse")}
-                </Button>
-
-                {catalogEntry?.structuredTutorialUrl && (
-                  <Button
-                    mode="contained-tonal"
-                    icon="google-drive"
-                    style={[styles.tutorialButton, { borderRadius: BUTTON_RADIUS }]}
-                    onPress={() => setPracticalGuideVisible(true)}
-                  >
-                    {t("tutorials.accessPracticalGuide")}
-                  </Button>
-                )}
-              </View>
-            )}
-
-            {practicalGuideVisible && catalogEntry?.structuredTutorialUrl && (
-              <PracticalGuideDialog
-                visible={practicalGuideVisible}
-                onDismiss={() => setPracticalGuideVisible(false)}
-                url={catalogEntry.structuredTutorialUrl}
                 theme={theme}
                 t={t}
               />
@@ -331,30 +213,7 @@ const styles = StyleSheet.create({
   selector: {
     marginBottom: 16,
   },
-  tutorialButtonsRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 16,
-  },
-  tutorialButton: {
-    flex: 1,
-  },
   card: {
     marginBottom: 16,
-  },
-  linkBox: {
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-  },
-  copyButton: {
-    alignSelf: "flex-start",
-    marginBottom: 16,
-  },
-  tipBox: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    borderRadius: 8,
-    padding: 12,
   },
 });

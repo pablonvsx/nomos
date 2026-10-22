@@ -12,7 +12,7 @@ interface CardHeaderIconButtonProps {
 }
 
 // The icon-only "rounded rectangle" action button placed at card-header
-// level, alongside the card title (map, tutorial, edit, add, etc.).
+// level, alongside the card title (map, edit, add, etc.).
 export function CardHeaderIconButton({ icon, onPress, disabled, size = 24, accessibilityLabel }: CardHeaderIconButtonProps) {
   const theme = useTheme();
   return (

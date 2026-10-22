@@ -594,24 +594,14 @@ export default function ProjectsScreen() {
             renderItem={renderProtocolCard}
             contentContainerStyle={styles.listContent}
             ListHeaderComponent={
-              <View>
-                <Button
-                  mode="outlined"
-                  icon="compass-outline"
-                  onPress={() => router.push("/protocol/native-catalog" as any)}
-                  style={[styles.nativeProtocolsButton, { borderRadius: BUTTON_RADIUS }]}
-                >
-                  {t("projectsList.nativeProtocolsShowcase")}
-                </Button>
-                <Button
-                  mode="outlined"
-                  icon="school-outline"
-                  onPress={() => router.push("/protocol/tutorials" as any)}
-                  style={[styles.nativeProtocolsButton, { borderRadius: BUTTON_RADIUS }]}
-                >
-                  {t("tutorials.buttonLabel")}
-                </Button>
-              </View>
+              <Button
+                mode="outlined"
+                icon="compass-outline"
+                onPress={() => router.push("/protocol/native-catalog" as any)}
+                style={[styles.nativeProtocolsButton, { borderRadius: BUTTON_RADIUS }]}
+              >
+                {t("projectsList.nativeProtocolsShowcase")}
+              </Button>
             }
             ListEmptyComponent={
               <View style={styles.emptyState}>
