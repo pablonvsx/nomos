@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { View, StyleSheet, ScrollView, Linking } from "react-native";
 import {
   List,
@@ -11,7 +11,7 @@ import {
   RadioButton,
   Button,
 } from "react-native-paper";
-import { Stack, router } from "expo-router";
+import { Stack, router, useFocusEffect } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "@/contexts/theme-context";
 import { useI18n } from "@/contexts/i18n-context";
@@ -32,7 +32,16 @@ export default function SettingsScreen() {
   const [speciesLinkModalVisible, setSpeciesLinkModalVisible] = useState(false);
   const [collectorCodeModalVisible, setCollectorCodeModalVisible] = useState(false);
   const [googleConnectionModalVisible, setGoogleConnectionModalVisible] = useState(false);
-  const { account: googleAccount } = useGoogleAccount();
+  const { account: googleAccount, refresh: refreshGoogleAccount } = useGoogleAccount();
+
+  // This tab stays mounted and its useGoogleAccount() state is its own, so
+  // it must re-read the connection whenever the screen is shown again (the
+  // account may have been connected or disconnected from another screen).
+  useFocusEffect(
+    useCallback(() => {
+      refreshGoogleAccount();
+    }, [refreshGoogleAccount]),
+  );
 
   const availableLanguages = getAvailableLanguages();
 
@@ -319,6 +328,7 @@ export default function SettingsScreen() {
       <GoogleConnectionModal
         visible={googleConnectionModalVisible}
         onDismiss={() => setGoogleConnectionModalVisible(false)}
+        onAccountChange={refreshGoogleAccount}
       />
     </ScrollView>
   );

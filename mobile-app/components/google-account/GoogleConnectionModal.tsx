@@ -15,6 +15,10 @@ interface GoogleConnectionModalProps {
    * automatically retry the pending Drive action (activate backup, back up,
    * restore) once the account is connected. */
   onConnected?: (account: GoogleAccount) => void;
+  /** Called after any connect or disconnect attempt finishes, so a caller that
+   * shows the connection status can re-read it: this modal's useGoogleAccount()
+   * state is its own, not the caller's. */
+  onAccountChange?: () => void;
   /** Sign out before signing in so Android shows the account chooser instead of silently reusing the last account ("use another account" flow). */
   forceAccountChooser?: boolean;
 }
@@ -23,6 +27,7 @@ export const GoogleConnectionModal: React.FC<GoogleConnectionModalProps> = ({
   visible,
   onDismiss,
   onConnected,
+  onAccountChange,
   forceAccountChooser = false,
 }) => {
   const theme = useTheme();
@@ -41,7 +46,13 @@ export const GoogleConnectionModal: React.FC<GoogleConnectionModalProps> = ({
   // re-sync above can never be mistaken for a fresh connection.
   const handleConnect = async () => {
     const connected = await connect({ forceAccountChooser });
+    onAccountChange?.();
     if (connected) onConnected?.(connected);
+  };
+
+  const handleDisconnect = async () => {
+    await disconnect();
+    onAccountChange?.();
   };
 
   return (
@@ -73,7 +84,7 @@ export const GoogleConnectionModal: React.FC<GoogleConnectionModalProps> = ({
               </Text>
               <Button
                 mode="outlined"
-                onPress={disconnect}
+                onPress={handleDisconnect}
                 loading={isConnecting}
                 disabled={isConnecting}
                 style={[styles.actionButton, { borderRadius: BUTTON_RADIUS }]}

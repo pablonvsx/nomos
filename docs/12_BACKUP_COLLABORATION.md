@@ -550,6 +550,11 @@ shared connection UI, home base in Settings, also opened in place by
 three actions is attempted without a connected account — the pending
 action (`pendingDriveIntent`, local state in each screen) resumes
 automatically once the modal's `onConnected` fires.
+Every `useGoogleAccount()` instance keeps its own state (the modal has one,
+and so does the Settings tab, which stays mounted), so a caller that shows
+the connection status must re-read it: the modal calls `onAccountChange`
+after each connect or disconnect, and Settings also calls the hook's
+`refresh()` every time the screen gains focus.
 `core/google-auth/google-auth-service.ts` wraps
 `@react-native-google-signin/google-signin` behind a lazy `require()`
 (never a static top-level import) so the module doesn't crash an
