@@ -5,6 +5,7 @@
  */
 
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { ModalActions } from "@/components/ui/ModalActions";
 import React, { useState, useCallback, useRef } from "react";
 import {
   View,
@@ -1413,12 +1414,12 @@ function SpeciesManagementModal({
                 {t("species.addCommonName")}
               </Button>
             </Dialog.Content>
-            <Dialog.Actions>
-              <Button onPress={handleCloseEditModal}>{t("species.cancel")}</Button>
-              <Button onPress={handleSaveEdit} mode="contained" style={{ borderRadius: BUTTON_RADIUS }}>
-                {t("common.save")}
-              </Button>
-            </Dialog.Actions>
+            <ModalActions
+              cancelLabel={t("species.cancel")}
+              onCancel={handleCloseEditModal}
+              confirmLabel={t("common.save")}
+              onConfirm={handleSaveEdit}
+            />
           </Dialog>
         </Portal>
 
@@ -1429,19 +1430,17 @@ function SpeciesManagementModal({
             <Dialog.Content>
               <Text variant="bodyMedium">{t("species.deleteMessage")}</Text>
             </Dialog.Content>
-            <Dialog.Actions>
-              <Button onPress={() => setDeleteConfirmVisible(false)}>{t("species.cancel")}</Button>
-              <Button
-                onPress={() => {
-                  if (speciesToDelete) {
-                    handleDeleteSpecies(speciesToDelete);
-                  }
-                }}
-                textColor={theme.colors.error}
-              >
-                {t("common.remove")}
-              </Button>
-            </Dialog.Actions>
+            <ModalActions
+              cancelLabel={t("species.cancel")}
+              onCancel={() => setDeleteConfirmVisible(false)}
+              confirmLabel={t("common.remove")}
+              onConfirm={() => {
+                if (speciesToDelete) {
+                  handleDeleteSpecies(speciesToDelete);
+                }
+              }}
+              destructive
+            />
           </Dialog>
         </Portal>
 
@@ -1454,15 +1453,13 @@ function SpeciesManagementModal({
                 {t("species.resetCatalogMessage")}
               </Text>
             </Dialog.Content>
-            <Dialog.Actions>
-              <Button onPress={() => setResetCatalogConfirmVisible(false)}>{t("species.cancel")}</Button>
-              <Button
-                onPress={handleResetCatalog}
-                textColor={theme.colors.error}
-              >
-                {t("species.removeAll")}
-              </Button>
-            </Dialog.Actions>
+            <ModalActions
+              cancelLabel={t("species.cancel")}
+              onCancel={() => setResetCatalogConfirmVisible(false)}
+              confirmLabel={t("species.removeAll")}
+              onConfirm={handleResetCatalog}
+              destructive
+            />
           </Dialog>
         </Portal>
 

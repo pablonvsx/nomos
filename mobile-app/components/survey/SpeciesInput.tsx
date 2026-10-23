@@ -5,6 +5,7 @@
  */
 
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { ModalActions } from "@/components/ui/ModalActions";
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -1025,25 +1026,16 @@ export default function SpeciesInput({
                     right={<TextInput.Affix text={t("surveyView.individuals")} />}
                   />
 
-                  <Button
-                    mode="contained"
-                    onPress={handleAddFromCatalog}
-                    style={{ marginBottom: 8, borderRadius: BUTTON_RADIUS }}
-                  >
-                    {isUpdatingSpecies ? t("species.modifyRecord") : t("species.addToCollection")}
-                  </Button>
-
-                  <Button
-                    mode="outlined"
-                    onPress={() => {
+                  <ModalActions
+                    cancelLabel={t("common.cancel")}
+                    onCancel={() => {
                       setSelectedCatalogSpecies(null);
                       setCatalogAbundanceInput("");
                       setIsUpdatingSpecies(false);
                     }}
-                    style={{ borderRadius: BUTTON_RADIUS }}
-                  >
-                    {t("common.cancel")}
-                  </Button>
+                    confirmLabel={isUpdatingSpecies ? t("species.modifyRecord") : t("species.addToCollection")}
+                    onConfirm={handleAddFromCatalog}
+                  />
                 </View>
               )}
             </>
