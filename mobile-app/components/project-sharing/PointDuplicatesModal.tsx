@@ -1,7 +1,7 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useRef, useState } from "react";
 import { View, ScrollView, StyleSheet } from "react-native";
-import { Button, Text, Divider, useTheme, IconButton, Portal, Modal } from "react-native-paper";
+import { Text, Divider, useTheme, IconButton, Portal, Modal } from "react-native-paper";
 import {
   resolvePointDuplicate,
   type PendingDuplicate,
@@ -12,7 +12,7 @@ import {
   type DuplicateAction,
 } from "@/core/project-sharing/duplicates-session";
 import { useI18n } from "@/contexts/i18n-context";
-import { BUTTON_RADIUS } from "@/constants/shape";
+import { ModalActions } from "@/components/ui/ModalActions";
 
 interface PointDuplicatesModalProps {
   visible: boolean;
@@ -79,26 +79,16 @@ export const PointDuplicatesModal: React.FC<PointDuplicatesModalProps> = ({
               <Text variant="bodyMedium" style={{ color: theme.colors.onSurface }}>
                 {t("surveyView.point")} {duplicate.incoming.point_number}
               </Text>
-              <View style={styles.buttonRow}>
-                <Button
-                  mode="outlined"
-                  onPress={() => resolve(duplicate, "discard")}
-                  loading={busyUuid === duplicate.incoming.point_uuid}
-                  disabled={busyUuid !== null}
-                  style={[styles.buttonHalf, { borderRadius: BUTTON_RADIUS }]}
-                >
-                  {t("pointDuplicates.discard")}
-                </Button>
-                <Button
-                  mode="contained"
-                  onPress={() => resolve(duplicate, "replace")}
-                  loading={busyUuid === duplicate.incoming.point_uuid}
-                  disabled={busyUuid !== null}
-                  style={[styles.buttonHalf, { borderRadius: BUTTON_RADIUS }]}
-                >
-                  {t("pointDuplicates.replace")}
-                </Button>
-              </View>
+              <ModalActions
+                cancelLabel={t("pointDuplicates.discard")}
+                onCancel={() => resolve(duplicate, "discard")}
+                cancelDisabled={busyUuid !== null}
+                confirmLabel={t("pointDuplicates.replace")}
+                onConfirm={() => resolve(duplicate, "replace")}
+                confirmDisabled={busyUuid !== null}
+                loading={busyUuid === duplicate.incoming.point_uuid}
+                style={styles.buttonRow}
+              />
               <Divider style={styles.rowDivider} />
             </View>
           ))}
@@ -136,12 +126,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   buttonRow: {
-    flexDirection: "row",
-    gap: 8,
     marginTop: 8,
-  },
-  buttonHalf: {
-    flex: 1,
   },
   rowDivider: {
     marginTop: 12,

@@ -2,7 +2,6 @@ import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import {
-  Button,
   TextInput,
   Text,
   Divider,
@@ -14,7 +13,7 @@ import {
 } from "react-native-paper";
 import { getLocalCollectorCode, setLocalCollectorCode } from "@/core/local-identity/collector-code";
 import { useI18n } from "@/contexts/i18n-context";
-import { BUTTON_RADIUS } from "@/constants/shape";
+import { ModalActions } from "@/components/ui/ModalActions";
 
 interface CollectorCodeModalProps {
   visible: boolean;
@@ -91,16 +90,14 @@ export const CollectorCodeModal: React.FC<CollectorCodeModalProps> = ({
           />
           {error && <HelperText type="error">{error}</HelperText>}
 
-          <Button
-            mode="contained"
-            onPress={handleSave}
+          <ModalActions
+            confirmLabel={t("collectorCode.save")}
+            onConfirm={handleSave}
             loading={saving}
-            disabled={!code.trim()}
-            style={[styles.saveButton, { borderRadius: BUTTON_RADIUS }]}
-            icon="content-save-outline"
-          >
-            {t("collectorCode.save")}
-          </Button>
+            confirmDisabled={!code.trim()}
+            confirmIcon="content-save-outline"
+            style={styles.saveButton}
+          />
         </View>
       </Modal>
     </Portal>

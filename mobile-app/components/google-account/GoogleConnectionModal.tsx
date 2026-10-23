@@ -1,11 +1,11 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useEffect } from "react";
 import { View, StyleSheet } from "react-native";
-import { Button, Text, Divider, useTheme, IconButton, Portal, Modal, HelperText } from "react-native-paper";
+import { Text, Divider, useTheme, IconButton, Portal, Modal, HelperText } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useGoogleAccount } from "@/hooks/use-google-account";
 import { useI18n } from "@/contexts/i18n-context";
-import { BUTTON_RADIUS } from "@/constants/shape";
+import { ModalActions } from "@/components/ui/ModalActions";
 import { makeEmailBreakable } from "@/core/ui/dialog-layout";
 import type { GoogleAccount } from "@/core/google-auth/google-auth-service";
 
@@ -116,15 +116,13 @@ export const GoogleConnectionModal: React.FC<GoogleConnectionModalProps> = ({
                   {makeEmailBreakable(account.email)}
                 </Text>
               </View>
-              <Button
-                mode="outlined"
-                onPress={handleDisconnect}
+              <ModalActions
+                confirmLabel={t("googleAccount.disconnect")}
+                onConfirm={handleDisconnect}
                 loading={isConnecting}
-                disabled={isConnecting}
-                style={[styles.actionButton, { borderRadius: BUTTON_RADIUS }]}
-              >
-                {t("googleAccount.disconnect")}
-              </Button>
+                destructive
+                style={styles.actionButton}
+              />
             </>
           ) : (
             <>
@@ -134,16 +132,13 @@ export const GoogleConnectionModal: React.FC<GoogleConnectionModalProps> = ({
               >
                 {t("googleAccount.connectExplanation")}
               </Text>
-              <Button
-                mode="contained"
-                onPress={handleConnect}
+              <ModalActions
+                confirmLabel={t("googleAccount.connect")}
+                onConfirm={handleConnect}
                 loading={isConnecting}
-                disabled={isConnecting}
-                style={[styles.actionButton, { borderRadius: BUTTON_RADIUS }]}
-                icon="google"
-              >
-                {t("googleAccount.connect")}
-              </Button>
+                confirmIcon="google"
+                style={styles.actionButton}
+              />
             </>
           )}
           {error && (
