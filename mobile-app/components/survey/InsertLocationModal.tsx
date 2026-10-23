@@ -1,7 +1,7 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { View, StyleSheet, Modal, InteractionManager, Platform } from "react-native";
-import { Button, IconButton, Text, FAB, useTheme } from "react-native-paper";
+import { IconButton, Text, FAB, useTheme } from "react-native-paper";
 import MapView, {
   Marker,
   Geojson,
@@ -19,7 +19,7 @@ import {
   MAP_LEGEND_TOP_OFFSET,
 } from "@/components/map/map-overlay-styles";
 import { LayerMenu } from "@/components/map/LayerMenu";
-import { BUTTON_RADIUS } from "@/constants/shape";
+import { ModalActions } from "@/components/ui/ModalActions";
 import { useLocationPermission } from "@/hooks/use-location-permission";
 
 // This modal already has its own header above the map (unlike the project
@@ -303,15 +303,6 @@ export function LocationPickerModal({
           >
             {t("insertLocation.selectLocation")}
           </Text>
-          <Button
-            mode="contained"
-            onPress={handleConfirm}
-            disabled={!tempMarker}
-            compact
-            style={{ borderRadius: BUTTON_RADIUS }}
-          >
-            {t("common.confirm")}
-          </Button>
         </View>
 
         {/* Map */}
@@ -502,7 +493,7 @@ export function LocationPickerModal({
             <View
               style={[
                 styles.coordsOverlay,
-                { backgroundColor: theme.colors.surface, bottom: 100 + insets.bottom },
+                { backgroundColor: theme.colors.surface, bottom: 100 },
               ]}
             >
               <Text
@@ -523,7 +514,7 @@ export function LocationPickerModal({
 
           {/* Layers button */}
           {!shouldBlockMapRender && (
-            <View style={[styles.fabContainer, { bottom: 24 + insets.bottom }]}>
+            <View style={[styles.fabContainer, { bottom: 24 }]}>
               <FAB
                 icon="layers"
                 style={[styles.fab, { backgroundColor: theme.colors.surface }]}
@@ -544,6 +535,23 @@ export function LocationPickerModal({
             bottomOffset={98}
             t={t}
             theme={theme}
+          />
+        </View>
+
+        {/* Footer */}
+        <View
+          style={{
+            backgroundColor: theme.colors.surface,
+            paddingBottom: insets.bottom,
+            elevation: 4,
+          }}
+        >
+          <ModalActions
+            cancelLabel={t("common.cancel")}
+            onCancel={onDismiss}
+            confirmLabel={t("common.confirm")}
+            onConfirm={handleConfirm}
+            confirmDisabled={!tempMarker}
           />
         </View>
       </View>
