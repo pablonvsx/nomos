@@ -215,7 +215,7 @@ export default function SettingsScreen() {
           <List.Item
             title={t("googleAccount.settingsItemTitle")}
             description={
-              googleAccount ? `${t("googleAccount.connectedAs")}\n${googleAccount.email}` : t("googleAccount.notConnected")
+              googleAccount ? googleAccount.email : t("googleAccount.notConnected")
             }
             left={(props) => <List.Icon {...props} icon="google" />}
             onPress={() => setGoogleConnectionModalVisible(true)}
