@@ -593,16 +593,6 @@ export default function ProjectsScreen() {
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderProtocolCard}
             contentContainerStyle={styles.listContent}
-            ListHeaderComponent={
-              <Button
-                mode="outlined"
-                icon="compass-outline"
-                onPress={() => router.push("/protocol/native-catalog" as any)}
-                style={[styles.nativeProtocolsButton, { borderRadius: BUTTON_RADIUS }]}
-              >
-                {t("projectsList.nativeProtocolsShowcase")}
-              </Button>
-            }
             ListEmptyComponent={
               <View style={styles.emptyState}>
                 <Text
@@ -797,8 +787,5 @@ const styles = StyleSheet.create({
   },
   emptySubText: {
     textAlign: "center",
-  },
-  nativeProtocolsButton: {
-    marginBottom: 12,
   },
 });

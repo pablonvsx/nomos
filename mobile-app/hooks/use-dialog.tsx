@@ -1,3 +1,4 @@
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, {
   createContext,
   useContext,
@@ -106,11 +107,10 @@ export function DialogProvider({ children }: { children: ReactNode }) {
         >
           {options?.title && (
             <Dialog.Title
-              style={{
-                color: theme.colors.onSurface,
-                textAlign: "justify",
-                fontSize: 19,
-              }}
+              style={[
+                MODAL_TITLE_STYLE,
+                { color: theme.colors.onSurface, textAlign: "justify" },
+              ]}
             >
               {options.title}
             </Dialog.Title>

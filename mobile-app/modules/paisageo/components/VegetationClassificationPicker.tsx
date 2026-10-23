@@ -1,3 +1,4 @@
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
@@ -141,7 +142,7 @@ export default function VegetationClassificationPicker({
       onDismiss={onClose}
       style={styles.dialog}
     >
-      <Dialog.Title>{t("vegetationClassification.selectClassification")}</Dialog.Title>
+      <Dialog.Title style={MODAL_TITLE_STYLE}>{t("vegetationClassification.selectClassification")}</Dialog.Title>
 
       <Dialog.ScrollArea style={styles.content}>
         {loading ? (

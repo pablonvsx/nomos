@@ -35,7 +35,7 @@ Real dependencies extracted from `mobile-app/package.json`. Exact versions per t
 | `react-native-worklets` | 0.5.1 | Native worklet support (reanimated) |
 | `react-native-view-shot` | ^4.0.3 | Screen capture (used in the export flow) |
 | `@react-native-community/slider` | 5.0.1 | Native slider (`percentage`/`azimuth` fields, `modules/generic/FieldRenderer.tsx`) |
-| `expo-clipboard` | ~8.0.8 | Copy-to-clipboard (`app/(projects)/protocol/native-catalog.tsx`) |
+| `expo-clipboard` | ~8.0.8 | Copy-to-clipboard (currently not used by any screen) |
 
 ## Database
 

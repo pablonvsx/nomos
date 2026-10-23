@@ -1,3 +1,4 @@
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useState, useMemo } from "react";
 import { View, Pressable, ScrollView } from "react-native";
 import Slider from "@react-native-community/slider";
@@ -139,7 +140,7 @@ function CardinalPointDialog({
   return (
     <Portal>
       <Dialog visible={visible} onDismiss={onDismiss} style={{ maxHeight: "70%" }}>
-        <Dialog.Title style={{ fontSize: 16 }} numberOfLines={1}>
+        <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {t("survey.selectCardinalPoint")}
         </Dialog.Title>
         <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>

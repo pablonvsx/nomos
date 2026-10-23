@@ -4,6 +4,7 @@
  * Allows searching, adding, editing, and removing species
  */
 
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useState, useCallback, useRef } from "react";
 import {
   View,
@@ -810,7 +811,7 @@ function SpeciesManagementModal({
     <>
       {!isScreen && (
         <View style={styles.header}>
-          <Text variant="headlineSmall">{t("species.manageSpecies")}</Text>
+          <Text variant="headlineSmall" style={MODAL_TITLE_STYLE}>{t("species.manageSpecies")}</Text>
           <IconButton icon="close" onPress={onDismiss} />
         </View>
       )}
@@ -1333,7 +1334,7 @@ function SpeciesManagementModal({
         {/* Edit Species Modal */}
         <Portal>
           <Dialog visible={editModalVisible} onDismiss={handleCloseEditModal}>
-            <Dialog.Title>{t("species.editSpecies")}</Dialog.Title>
+            <Dialog.Title style={MODAL_TITLE_STYLE}>{t("species.editSpecies")}</Dialog.Title>
             <Dialog.Content>
               <TextInput
                 label={`${t("species.scientificName")} *`}
@@ -1424,7 +1425,7 @@ function SpeciesManagementModal({
         {/* Delete Confirmation Dialog */}
         <Portal>
           <Dialog visible={deleteConfirmVisible} onDismiss={() => setDeleteConfirmVisible(false)}>
-            <Dialog.Title>{t("species.confirmDelete")}</Dialog.Title>
+            <Dialog.Title style={MODAL_TITLE_STYLE}>{t("species.confirmDelete")}</Dialog.Title>
             <Dialog.Content>
               <Text variant="bodyMedium">{t("species.deleteMessage")}</Text>
             </Dialog.Content>
@@ -1447,7 +1448,7 @@ function SpeciesManagementModal({
         {/* Reset Catalog Confirmation Dialog */}
         <Portal>
           <Dialog visible={resetCatalogConfirmVisible} onDismiss={() => setResetCatalogConfirmVisible(false)}>
-            <Dialog.Title>{t("species.resetCatalogTitle")}</Dialog.Title>
+            <Dialog.Title style={MODAL_TITLE_STYLE}>{t("species.resetCatalogTitle")}</Dialog.Title>
             <Dialog.Content>
               <Text variant="bodyMedium">
                 {t("species.resetCatalogMessage")}

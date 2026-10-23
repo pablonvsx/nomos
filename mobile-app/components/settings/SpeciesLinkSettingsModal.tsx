@@ -1,3 +1,4 @@
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -312,7 +313,7 @@ export const SpeciesLinkSettingsModal: React.FC<SpeciesLinkSettingsModalProps> =
         onDismiss={() => setRemoveConfirmVisible(false)}
         style={{ backgroundColor: theme.colors.surface }}
       >
-        <Dialog.Title style={{ color: theme.colors.onSurface }}>
+        <Dialog.Title style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>
           {t('species.confirmRemoval')}
         </Dialog.Title>
         <Dialog.Content>
@@ -342,7 +343,7 @@ export const SpeciesLinkSettingsModal: React.FC<SpeciesLinkSettingsModalProps> =
         onDismiss={() => setInfoDialog(null)}
         style={{ backgroundColor: theme.colors.surface }}
       >
-        <Dialog.Title style={{ color: theme.colors.onSurface }}>
+        <Dialog.Title style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>
           {infoDialog?.title}
         </Dialog.Title>
         <Dialog.Content>
@@ -378,7 +379,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    fontWeight: '600',
+    ...MODAL_TITLE_STYLE,
   },
   content: {
     maxHeight: '80%',

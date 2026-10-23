@@ -1,3 +1,4 @@
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useState } from "react";
 import { View, StyleSheet, Pressable, FlatList } from "react-native";
 import {
@@ -71,7 +72,7 @@ export default function SoilOptionPicker({ label, options, value, onSelect, onIn
           onDismiss={() => setListModalVisible(false)}
           contentContainerStyle={[styles.modalContent, { backgroundColor: theme.colors.surface }]}
         >
-          <Text variant="titleMedium" style={{ marginBottom: 12, color: theme.colors.primary, fontWeight: "bold" }}>
+          <Text variant="titleMedium" style={{ ...MODAL_TITLE_STYLE, marginBottom: 12, color: theme.colors.primary }}>
             {label}
           </Text>
           <Pressable

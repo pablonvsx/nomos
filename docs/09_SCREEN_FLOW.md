@@ -25,7 +25,6 @@ flowchart TD
 
     Projects -->|"create project"| NewProject["project/new.tsx"]
     Projects -->|"create/edit custom protocol"| Builder["protocol/builder.tsx"]
-    Projects -->|"browse native scientific protocols"| NativeCatalog["protocol/native-catalog.tsx<br/>catalog/picker (today only paisageo)"]
     Projects -->|"router.push('/project-details/[id]')"| Details["project-details/[id].tsx<br/>THE SINGLE, manifest-driven screen"]
 
     Details -->|"view map"| ViewMap["view-map.tsx"]
@@ -46,7 +45,6 @@ Verified points (file:line):
 - `insert-location.tsx:314-315` builds the form URL, including `protocolId=${resolveManifestId(project)}` and, for custom projects, `customProtocolDbId=${project.protocol_id}` — this is how `survey/form.tsx` knows which manifest and which modules to load.
 - `survey-point-details/[id].tsx:410-416` builds the same URL when editing an existing point, branching on `isOfficial` (paisageo) vs. custom.
 - `survey/form.tsx:498` navigates back to `project-details/${projectId}` after saving.
-- `projects.tsx:522` → `router.push('/protocol/native-catalog')` — a recommendation card in the project list leads to the native scientific protocol catalog (`protocol/native-catalog.tsx`), which reads `NATIVE_PROTOCOLS_CATALOG` (`constants/native-protocols-catalog.ts`) and the `ProtocolRegistry`'s manifest list to show each available native protocol's workflow and modules before the user creates a project with it — today only the `paisageo` entry exists.
 
 ## End-to-end user flow: create project → collect → export
 

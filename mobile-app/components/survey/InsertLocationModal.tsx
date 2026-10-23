@@ -1,3 +1,4 @@
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { View, StyleSheet, Modal, InteractionManager, Platform } from "react-native";
 import { Button, IconButton, Text, FAB, useTheme } from "react-native-paper";
@@ -298,7 +299,7 @@ export function LocationPickerModal({
           />
           <Text
             variant="titleMedium"
-            style={{ flex: 1, color: theme.colors.onSurface }}
+            style={{ ...MODAL_TITLE_STYLE, flex: 1, color: theme.colors.onSurface }}
           >
             {t("insertLocation.selectLocation")}
           </Text>

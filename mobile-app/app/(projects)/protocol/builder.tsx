@@ -4,6 +4,7 @@
  * Form builder interface similar to Google Forms
  */
 
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
 import {
   View,
@@ -717,7 +718,7 @@ const TypeSelectionDialog = memo(function TypeSelectionDialog({
         onDismiss={onDismiss}
         style={{ maxHeight: "70%" }}
       >
-        <Dialog.Title style={{ fontSize: 16 }} numberOfLines={1}>
+        <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {t("protocol.selectFieldType")}
         </Dialog.Title>
         <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
@@ -772,7 +773,7 @@ const TypeSelectionDialog = memo(function TypeSelectionDialog({
 
 // Picker for attaching a prefab scientific module (modules/registry.ts)
 // to the protocol - same own-Portal/own-Dialog + Pressable-list pattern as
-// TypeSelectionDialog above (and app/(projects)/protocol/native-catalog.tsx).
+// TypeSelectionDialog above.
 function ModuleSelectionDialog({
   visible,
   onDismiss,
@@ -813,7 +814,7 @@ function ModuleSelectionDialog({
   return (
     <Portal>
       <Dialog visible={visible} onDismiss={onDismiss} style={{ maxHeight: "80%" }}>
-        <Dialog.Title style={{ fontSize: 16 }} numberOfLines={1}>
+        <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {t("protocol.selectScientificModule")}
         </Dialog.Title>
         <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
@@ -930,7 +931,7 @@ const UnitSelectionDialog = memo(function UnitSelectionDialog({
   return (
     <Portal>
       <Dialog visible={visible} onDismiss={onDismiss} style={{ maxHeight: "70%" }}>
-        <Dialog.Title style={{ fontSize: 16 }} numberOfLines={1}>
+        <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {t("protocol.selectUnit")}
         </Dialog.Title>
         <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
@@ -968,7 +969,7 @@ const OptionsManagerDialog = memo(function OptionsManagerDialog({
   return (
     <Portal>
       <Dialog visible={visible} onDismiss={onDismiss} style={{ maxHeight: "80%" }}>
-        <Dialog.Title style={{ fontSize: 16 }} numberOfLines={1}>
+        <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {t("protocol.manageOptions")}
         </Dialog.Title>
         <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
@@ -1068,7 +1069,7 @@ const ItemFieldsManagerDialog = memo(function ItemFieldsManagerDialog({
     <>
       <Portal>
         <Dialog visible={visible} onDismiss={onDismiss} style={{ maxHeight: "80%" }}>
-          <Dialog.Title style={{ fontSize: 16 }} numberOfLines={1}>
+          <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
             {t("protocol.manageItemFields")}
           </Dialog.Title>
           <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
@@ -1162,7 +1163,7 @@ const FieldValidationAlert = memo(function FieldValidationAlert({
       >
         <Dialog.Title
           numberOfLines={1}
-          style={{ color: theme.colors.onSurface, textAlign: "justify", fontSize: 16 }}
+          style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface, textAlign: "justify" }]}
         >
           {t("common.error")}
         </Dialog.Title>
@@ -1347,7 +1348,7 @@ function FieldFormDialog({
         onDismiss={onDismiss}
         style={{ maxHeight: FIELD_DIALOG_MAX_HEIGHT }}
       >
-        <Dialog.Title style={{ fontSize: 16 }} numberOfLines={1}>
+        <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {isEdit ? t("protocol.editField") : t("protocol.newField")}
         </Dialog.Title>
         <Dialog.ScrollArea>

@@ -1,3 +1,4 @@
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useEffect, useState } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 import {
@@ -188,7 +189,7 @@ export const RestoreProjectsModal: React.FC<RestoreProjectsModalProps> = ({
       </Modal>
 
       <Dialog visible={selected !== null} onDismiss={() => (isRestoring ? null : setSelected(null))}>
-        <Dialog.Title>{selected?.projectName}</Dialog.Title>
+        <Dialog.Title style={MODAL_TITLE_STYLE}>{selected?.projectName}</Dialog.Title>
         <Dialog.Content>
           <Text variant="bodyMedium" style={{ textAlign: "justify" }}>
             {t("driveRestore.confirmRestore")}
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    fontWeight: "600",
+    ...MODAL_TITLE_STYLE,
   },
   content: {
     padding: 16,

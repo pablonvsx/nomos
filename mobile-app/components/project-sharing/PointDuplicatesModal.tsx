@@ -1,3 +1,4 @@
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useRef, useState } from "react";
 import { View, ScrollView, StyleSheet } from "react-native";
 import { Button, Text, Divider, useTheme, IconButton, Portal, Modal } from "react-native-paper";
@@ -122,7 +123,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    fontWeight: "600",
+    ...MODAL_TITLE_STYLE,
   },
   content: {
     maxHeight: "80%",

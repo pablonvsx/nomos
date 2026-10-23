@@ -1,7 +1,8 @@
 // mobile-app/utils/open-external-url.ts
 //
 // Opens an external link without ever throwing. Takes the opener as a
-// parameter (callers pass react-native's Linking.openURL) so the logic stays
+// parameter (callers pass `(url) => Linking.openURL(url)`; never the bare
+// method, which depends on `this` and throws when detached) so the logic stays
 // free of native imports and testable under plain Node. Only ever called on
 // an explicit user action: the app is offline-first, so no feature depends on
 // a link being reachable.

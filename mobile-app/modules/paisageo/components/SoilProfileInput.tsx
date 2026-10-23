@@ -1,3 +1,4 @@
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, ScrollView, Pressable } from "react-native";
 import {
@@ -671,7 +672,7 @@ export default function SoilProfileInput({ field, value, onChange }: Props) {
           contentContainerStyle={[styles.modalContent, { backgroundColor: theme.colors.surface }]}
         >
           <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
-            <Text variant="headlineSmall" style={{ marginBottom: 16, fontWeight: "bold", color: theme.colors.primary }}>
+            <Text variant="headlineSmall" style={{ ...MODAL_TITLE_STYLE, marginBottom: 16, color: theme.colors.primary }}>
               {modalMode === "simple" ? t("survey.generalSoilDescription") : t("survey.editLayer")}
             </Text>
 

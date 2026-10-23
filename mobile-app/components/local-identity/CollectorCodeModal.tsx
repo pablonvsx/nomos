@@ -1,3 +1,4 @@
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import {
@@ -120,7 +121,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    fontWeight: "600",
+    ...MODAL_TITLE_STYLE,
   },
   content: {
     padding: 16,

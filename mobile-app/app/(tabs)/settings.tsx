@@ -1,3 +1,4 @@
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useCallback, useState } from "react";
 import { View, StyleSheet, ScrollView, Linking } from "react-native";
 import {
@@ -214,7 +215,7 @@ export default function SettingsScreen() {
           <List.Item
             title={t("googleAccount.settingsItemTitle")}
             description={
-              googleAccount ? t("googleAccount.connectedAs", { email: googleAccount.email }) : t("googleAccount.notConnected")
+              googleAccount ? `${t("googleAccount.connectedAs")}\n${googleAccount.email}` : t("googleAccount.notConnected")
             }
             left={(props) => <List.Icon {...props} icon="google" />}
             onPress={() => setGoogleConnectionModalVisible(true)}
@@ -285,7 +286,7 @@ export default function SettingsScreen() {
           visible={languageDialogVisible}
           onDismiss={() => setLanguageDialogVisible(false)}
         >
-          <Dialog.Title>{t("settings.language")}</Dialog.Title>
+          <Dialog.Title style={MODAL_TITLE_STYLE}>{t("settings.language")}</Dialog.Title>
           <Dialog.Content>
             <RadioButton.Group
               onValueChange={(value) => setSelectedLanguage(value)}

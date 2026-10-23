@@ -1,3 +1,4 @@
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useState } from "react";
 import { View, ScrollView, StyleSheet } from "react-native";
 import { Card, Text, Button, IconButton, Portal, Modal, useTheme } from "react-native-paper";
@@ -110,7 +111,7 @@ export function RepeatableGroupField({
               stack on top of the modal instead of behind it. */}
           <DialogProvider>
             <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
-              <Text variant="titleMedium" style={{ marginBottom: 16, fontWeight: "bold", color: theme.colors.primary }}>
+              <Text variant="titleMedium" style={{ ...MODAL_TITLE_STYLE, marginBottom: 16, color: theme.colors.primary }}>
                 {editingIndex === null
                   ? t("survey.addGroupItem", { label })
                   : `${label} ${editingIndex + 1}`}

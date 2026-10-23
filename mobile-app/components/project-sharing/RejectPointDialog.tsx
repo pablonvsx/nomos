@@ -1,3 +1,4 @@
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useEffect, useState } from "react";
 import { Button, Dialog, Portal, TextInput } from "react-native-paper";
 import { useI18n } from "@/contexts/i18n-context";
@@ -32,7 +33,7 @@ export function RejectPointDialog({ visible, busy = false, onCancel, onConfirm }
   return (
     <Portal>
       <Dialog visible={visible} onDismiss={busy ? undefined : onCancel}>
-        <Dialog.Title>{t("pointApproval.reject")}</Dialog.Title>
+        <Dialog.Title style={MODAL_TITLE_STYLE}>{t("pointApproval.reject")}</Dialog.Title>
         <Dialog.Content>
           <TextInput
             mode="outlined"

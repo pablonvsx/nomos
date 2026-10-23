@@ -1,5 +1,6 @@
 // src/app/project-details/[id].tsx
 // Paisageo / official protocol project details screen
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { View, ScrollView, StyleSheet, FlatList } from "react-native";
 import {
@@ -1421,7 +1422,7 @@ function UnifiedProjectDetailsScreen() {
 
       <Portal>
         <Dialog visible={editDialogVisible} onDismiss={() => setEditDialogVisible(false)}>
-          <Dialog.Title>{t("projectView.editProject")}</Dialog.Title>
+          <Dialog.Title style={MODAL_TITLE_STYLE}>{t("projectView.editProject")}</Dialog.Title>
           <Dialog.Content>
             <TextInput key={nameInput.resetKey} label={t("projectView.name")} mode="outlined" {...nameInput.inputProps} />
             <TextInput key={descriptionInput.resetKey} label={t("projectView.description")} mode="outlined" multiline numberOfLines={3} style={{ marginTop: 12 }} {...descriptionInput.inputProps} />

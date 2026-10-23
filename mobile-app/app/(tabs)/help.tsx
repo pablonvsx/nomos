@@ -15,7 +15,7 @@ export default function HelpScreen() {
 
   // Opened only on tap: the app is offline-first, nothing depends on this link.
   const openProjectPage = async () => {
-    const opened = await openExternalUrl(PROJECT_PAGE_URL, Linking.openURL);
+    const opened = await openExternalUrl(PROJECT_PAGE_URL, (url) => Linking.openURL(url));
     if (!opened) {
       alert(t("help.openErrorTitle"), t("help.openError"));
     }

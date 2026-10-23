@@ -1,5 +1,6 @@
 // src/app/survey-point-details/[id].tsx
 // Tela unificada de detalhes de ponto (oficial e personalizado)
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import {
   View,
@@ -1113,7 +1114,7 @@ export default function UnifiedSurveyPointViewScreen() {
           contentContainerStyle={[styles.galleryModalContainer, { backgroundColor: paperTheme.colors.background }]}
         >
           <View style={styles.galleryHeader}>
-            <Text variant="titleMedium" style={{ flex: 1 }}>
+            <Text variant="titleMedium" style={{ ...MODAL_TITLE_STYLE, flex: 1 }}>
               {t("surveyView.photos")} ({galleryPhotos?.length ?? 0})
             </Text>
             <IconButton icon="close" onPress={() => setGalleryPhotos(null)} />

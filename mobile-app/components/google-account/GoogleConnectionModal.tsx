@@ -1,10 +1,22 @@
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import { Button, Text, Divider, useTheme, IconButton, Portal, Modal, HelperText } from "react-native-paper";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useGoogleAccount } from "@/hooks/use-google-account";
 import { useI18n } from "@/contexts/i18n-context";
 import { BUTTON_RADIUS } from "@/constants/shape";
+import { makeEmailBreakable } from "@/core/ui/dialog-layout";
 import type { GoogleAccount } from "@/core/google-auth/google-auth-service";
+
+// Highlight for the connected e-mail. The app theme has no "success" color,
+// so the green lives here, with a pair per color scheme.
+const CONNECTED_GREEN = {
+  lightBg: "#DFF3E4",
+  lightFg: "#1B5E20",
+  darkBg: "#1F3D26",
+  darkFg: "#A5D6A7",
+};
 
 interface GoogleConnectionModalProps {
   visible: boolean;
@@ -78,10 +90,32 @@ export const GoogleConnectionModal: React.FC<GoogleConnectionModalProps> = ({
             <>
               <Text
                 variant="bodyMedium"
-                style={[styles.description, { color: theme.colors.onSurfaceVariant }]}
+                style={[styles.connectedLabel, { color: theme.colors.onSurfaceVariant }]}
               >
-                {t("googleAccount.connectedAs", { email: account.email })}
+                {t("googleAccount.connectedAs")}
               </Text>
+              <View
+                style={[
+                  styles.emailChip,
+                  { backgroundColor: theme.dark ? CONNECTED_GREEN.darkBg : CONNECTED_GREEN.lightBg },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="check-circle-outline"
+                  size={18}
+                  color={theme.dark ? CONNECTED_GREEN.darkFg : CONNECTED_GREEN.lightFg}
+                />
+                <Text
+                  variant="bodyMedium"
+                  selectable
+                  style={[
+                    styles.emailText,
+                    { color: theme.dark ? CONNECTED_GREEN.darkFg : CONNECTED_GREEN.lightFg },
+                  ]}
+                >
+                  {makeEmailBreakable(account.email)}
+                </Text>
+              </View>
               <Button
                 mode="outlined"
                 onPress={handleDisconnect}
@@ -141,11 +175,29 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    fontWeight: "600",
+    ...MODAL_TITLE_STYLE,
   },
   content: {
     padding: 16,
     paddingTop: 20,
+  },
+  connectedLabel: {
+    marginBottom: 8,
+  },
+  emailChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    maxWidth: "100%",
+    gap: 8,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 20,
+  },
+  emailText: {
+    flexShrink: 1,
+    fontWeight: "600",
   },
   description: {
     marginBottom: 20,

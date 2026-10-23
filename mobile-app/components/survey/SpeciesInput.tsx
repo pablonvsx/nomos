@@ -4,6 +4,7 @@
  * Provides autocomplete suggestions from project's existing species database
  */
 
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -670,7 +671,7 @@ export default function SpeciesInput({
         >
           <View style={[styles.modalContainer, { backgroundColor: theme.colors.background }]}>
             <View style={styles.modalHeader}>
-              <Paragraph style={{ fontSize: 18, fontWeight: "600", flex: 1 }}>
+              <Paragraph style={{ ...MODAL_TITLE_STYLE, flex: 1 }}>
                 {`${t("species.registeredSpecies")} (${speciesList.length})`}
               </Paragraph>
               <IconButton icon="close" onPress={() => setShowAllSpeciesModal(false)} />
@@ -871,7 +872,7 @@ export default function SpeciesInput({
       >
         <View style={[styles.modalContainer, { backgroundColor: theme.colors.background }]}>
           <View style={styles.modalHeader}>
-            <Paragraph style={{ fontSize: 18, fontWeight: "600", flex: 1 }}>
+            <Paragraph style={{ ...MODAL_TITLE_STYLE, flex: 1 }}>
               Espécies Registradas ({speciesList.length})
             </Paragraph>
             <IconButton
@@ -910,7 +911,7 @@ export default function SpeciesInput({
       >
         <View style={[styles.modalContainer, { backgroundColor: theme.colors.background }]}>
           <View style={styles.modalHeader}>
-            <Paragraph style={{ fontSize: 18, fontWeight: "600", flex: 1 }}>
+            <Paragraph style={{ ...MODAL_TITLE_STYLE, flex: 1 }}>
               Catálogo de Espécies
             </Paragraph>
             <IconButton

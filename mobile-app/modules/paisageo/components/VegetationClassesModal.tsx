@@ -1,9 +1,11 @@
+import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   StyleSheet,
   ScrollView,
   FlatList,
+  useWindowDimensions,
 } from "react-native";
 import {
   Dialog,
@@ -208,11 +210,17 @@ export default function VegetationClassesModal({
     t,
   ]);
 
+  const { height: windowHeight } = useWindowDimensions();
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
+        // Slightly smaller than the classifications management dialog it
+        // opens over, so the one underneath stays visible around it.
         dialog: {
           backgroundColor: theme.colors.surface,
+          marginHorizontal: 28,
+          height: windowHeight * 0.82,
         },
         content: {
           paddingHorizontal: 24,
@@ -261,7 +269,7 @@ export default function VegetationClassesModal({
           color: theme.colors.onSurfaceVariant,
         },
       }),
-    [theme]
+    [theme, windowHeight]
   );
 
   if (!visible) return null;
@@ -272,7 +280,7 @@ export default function VegetationClassesModal({
       onDismiss={onClose}
       style={styles.dialog}
     >
-      <Dialog.Title style={{ fontSize: 16 }} numberOfLines={1}>
+      <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
         {t("vegetationClassification.manageClasses")}
       </Dialog.Title>
 
