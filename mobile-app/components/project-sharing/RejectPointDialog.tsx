@@ -1,8 +1,8 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useEffect, useState } from "react";
-import { Button, Dialog, Portal, TextInput } from "react-native-paper";
+import { Dialog, Portal, TextInput } from "react-native-paper";
 import { useI18n } from "@/contexts/i18n-context";
-import { BUTTON_RADIUS } from "@/constants/shape";
+import { ModalActions } from "@/components/ui/ModalActions";
 
 interface RejectPointDialogProps {
   visible: boolean;
@@ -46,20 +46,15 @@ export function RejectPointDialog({ visible, busy = false, onCancel, onConfirm }
             disabled={busy}
           />
         </Dialog.Content>
-        <Dialog.Actions>
-          <Button onPress={onCancel} disabled={busy} style={{ borderRadius: BUTTON_RADIUS }}>
-            {t("common.cancel")}
-          </Button>
-          <Button
-            mode="contained"
-            onPress={() => onConfirm(trimmed)}
-            disabled={busy || !trimmed}
-            loading={busy}
-            style={{ borderRadius: BUTTON_RADIUS }}
-          >
-            {t("pointApproval.reject")}
-          </Button>
-        </Dialog.Actions>
+        <ModalActions
+          cancelLabel={t("common.cancel")}
+          onCancel={onCancel}
+          cancelDisabled={busy}
+          confirmLabel={t("pointApproval.reject")}
+          onConfirm={() => onConfirm(trimmed)}
+          confirmDisabled={!trimmed}
+          loading={busy}
+        />
       </Dialog>
     </Portal>
   );

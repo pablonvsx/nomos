@@ -14,6 +14,7 @@ import { useI18n } from "@/contexts/i18n-context";
 import { dialogReducer, initialDialogState, pressDialogButton } from "@/core/ui/dialog-state";
 import { orderStackedButtons, type DialogButtonRole } from "@/core/ui/dialog-layout";
 import { BUTTON_RADIUS } from "@/constants/shape";
+import { ModalActions } from "@/components/ui/ModalActions";
 
 interface DialogButton {
   label: string;
@@ -46,6 +47,62 @@ const styles = StyleSheet.create({
   stackedActions: { paddingHorizontal: 24, paddingBottom: 24, paddingTop: 8, gap: 8 },
   stackedButton: { width: "100%" },
 });
+
+/**
+ * Footer for the non-stacked layout: two actions go in the split ModalActions
+ * footer (first = cancel, last = confirm), one action (or none, an "OK") is
+ * centered. Three or more fall back to the Paper actions row.
+ */
+function DialogFooter({
+  buttons,
+  onPress,
+  onDismiss,
+}: {
+  buttons?: DialogButton[];
+  onPress: (onPress: () => void) => void;
+  onDismiss: () => void;
+}) {
+  const theme = useTheme();
+  if (!buttons || buttons.length === 0) {
+    return <ModalActions confirmLabel="OK" onConfirm={onDismiss} />;
+  }
+  if (buttons.length === 1) {
+    const [only] = buttons;
+    return (
+      <ModalActions
+        confirmLabel={only.label}
+        onConfirm={() => onPress(only.onPress)}
+        destructive={only.style === "destructive"}
+      />
+    );
+  }
+  if (buttons.length === 2) {
+    const [cancel, confirm] = buttons;
+    return (
+      <ModalActions
+        cancelLabel={cancel.label}
+        onCancel={() => onPress(cancel.onPress)}
+        confirmLabel={confirm.label}
+        onConfirm={() => onPress(confirm.onPress)}
+        destructive={confirm.style === "destructive"}
+      />
+    );
+  }
+  return (
+    <Dialog.Actions>
+      {buttons.map((button, index) => (
+        <Button
+          key={index}
+          mode={button.mode || "text"}
+          onPress={() => onPress(button.onPress)}
+          textColor={button.style === "destructive" ? theme.colors.error : undefined}
+        >
+          {button.label}
+        </Button>
+      ))}
+    </Dialog.Actions>
+  );
+}
 
 const DialogContext = createContext<DialogContextType | undefined>(undefined);
 
@@ -143,28 +200,11 @@ export function DialogProvider({ children }: { children: ReactNode }) {
               ))}
             </View>
           ) : (
-            <Dialog.Actions>
-              {options?.buttons && options.buttons.length > 0 ? (
-                options.buttons.map((button, index) => (
-                  <Button
-                    key={index}
-                    mode={button.mode || "text"}
-                    onPress={() => handleButtonPress(button.onPress)}
-                    textColor={
-                      button.style === "destructive"
-                        ? theme.colors.error
-                        : undefined
-                    }
-                  >
-                    {button.label}
-                  </Button>
-                ))
-              ) : (
-                <Button mode="text" onPress={hideDialog}>
-                  OK
-                </Button>
-              )}
-            </Dialog.Actions>
+            <DialogFooter
+              buttons={options?.buttons}
+              onPress={handleButtonPress}
+              onDismiss={hideDialog}
+            />
           )}
         </Dialog>
       </Portal>

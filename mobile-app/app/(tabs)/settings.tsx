@@ -1,4 +1,5 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { ModalActions } from "@/components/ui/ModalActions";
 import React, { useCallback, useState } from "react";
 import { View, StyleSheet, ScrollView, Linking } from "react-native";
 import {
@@ -10,7 +11,6 @@ import {
   Dialog,
   Portal,
   RadioButton,
-  Button,
 } from "react-native-paper";
 import { Stack, router, useFocusEffect } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -302,14 +302,12 @@ export default function SettingsScreen() {
               ))}
             </RadioButton.Group>
           </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setLanguageDialogVisible(false)}>
-              {t("common.cancel")}
-            </Button>
-            <Button onPress={handleLanguageChange}>
-              {t("common.confirm")}
-            </Button>
-          </Dialog.Actions>
+          <ModalActions
+            cancelLabel={t("common.cancel")}
+            onCancel={() => setLanguageDialogVisible(false)}
+            confirmLabel={t("common.confirm")}
+            onConfirm={handleLanguageChange}
+          />
         </Dialog>
       </Portal>
 

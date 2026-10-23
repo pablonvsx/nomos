@@ -21,7 +21,7 @@ import { restoreOwnProjectFromDrive, type RestoreResult } from "@/core/drive-syn
 import { describeRestoreError } from "@/core/drive-sync/restore-error-messages";
 import type { DriveFile } from "@/core/drive-sync/drive-api-client";
 import { useI18n } from "@/contexts/i18n-context";
-import { BUTTON_RADIUS } from "@/constants/shape";
+import { ModalActions } from "@/components/ui/ModalActions";
 import { isNetworkTimeoutError } from "@/core/net/network-timeout";
 import { runThenCloseAndShow } from "@/core/ui/close-then-show";
 import { waitForModalClose } from "@/core/ui/wait-for-modal-close";
@@ -205,25 +205,13 @@ export const RestoreProjectsModal: React.FC<RestoreProjectsModalProps> = ({
             </Text>
           )}
         </Dialog.Content>
-        <Dialog.Actions>
-          <Button
-            mode="outlined"
-            onPress={() => setSelected(null)}
-            disabled={isRestoring}
-            style={{ borderRadius: BUTTON_RADIUS }}
-          >
-            {t("common.cancel")}
-          </Button>
-          <Button
-            mode="contained"
-            onPress={handleRestore}
-            loading={isRestoring}
-            disabled={isRestoring}
-            style={{ borderRadius: BUTTON_RADIUS }}
-          >
-            {t("driveRestore.restoreButton")}
-          </Button>
-        </Dialog.Actions>
+        <ModalActions
+          cancelLabel={t("common.cancel")}
+          onCancel={() => setSelected(null)}
+          confirmLabel={t("driveRestore.restoreButton")}
+          onConfirm={handleRestore}
+          loading={isRestoring}
+        />
       </Dialog>
     </Portal>
   );
