@@ -31,7 +31,7 @@ export default function HelpScreen() {
       <View style={styles.content}>
         <View style={styles.headerContainer}>
           <MaterialCommunityIcons
-            name="help-circle-outline"
+            name="headset"
             size={64}
             color={paperTheme.colors.primary}
           />

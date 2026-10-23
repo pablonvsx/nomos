@@ -18,7 +18,7 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
-  'questionmark.circle.fill': 'help',
+  'headphones': 'support-agent',
   'gearshape.fill': 'settings',
 } as IconMapping;
 
