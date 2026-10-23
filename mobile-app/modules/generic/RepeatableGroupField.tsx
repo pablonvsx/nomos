@@ -6,6 +6,7 @@ import type { DynamicGroupRule, LanguageCode } from "@/protocol-kernel/types";
 import { useI18n } from "@/contexts/i18n-context";
 import { DialogProvider } from "@/hooks/use-dialog";
 import { BUTTON_RADIUS } from "@/constants/shape";
+import { ModalActions } from "@/components/ui/ModalActions";
 import { GenericFieldRow } from "./GenericFieldRow";
 
 interface Props {
@@ -110,7 +111,7 @@ export function RepeatableGroupField({
               fixes that, and its own Portal mounts after this one, so alerts
               stack on top of the modal instead of behind it. */}
           <DialogProvider>
-            <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+            <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
               <Text variant="titleMedium" style={{ ...MODAL_TITLE_STYLE, marginBottom: 16, color: theme.colors.primary }}>
                 {editingIndex === null
                   ? t("survey.addGroupItem", { label })
@@ -129,16 +130,6 @@ export function RepeatableGroupField({
                 />
               ))}
 
-              <Button mode="contained" onPress={saveItem} style={{ marginTop: 8, borderRadius: BUTTON_RADIUS }}>
-                {t("common.save")}
-              </Button>
-              <Button
-                mode="outlined"
-                onPress={() => setModalVisible(false)}
-                style={{ marginTop: 8, borderRadius: BUTTON_RADIUS }}
-              >
-                {t("common.cancel")}
-              </Button>
               {editingIndex !== null && (
                 <Button
                   mode="outlined"
@@ -150,6 +141,12 @@ export function RepeatableGroupField({
                 </Button>
               )}
             </ScrollView>
+            <ModalActions
+              cancelLabel={t("common.cancel")}
+              onCancel={() => setModalVisible(false)}
+              confirmLabel={t("common.save")}
+              onConfirm={saveItem}
+            />
           </DialogProvider>
         </Modal>
       </Portal>

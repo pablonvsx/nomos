@@ -18,6 +18,7 @@ import {
 import { useI18n } from "@/contexts/i18n-context";
 import { useProtocolTranslations } from "@/hooks/use-protocol-translations";
 import InfoBubble from "@/components/ui/InfoBubble";
+import { ModalActions } from "@/components/ui/ModalActions";
 import { BUTTON_RADIUS, SEGMENTED_BUTTONS_SHAPE_THEME } from "@/constants/shape";
 import SoilOptionPicker from "./SoilOptionPicker";
 import {
@@ -671,7 +672,7 @@ export default function SoilProfileInput({ field, value, onChange }: Props) {
           onDismiss={() => setModalVisible(false)}
           contentContainerStyle={[styles.modalContent, { backgroundColor: theme.colors.surface }]}
         >
-          <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+          <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
             <Text variant="headlineSmall" style={{ ...MODAL_TITLE_STYLE, marginBottom: 16, color: theme.colors.primary }}>
               {modalMode === "simple" ? t("survey.generalSoilDescription") : t("survey.editLayer")}
             </Text>
@@ -745,16 +746,13 @@ export default function SoilProfileInput({ field, value, onChange }: Props) {
               (v) => setCurrentLayer((prev) => prev ? { ...prev, cracks: v } : null),
             )}
 
-            <Button mode="contained" onPress={saveLayer} style={{ marginTop: 24, borderRadius: BUTTON_RADIUS }}>
-              {modalMode === "simple" ? t("common.save") : t("survey.saveLayer")}
-            </Button>
-            <Button
-              onPress={() => { setDepthError(null); setModalVisible(false); }}
-              style={{ marginTop: 8 }}
-            >
-              {t("common.cancel")}
-            </Button>
           </ScrollView>
+          <ModalActions
+            cancelLabel={t("common.cancel")}
+            onCancel={() => { setDepthError(null); setModalVisible(false); }}
+            confirmLabel={modalMode === "simple" ? t("common.save") : t("survey.saveLayer")}
+            onConfirm={saveLayer}
+          />
         </Modal>
       </Portal>
     </View>
