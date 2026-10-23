@@ -5,6 +5,7 @@
  */
 
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { ModalActions } from "@/components/ui/ModalActions";
 import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
 import {
   View,
@@ -763,9 +764,7 @@ const TypeSelectionDialog = memo(function TypeSelectionDialog({
             })}
           </ScrollView>
         </Dialog.ScrollArea>
-        <Dialog.Actions>
-          <Button onPress={onDismiss}>{t("common.close")}</Button>
-        </Dialog.Actions>
+        <ModalActions confirmLabel={t("common.close")} onConfirm={onDismiss} />
       </Dialog>
     </Portal>
   );
@@ -878,9 +877,7 @@ function ModuleSelectionDialog({
             )}
           </ScrollView>
         </Dialog.ScrollArea>
-        <Dialog.Actions>
-          <Button onPress={onDismiss}>{t("common.close")}</Button>
-        </Dialog.Actions>
+        <ModalActions confirmLabel={t("common.close")} onConfirm={onDismiss} />
       </Dialog>
     </Portal>
   );
@@ -943,9 +940,7 @@ const UnitSelectionDialog = memo(function UnitSelectionDialog({
             {renderItem(t("protocol.customUnit"), isCustom, onSelectCustom, "custom")}
           </ScrollView>
         </Dialog.ScrollArea>
-        <Dialog.Actions>
-          <Button onPress={onDismiss}>{t("common.close")}</Button>
-        </Dialog.Actions>
+        <ModalActions confirmLabel={t("common.close")} onConfirm={onDismiss} />
       </Dialog>
     </Portal>
   );
@@ -986,9 +981,7 @@ const OptionsManagerDialog = memo(function OptionsManagerDialog({
             />
           </ScrollView>
         </Dialog.ScrollArea>
-        <Dialog.Actions>
-          <Button onPress={onDismiss}>{t("common.close")}</Button>
-        </Dialog.Actions>
+        <ModalActions confirmLabel={t("common.close")} onConfirm={onDismiss} />
       </Dialog>
     </Portal>
   );
@@ -1117,9 +1110,7 @@ const ItemFieldsManagerDialog = memo(function ItemFieldsManagerDialog({
               </Button>
             </ScrollView>
           </Dialog.ScrollArea>
-          <Dialog.Actions>
-            <Button onPress={onDismiss}>{t("common.close")}</Button>
-          </Dialog.Actions>
+          <ModalActions confirmLabel={t("common.close")} onConfirm={onDismiss} />
         </Dialog>
       </Portal>
 
@@ -1175,11 +1166,7 @@ const FieldValidationAlert = memo(function FieldValidationAlert({
             {message}
           </Text>
         </Dialog.Content>
-        <Dialog.Actions>
-          <Button mode="text" onPress={onDismiss}>
-            OK
-          </Button>
-        </Dialog.Actions>
+        <ModalActions confirmLabel="OK" onConfirm={onDismiss} />
       </Dialog>
     </Portal>
   );
@@ -1631,12 +1618,12 @@ function FieldFormDialog({
             />
           </ScrollView>
         </Dialog.ScrollArea>
-        <Dialog.Actions>
-          <Button onPress={onDismiss}>{t("common.cancel")}</Button>
-          <Button mode="contained" onPress={validateAndSave} style={{ borderRadius: BUTTON_RADIUS }}>
-            {t("common.save")}
-          </Button>
-        </Dialog.Actions>
+        <ModalActions
+          cancelLabel={t("common.cancel")}
+          onCancel={onDismiss}
+          confirmLabel={t("common.save")}
+          onConfirm={validateAndSave}
+        />
       </Dialog>
       {!!validationMessage && (
         <FieldValidationAlert

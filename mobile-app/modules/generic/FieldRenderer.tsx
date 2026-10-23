@@ -1,4 +1,5 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { ModalActions } from "@/components/ui/ModalActions";
 import React, { useState, useMemo } from "react";
 import { View, Pressable, ScrollView } from "react-native";
 import Slider from "@react-native-community/slider";
@@ -179,9 +180,7 @@ function CardinalPointDialog({
             })}
           </ScrollView>
         </Dialog.ScrollArea>
-        <Dialog.Actions>
-          <Button onPress={onDismiss}>{t("common.close")}</Button>
-        </Dialog.Actions>
+        <ModalActions confirmLabel={t("common.close")} onConfirm={onDismiss} />
       </Dialog>
     </Portal>
   );
