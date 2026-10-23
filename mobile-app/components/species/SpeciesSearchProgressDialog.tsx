@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from "react";
 import { View, StyleSheet, Animated } from "react-native";
-import { Dialog, Portal, Text, ProgressBar, Button, Icon, useTheme } from "react-native-paper";
+import { Dialog, Portal, Text, ProgressBar, Icon, useTheme } from "react-native-paper";
 import { useI18n } from "@/contexts/i18n-context";
 import type { SpeciesSearchProgress } from "@/core/species-catalog/search-progress";
-import { BUTTON_RADIUS } from "@/constants/shape";
+import { ModalActions } from "@/components/ui/ModalActions";
 
 export type SearchProgress = SpeciesSearchProgress;
 export type SearchDialogPhase = "idle" | "counting" | "counted" | "searching";
@@ -245,14 +245,16 @@ export default function SpeciesSearchProgressDialog({
           )}
         </Dialog.Content>
 
-        <Dialog.Actions>
-          <Button onPress={onCancel}>{t("species.cancel")}</Button>
-          {phase === "counted" && (
-            <Button mode="contained" onPress={onConfirmCount} style={{ borderRadius: BUTTON_RADIUS }}>
-              {t("species.startSpeciesCount")}
-            </Button>
-          )}
-        </Dialog.Actions>
+        {phase === "counted" ? (
+          <ModalActions
+            cancelLabel={t("species.cancel")}
+            onCancel={onCancel}
+            confirmLabel={t("species.startSpeciesCount")}
+            onConfirm={onConfirmCount}
+          />
+        ) : (
+          <ModalActions confirmLabel={t("species.cancel")} onConfirm={onCancel} />
+        )}
       </Dialog>
     </Portal>
   );

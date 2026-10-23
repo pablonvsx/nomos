@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   FlatList,
-  useWindowDimensions,
 } from "react-native";
 import {
   Dialog,
@@ -19,6 +18,7 @@ import {
 } from "react-native-paper";
 import { VegetationClass, VegetationClassification } from "@/types/database";
 import { BUTTON_RADIUS } from "@/constants/shape";
+import { ModalActions } from "@/components/ui/ModalActions";
 import {
   createVegetationClassification,
   updateVegetationClassification,
@@ -210,17 +210,17 @@ export default function VegetationClassesModal({
     t,
   ]);
 
-  const { height: windowHeight } = useWindowDimensions();
-
   const styles = useMemo(
     () =>
       StyleSheet.create({
         // Slightly smaller than the classifications management dialog it
-        // opens over, so the one underneath stays visible around it.
+        // opens over, so the one underneath stays visible around it (see the
+        // note there on why maxHeight/minHeight and not a fixed height).
         dialog: {
           backgroundColor: theme.colors.surface,
-          marginHorizontal: 28,
-          height: windowHeight * 0.82,
+          marginHorizontal: 32,
+          maxHeight: "68%",
+          minHeight: "45%",
         },
         content: {
           paddingHorizontal: 24,
@@ -269,7 +269,7 @@ export default function VegetationClassesModal({
           color: theme.colors.onSurfaceVariant,
         },
       }),
-    [theme, windowHeight]
+    [theme]
   );
 
   if (!visible) return null;
@@ -398,20 +398,14 @@ export default function VegetationClassesModal({
         </ScrollView>
       </Dialog.ScrollArea>
 
-      <Dialog.Actions>
-        <Button onPress={onClose} disabled={saving}>
-          {t("common.cancel")}
-        </Button>
-        <Button
-          onPress={handleSaveClassification}
-          loading={saving}
-          disabled={saving}
-          mode="contained"
-          style={{ borderRadius: BUTTON_RADIUS }}
-        >
-          {t("common.save")}
-        </Button>
-      </Dialog.Actions>
+      <ModalActions
+        cancelLabel={t("common.cancel")}
+        onCancel={onClose}
+        cancelDisabled={saving}
+        confirmLabel={t("common.save")}
+        onConfirm={handleSaveClassification}
+        loading={saving}
+      />
     </Dialog>
   );
 }

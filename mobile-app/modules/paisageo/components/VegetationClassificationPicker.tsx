@@ -1,4 +1,5 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { ModalActions } from "@/components/ui/ModalActions";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
@@ -8,7 +9,6 @@ import {
 } from "react-native";
 import {
   Dialog,
-  Button,
   RadioButton,
   Text,
   useTheme as usePaperTheme,
@@ -192,12 +192,14 @@ export default function VegetationClassificationPicker({
         )}
       </Dialog.ScrollArea>
 
-      <Dialog.Actions>
-        <Button onPress={onClose}>{t("common.cancel")}</Button>
-        <Button onPress={handleSave} loading={saving} disabled={loading || saving || !selectedClassificationId}>
-          {t("common.save")}
-        </Button>
-      </Dialog.Actions>
+      <ModalActions
+        cancelLabel={t("common.cancel")}
+        onCancel={onClose}
+        confirmLabel={t("common.save")}
+        onConfirm={handleSave}
+        loading={saving}
+        confirmDisabled={loading || !selectedClassificationId}
+      />
     </Dialog>
   );
 }

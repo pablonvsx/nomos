@@ -26,6 +26,7 @@ import {
 } from '@/core/species-catalog/specieslink';
 import { useI18n } from '@/contexts/i18n-context';
 import { BUTTON_RADIUS } from '@/constants/shape';
+import { ModalActions } from '@/components/ui/ModalActions';
 
 interface SpeciesLinkSettingsModalProps {
   visible: boolean;
@@ -324,18 +325,13 @@ export const SpeciesLinkSettingsModal: React.FC<SpeciesLinkSettingsModalProps> =
             {t('species.confirmRemovalMessage')}
           </Text>
         </Dialog.Content>
-        <Dialog.Actions>
-          <Button mode="text" onPress={() => setRemoveConfirmVisible(false)}>
-            {t('common.cancel')}
-          </Button>
-          <Button
-            mode="text"
-            textColor={theme.colors.error}
-            onPress={confirmRemoveApiKey}
-          >
-            {t('common.remove')}
-          </Button>
-        </Dialog.Actions>
+        <ModalActions
+          cancelLabel={t('common.cancel')}
+          onCancel={() => setRemoveConfirmVisible(false)}
+          confirmLabel={t('common.remove')}
+          onConfirm={confirmRemoveApiKey}
+          destructive
+        />
       </Dialog>
 
       <Dialog
@@ -354,11 +350,7 @@ export const SpeciesLinkSettingsModal: React.FC<SpeciesLinkSettingsModalProps> =
             {infoDialog?.message}
           </Text>
         </Dialog.Content>
-        <Dialog.Actions>
-          <Button mode="text" onPress={() => setInfoDialog(null)}>
-            OK
-          </Button>
-        </Dialog.Actions>
+        <ModalActions confirmLabel="OK" onConfirm={() => setInfoDialog(null)} />
       </Dialog>
     </Portal>
   );

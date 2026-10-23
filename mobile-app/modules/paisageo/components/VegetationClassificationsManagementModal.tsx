@@ -5,11 +5,9 @@ import {
   StyleSheet,
   ScrollView,
   FlatList,
-  useWindowDimensions,
 } from "react-native";
 import {
   Dialog,
-  Button,
   Text,
   useTheme as usePaperTheme,
   IconButton,
@@ -18,7 +16,7 @@ import {
   Divider,
 } from "react-native-paper";
 import { VegetationClassification } from "@/types/database";
-import { BUTTON_RADIUS } from "@/constants/shape";
+import { ModalActions } from "@/components/ui/ModalActions";
 import {
   getVegetationClassificationsByProject,
   deleteVegetationClassification,
@@ -100,17 +98,19 @@ export default function VegetationClassificationsManagementModal({
     );
   }, [projectId, confirm, alert, t, onClassificationsChanged]);
 
-  const { height: windowHeight } = useWindowDimensions();
-
   const styles = useMemo(
     () =>
       StyleSheet.create({
         // Large dialog; the classes editor opens on top of it, slightly
-        // smaller, so the one underneath stays visible around it.
+        // smaller, so the one underneath stays visible around it. Percentage
+        // maxHeight/minHeight (like the pickers in protocol/builder.tsx), not a
+        // fixed height: Paper's Dialog adds its own vertical margins, so a
+        // fixed height overflows the screen and stretches the footer.
         dialog: {
           backgroundColor: theme.colors.surface,
-          marginHorizontal: 12,
-          height: windowHeight * 0.92,
+          marginHorizontal: 16,
+          maxHeight: "80%",
+          minHeight: "55%",
         },
         content: {
           paddingHorizontal: 24,
@@ -144,7 +144,7 @@ export default function VegetationClassificationsManagementModal({
           flexDirection: "row",
         },
       }),
-    [theme, windowHeight]
+    [theme]
   );
 
   if (!visible) return null;
@@ -210,12 +210,12 @@ export default function VegetationClassificationsManagementModal({
           )}
         </Dialog.ScrollArea>
 
-        <Dialog.Actions>
-          <Button onPress={onClose}>{t("common.close")}</Button>
-          <Button onPress={handleCreateNew} mode="contained" style={{ borderRadius: BUTTON_RADIUS }}>
-            {t("common.add")}
-          </Button>
-        </Dialog.Actions>
+        <ModalActions
+          cancelLabel={t("common.close")}
+          onCancel={onClose}
+          confirmLabel={t("common.add")}
+          onConfirm={handleCreateNew}
+        />
       </Dialog>
 
       {/* Vegetation Classes Editor Modal */}
