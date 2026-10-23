@@ -50,12 +50,6 @@ export default function SettingsScreen() {
     Linking.openURL("https://github.com/pablonvsx/nomos");
   };
 
-  const openDrive = () => {
-    Linking.openURL(
-      "https://drive.google.com/drive/folders/1Ikc18svAf_pBV3j8QSXvILa6XqKRPcRI?usp=sharing"
-    );
-  };
-
   const handleLanguageChange = async () => {
     if (selectedLanguage !== currentLanguage) {
       // Get translations for the NEW language before switching
@@ -256,22 +250,6 @@ export default function SettingsScreen() {
             }
             left={(props) => <List.Icon {...props} icon="open-in-new" />}
             onPress={openGitHub}
-            titleStyle={styles.itemTitle}
-            descriptionStyle={styles.itemDescription}
-            descriptionNumberOfLines={0}
-          />
-          <List.Item
-            title={t("settings.driveTitle")}
-            description={
-              <Text variant="bodySmall" style={styles.itemDescription}>
-                Google Drive: {" "}
-                <Text style={{ color: paperTheme.colors.primary }}>
-                  {t("settings.driveAccess")}
-                </Text>
-              </Text>
-            }
-            left={(props) => <List.Icon {...props} icon="google-drive" />}
-            onPress={openDrive}
             titleStyle={styles.itemTitle}
             descriptionStyle={styles.itemDescription}
             descriptionNumberOfLines={0}
