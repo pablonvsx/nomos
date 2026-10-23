@@ -389,7 +389,6 @@
   },
   "help": {
     "title": "Aide",
-    "welcome": "Guide de Nomos",
     "about": "Nomos est une application pour les inventaires environnementaux de terrain. Elle permet d'enregistrer des points de collecte avec le GPS, de remplir des formulaires selon le protocole du projet, de joindre des photos et des notes audio et d'exporter les données, le tout sans connexion internet.",
     "pageInfo": "Les tutoriels, les guides et le téléchargement de la dernière version de l'application sont disponibles sur la page du projet.",
     "openPage": "Ouvrir la page du projet",

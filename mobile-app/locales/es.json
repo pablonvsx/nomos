@@ -388,7 +388,6 @@
   },
   "help": {
     "title": "Ayuda",
-    "welcome": "Guía de Nomos",
     "about": "Nomos es una aplicación para inventarios ambientales en campo. Permite registrar puntos de recolección con GPS, completar formularios según el protocolo del proyecto, adjuntar fotos y notas de audio y exportar los datos, todo funcionando sin conexión a internet.",
     "pageInfo": "Los tutoriales, las guías y la descarga de la versión más reciente de la aplicación están disponibles en la página del proyecto.",
     "openPage": "Abrir página del proyecto",

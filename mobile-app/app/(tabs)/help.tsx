@@ -41,12 +41,6 @@ export default function HelpScreen() {
           >
             {t("help.title")}
           </Text>
-          <Text
-            variant="bodyMedium"
-            style={[styles.subtitle, { color: paperTheme.colors.secondary }]}
-          >
-            {t("help.welcome")}
-          </Text>
         </View>
 
         <Text
@@ -92,10 +86,6 @@ const styles = StyleSheet.create({
   title: {
     fontWeight: "bold",
     marginTop: 12,
-    textAlign: "center",
-  },
-  subtitle: {
-    marginTop: 8,
     textAlign: "center",
   },
   paragraph: {
