@@ -54,6 +54,7 @@ export function RejectPointDialog({ visible, busy = false, onCancel, onConfirm }
           onConfirm={() => onConfirm(trimmed)}
           confirmDisabled={!trimmed}
           loading={busy}
+          destructive
         />
       </Dialog>
     </Portal>
