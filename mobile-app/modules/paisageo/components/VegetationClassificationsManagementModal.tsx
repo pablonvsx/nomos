@@ -128,14 +128,14 @@ export default function VegetationClassificationsManagementModal({
           color: theme.colors.onSurfaceVariant,
         },
         classificationCard: {
-          marginVertical: 3,
+          marginVertical: 6,
           backgroundColor: theme.colors.surfaceVariant,
         },
         classificationCardContent: {
           flexDirection: "row",
           justifyContent: "space-between",
           alignItems: "center",
-          paddingVertical: 2,
+          paddingVertical: 8,
           paddingHorizontal: 12,
         },
         classificationInfo: {
@@ -143,12 +143,6 @@ export default function VegetationClassificationsManagementModal({
         },
         cardActions: {
           flexDirection: "row",
-        },
-        // 32dp visual target (was the 40dp default); hitSlop keeps the touch area comfortable.
-        cardIconButton: {
-          margin: 0,
-          width: 32,
-          height: 32,
         },
       }),
     [theme]
@@ -198,16 +192,12 @@ export default function VegetationClassificationsManagementModal({
                           <IconButton
                             icon="pencil"
                             size={20}
-                            style={styles.cardIconButton}
-                            hitSlop={4}
                             onPress={() => handleEdit(item)}
                             iconColor={theme.colors.primary}
                           />
                           <IconButton
                             icon="delete"
                             size={20}
-                            style={styles.cardIconButton}
-                            hitSlop={4}
                             onPress={() => handleDelete(item)}
                             iconColor={theme.colors.error}
                           />
