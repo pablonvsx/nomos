@@ -52,6 +52,12 @@ describe("resources and citation locale keys", () => {
     }
   });
 
+  it("does not hardcode the app version in the locale files", () => {
+    for (const lang of LANGUAGES) {
+      expect((locales[lang] as unknown as { home: Record<string, string> }).home.version).toBeUndefined();
+    }
+  });
+
   it("keeps every citation reference filled by the same placeholders", () => {
     for (const lang of LANGUAGES) {
       const placeholders = locales[lang].about.citeReference.match(/\{\{\w+\}\}/g)?.sort();

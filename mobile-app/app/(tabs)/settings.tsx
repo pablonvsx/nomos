@@ -1,4 +1,5 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { APP_VERSION_LABEL } from "@/constants/app-version";
 import { MODAL_SHAPE_STYLE } from "@/constants/shape";
 import { ModalActions } from "@/components/ui/ModalActions";
 import React, { useCallback, useState } from "react";
@@ -231,7 +232,7 @@ export default function SettingsScreen() {
           </List.Subheader>
           <List.Item
             title={t("settings.appVersion")}
-            description={t("home.version")}
+            description={APP_VERSION_LABEL}
             left={(props) => <List.Icon {...props} icon="information" />}
           />
           <List.Item

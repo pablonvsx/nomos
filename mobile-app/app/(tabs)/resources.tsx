@@ -6,6 +6,7 @@ import { useI18n } from "@/contexts/i18n-context";
 import { useAlertDialog } from "@/hooks/use-dialog";
 import { BUTTON_RADIUS } from "@/constants/shape";
 import { PROJECT_PAGE_URL } from "@/constants/links";
+import { APP_VERSION_LABEL } from "@/constants/app-version";
 import { openExternalUrl } from "@/utils/open-external-url";
 
 export default function ResourcesScreen() {
@@ -70,7 +71,7 @@ export default function ResourcesScreen() {
           variant="bodyMedium"
           style={[styles.version, { color: paperTheme.colors.onSurfaceVariant }]}
         >
-          {t("resources.installedVersion", { version: t("home.version") })}
+          {t("resources.installedVersion", { version: APP_VERSION_LABEL })}
         </Text>
       </View>
     </ScrollView>

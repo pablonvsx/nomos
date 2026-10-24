@@ -8,7 +8,8 @@ const googleWebClientId = process.env.GOOGLE_WEB_CLIENT_ID ?? '';
 const baseConfig = {
   name: 'Nomos',
   slug: 'nomos',
-  version: '1.1.0',
+  // Single source of truth for the app version: package.json (read at runtime via expo-constants).
+  version: require('./package.json').version,
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   scheme: 'nomos',
