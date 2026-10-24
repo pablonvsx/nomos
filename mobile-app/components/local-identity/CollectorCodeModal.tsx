@@ -131,6 +131,6 @@ const styles = StyleSheet.create({
     textAlign: "justify",
   },
   saveButton: {
-    marginTop: 16,
+    marginTop: 8,
   },
 });

@@ -201,6 +201,6 @@ const styles = StyleSheet.create({
     textAlign: "justify",
   },
   actionButton: {
-    marginTop: 4,
+    marginTop: 0,
   },
 });

@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   buttonRow: {
-    marginTop: 8,
+    marginTop: 4,
   },
   rowDivider: {
     marginTop: 12,
