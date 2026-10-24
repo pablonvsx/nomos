@@ -16,6 +16,7 @@ import {
   updatePoint,
 } from "@/db/queries/points";
 import { getProjectById } from "@/db/queries/projects";
+import type { Point } from "@/types/database";
 import { getModuleMediaFields, mapModuleMediaUris } from "@/core/project-sharing/module-media";
 import { parseAudioNotes, parsePhotoUris } from "@/db/mappers/json-utils";
 import type { PointPackageAudioNote, PointPackageEntry } from "@/core/project-sharing/export-points";
@@ -62,10 +63,16 @@ export interface BackupResult {
    * connection" message instead of the technical text in `error`.
    */
   timedOut?: boolean;
+  /** The person asked to cancel while this point was in progress: nothing was marked as backed up. */
+  cancelled?: boolean;
 }
 
 export interface BackupSummary {
   backedUp: number;
+  /** True when the run stopped early because the person cancelled. */
+  cancelled: boolean;
+  /** Eligible points that were never attempted because of the cancel. */
+  notAttempted: number;
   failed: Array<{
     pointId: number;
     pointLabel: string;
@@ -93,7 +100,10 @@ function mimeTypeForUri(uri: string): string {
 export async function backupPoint(
   pointId: string,
   cache: DriveFolderCache = createDriveFolderCache(),
+  options: { shouldCancel?: () => boolean } = {},
 ): Promise<BackupResult> {
+  const isCancelled = () => options.shouldCancel?.() === true;
+  const cancelledResult: BackupResult = { success: false, cancelled: true, error: "Cancelado." };
   const numericId = parseInt(pointId, 10);
   const result = await getPoint(numericId);
   if (!result) {
@@ -186,6 +196,7 @@ export async function backupPoint(
 
   const photoUris = parsePhotoUris(point.photos);
   for (let i = 0; i < photoUris.length; i++) {
+    if (isCancelled()) return cancelledResult;
     const relativePath = paths.pointPhoto(photoUris[i], i);
     if (!new File(photoUris[i]).exists) {
       mediaProblems.push(`Foto ${i + 1} não encontrada no dispositivo.`);
@@ -202,6 +213,7 @@ export async function backupPoint(
 
   const audioNotes = parseAudioNotes(point.audio_notes);
   for (let i = 0; i < audioNotes.length; i++) {
+    if (isCancelled()) return cancelledResult;
     const note = audioNotes[i];
     const relativePath = paths.pointAudio(note.uri, i);
     if (!new File(note.uri).exists) {
@@ -230,6 +242,7 @@ export async function backupPoint(
       fieldsOfModule.length === 0
         ? mod.data_json
         : await mapModuleMediaUris(mod.data_json, fieldsOfModule, async (uri, location) => {
+            if (isCancelled()) return null;
             const relativePath = paths.moduleMedia(location, uri);
             if (!new File(uri).exists) {
               mediaProblems.push(`Mídia do módulo ${mod.module_id} não encontrada no dispositivo.`);
@@ -246,6 +259,10 @@ export async function backupPoint(
           });
     schemaVersion = mod.schema_version;
   }
+
+  // Checked after the module media too: a cancel during that step made the
+  // mapper skip files without recording a problem, so this must come first.
+  if (isCancelled()) return cancelledResult;
 
   if (mediaProblems.length > 0) {
     // Nothing is written to the point's JSON on Drive, and drive_synced_at
@@ -277,6 +294,8 @@ export async function backupPoint(
   // point: the scientific data must arrive intact for the point to count as
   // backed up. In a folder that already existed (retry, re-backup) the JSON is
   // looked up by exact name and updated, never duplicated.
+  if (isCancelled()) return cancelledResult;
+
   let uploaded;
   try {
     const existing = createdHere.has(pointFolderId) ? null : await findChildByName(pointFolderId, POINT_JSON_FILENAME);
@@ -331,31 +350,60 @@ export interface BackupProgress {
   total: number;
 }
 
+export interface BackupAllOptions {
+  /** Checked between points (and inside backupPoint, between uploads). */
+  shouldCancel?: () => boolean;
+  /**
+   * The points to send. The backup works on the list captured when it
+   * started: points created or edited afterwards are not part of this run
+   * and stay pending. Defaults to every eligible point of the project.
+   */
+  points?: Point[];
+  /** Called after each point finished, successfully or not. */
+  onPointDone?: (point: Point, result: BackupResult) => void | Promise<void>;
+}
+
 export async function backupAllPendingPoints(
   projectId: number,
   onProgress?: (progress: BackupProgress) => void,
+  options: BackupAllOptions = {},
 ): Promise<BackupSummary> {
-  const points = await getBackupEligiblePointsByProject(projectId);
+  const points = options.points ?? (await getBackupEligiblePointsByProject(projectId));
   // One cache for the whole batch: approved/ is listed once, known folders are not looked up again.
   const cache = createDriveFolderCache();
+  const shouldCancel = options.shouldCancel;
 
   let backedUp = 0;
+  let cancelled = false;
+  let attempted = 0;
   const failed: BackupSummary["failed"] = [];
 
   for (const [index, point] of points.entries()) {
+    if (shouldCancel?.()) {
+      cancelled = true;
+      break;
+    }
     onProgress?.({ current: index + 1, total: points.length });
+    attempted += 1;
 
     // An unexpected throw (e.g. a DB error) counts as this point failing,
     // not as the whole batch aborting with the earlier points' work unreported.
     let result: BackupResult;
     try {
-      result = await backupPoint(point.id.toString(), cache);
+      result = await backupPoint(point.id.toString(), cache, { shouldCancel });
     } catch (error) {
       result = {
         success: false,
         error: error instanceof Error ? error.message : String(error),
         timedOut: isNetworkTimeoutError(error),
       };
+    }
+
+    if (result.cancelled) {
+      // Interrupted mid-point: it is neither sent nor failed, it stays pending.
+      cancelled = true;
+      attempted -= 1;
+      break;
     }
 
     if (result.success) {
@@ -369,7 +417,13 @@ export async function backupAllPendingPoints(
         timedOut: result.timedOut ?? false,
       });
     }
+
+    try {
+      await options.onPointDone?.(point, result);
+    } catch (error) {
+      console.error("Error in backup onPointDone:", error);
+    }
   }
 
-  return { backedUp, failed };
+  return { backedUp, failed, cancelled, notAttempted: points.length - attempted };
 }

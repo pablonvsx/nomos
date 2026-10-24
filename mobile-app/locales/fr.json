@@ -1097,21 +1097,58 @@
     "activatedSuccess": "Sauvegarde sur Drive activée avec succès.",
     "errorActivating": "Impossible d'activer la sauvegarde sur Drive.",
     "backupAction": "Sauvegarder",
-    "backupSummary": "{{backedUp}} point(s) sauvegardé(s), {{failed}} échoué(s).",
     "backupPointAction": "Sauvegarder ce point",
-    "backupPointSuccess": "Point sauvegardé sur Drive avec succès.",
     "discardMissingMediaTitle": "Médias introuvables",
     "discardMissingMediaMessage": "{{count}} fichier(s) photo ou audio de {{points}} point(s) n'existent plus sur cet appareil et bloquent la sauvegarde. Les écarter supprime uniquement les références à ces fichiers dans ces points, puis la sauvegarde sera retentée. Cette action est irréversible.",
     "discardMissingMediaConfirm": "Écarter les médias introuvables",
-    "errorBackingUpPoint": "Impossible de sauvegarder le point.",
     "confirmAccountLinkTitle": "Associer le compte Google",
     "confirmAccountLink": "Ce projet sera associé au compte {{email}} et cela ne pourra pas être modifié par la suite.",
     "useOtherAccount": "Utiliser un autre compte",
     "activating": "Activation de la sauvegarde sur Drive...",
-    "backingUp": "Préparation de la sauvegarde...",
-    "sendingPoint": "Envoi du point {{current}} sur {{total}}",
-    "backingUpPoint": "Envoi du point vers Drive...",
-    "retryingBackup": "Nouvelle tentative de sauvegarde..."
+    "modalTitle": "Sauvegarde sur Drive",
+    "keepAppOpen": "Gardez l'application ouverte jusqu'à la fin.",
+    "cancelTitle": "Annuler la sauvegarde ?",
+    "cancelMessage": "Ce qui a déjà été envoyé reste sur Drive et le reste demeure en attente.",
+    "keepGoing": "Continuer",
+    "cancelConfirm": "Annuler la sauvegarde",
+    "cancelling": "Annulation après l'élément en cours...",
+    "showDetails": "Voir les détails",
+    "hideDetails": "Masquer les détails",
+    "alreadyRunning": "Une sauvegarde est déjà en cours.",
+    "nothingToBackup": "Aucun élément en attente à envoyer.",
+    "stage": {
+      "preparing": "Préparation de la sauvegarde...",
+      "points": "Envoi des points : {{current}} sur {{total}}",
+      "singlePoint": "Envoi du point vers Drive..."
+    },
+    "result": {
+      "completed": {
+        "title": "Sauvegarde terminée",
+        "message": "{{sent}} élément(s) envoyé(s) avec succès."
+      },
+      "completedWithPending": {
+        "title": "Sauvegarde terminée avec des éléments en attente",
+        "message": "{{sent}} envoyé(s), {{notSent}} non envoyé(s). Les éléments non envoyés restent en attente."
+      },
+      "cancelled": {
+        "title": "Sauvegarde annulée",
+        "message": "{{sent}} envoyé(s) avant l'annulation. {{notSent}} restent en attente."
+      },
+      "error": {
+        "title": "La sauvegarde n'a pas pu être terminée"
+      }
+    },
+    "reason": {
+      "timeout": "La connexion est lente ou instable. Réessayez.",
+      "offline": "Pas de connexion internet.",
+      "auth": "Impossible d'accéder au compte Google. Reconnectez le compte et réessayez.",
+      "quota": "Google a temporairement limité les requêtes ou l'espace Drive est plein. Réessayez plus tard.",
+      "folderMissing": "Le dossier du projet est introuvable sur Drive.",
+      "server": "Google Drive est indisponible pour le moment. Réessayez dans un instant.",
+      "missingMedia": "{{count}} photo(s) ou note(s) audio n'existent plus sur cet appareil.",
+      "notEligible": "Seuls les points approuvés ou collectés par vous sont sauvegardés.",
+      "unknown": "Une erreur inattendue s'est produite. Voir les détails."
+    }
   },
   "driveRestore": {
     "restoreAction": "Restaurer Mes Projets depuis Drive",

@@ -595,7 +595,7 @@ describe("backupAllPendingPoints - progress callback", () => {
     const project = seedProject();
     const onProgress = jest.fn();
 
-    await expect(backupAllPendingPoints(project.id)).resolves.toEqual({ backedUp: 0, failed: [] });
+    await expect(backupAllPendingPoints(project.id)).resolves.toEqual({ backedUp: 0, failed: [], cancelled: false, notAttempted: 0 });
     await backupAllPendingPoints(project.id, onProgress);
 
     expect(onProgress).not.toHaveBeenCalled();
@@ -969,5 +969,76 @@ describe("backup and discard - media inside repeatable_group items (custom proto
     const retry = await backupPoint(point.id.toString());
     expect(retry.success).toBe(true);
     expect(uploadBinaryFileMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("backup cancellation", () => {
+  it("stops between points: the rest are never attempted and stay pending", async () => {
+    const project = seedProject();
+    const first = seedPoint(project.id);
+    const second = seedPoint(project.id);
+    const third = seedPoint(project.id);
+    let cancel = false;
+
+    const summary = await backupAllPendingPoints(project.id, undefined, {
+      shouldCancel: () => cancel,
+      onPointDone: () => {
+        cancel = true;
+      },
+    });
+
+    expect(summary).toMatchObject({ backedUp: 1, cancelled: true, notAttempted: 2, failed: [] });
+    expect(first.drive_synced_at).not.toBeNull();
+    expect(second.drive_synced_at).toBeNull();
+    expect(third.drive_synced_at).toBeNull();
+  });
+
+  it("stops between a point's uploads without writing its JSON or marking it as backed up", async () => {
+    fsState.set("file:///capture/photo1.jpg", { isDir: false, content: "a" });
+    fsState.set("file:///capture/photo2.jpg", { isDir: false, content: "b" });
+    const project = seedProject();
+    const point = seedPoint(project.id, {
+      photos: JSON.stringify([
+        { uri: "file:///capture/photo1.jpg", timestamp: 1 },
+        { uri: "file:///capture/photo2.jpg", timestamp: 2 },
+      ]),
+    });
+
+    const result = await backupPoint(point.id.toString(), undefined, {
+      shouldCancel: () => uploadBinaryFileMock.mock.calls.length >= 1,
+    });
+
+    expect(result).toMatchObject({ success: false, cancelled: true });
+    expect(uploadBinaryFileMock).toHaveBeenCalledTimes(1);
+    expect(uploadJsonFileMock).not.toHaveBeenCalled();
+    expect(updatePointMock).not.toHaveBeenCalled();
+    expect(point.drive_synced_at).toBeNull();
+  });
+
+  it("does not count a point interrupted mid-way as sent or as failed", async () => {
+    fsState.set("file:///capture/photo1.jpg", { isDir: false, content: "a" });
+    const project = seedProject();
+    seedPoint(project.id, { photos: JSON.stringify([{ uri: "file:///capture/photo1.jpg", timestamp: 1 }]) });
+    seedPoint(project.id);
+
+    const summary = await backupAllPendingPoints(project.id, undefined, {
+      shouldCancel: () => uploadBinaryFileMock.mock.calls.length >= 1,
+    });
+
+    expect(summary).toMatchObject({ backedUp: 0, cancelled: true, notAttempted: 2, failed: [] });
+  });
+
+  it("works on the list captured at the start: points created later are not part of the run", async () => {
+    const project = seedProject();
+    const captured = seedPoint(project.id);
+    const later = seedPoint(project.id);
+
+    const summary = await backupAllPendingPoints(project.id, undefined, {
+      points: [captured as unknown as import("@/types/database").Point],
+    });
+
+    expect(summary.backedUp).toBe(1);
+    expect(captured.drive_synced_at).not.toBeNull();
+    expect(later.drive_synced_at).toBeNull();
   });
 });

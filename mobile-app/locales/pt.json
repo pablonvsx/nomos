@@ -1097,21 +1097,58 @@
     "activatedSuccess": "Backup no Drive ativado com sucesso.",
     "errorActivating": "Não foi possível ativar o backup no Drive.",
     "backupAction": "Fazer Backup",
-    "backupSummary": "{{backedUp}} ponto(s) salvo(s), {{failed}} falharam.",
     "backupPointAction": "Fazer backup deste ponto",
-    "backupPointSuccess": "Ponto salvo no Drive com sucesso.",
     "discardMissingMediaTitle": "Mídias não encontradas",
     "discardMissingMediaMessage": "{{count}} arquivo(s) de foto ou áudio de {{points}} ponto(s) não existem mais neste aparelho e impedem o backup. Descartar essas mídias removerá apenas as referências a elas nesses pontos e o backup será tentado de novo. Essa ação não pode ser desfeita.",
     "discardMissingMediaConfirm": "Descartar mídias não encontradas",
-    "errorBackingUpPoint": "Não foi possível fazer o backup do ponto.",
     "confirmAccountLinkTitle": "Vincular conta do Google",
     "confirmAccountLink": "Este projeto ficará vinculado à conta {{email}} e isso não pode ser alterado depois.",
     "useOtherAccount": "Usar outra conta",
     "activating": "Ativando backup no Drive...",
-    "backingUp": "Preparando o backup...",
-    "sendingPoint": "Enviando ponto {{current}} de {{total}}",
-    "backingUpPoint": "Enviando ponto para o Drive...",
-    "retryingBackup": "Tentando o backup novamente..."
+    "modalTitle": "Backup no Drive",
+    "keepAppOpen": "Mantenha o app aberto até o fim.",
+    "cancelTitle": "Cancelar o backup?",
+    "cancelMessage": "O que já foi enviado permanece no Drive e o restante continua pendente.",
+    "keepGoing": "Continuar backup",
+    "cancelConfirm": "Cancelar backup",
+    "cancelling": "Cancelando após o item atual...",
+    "showDetails": "Ver detalhes",
+    "hideDetails": "Ocultar detalhes",
+    "alreadyRunning": "Já existe um backup em andamento.",
+    "nothingToBackup": "Não há itens pendentes para enviar.",
+    "stage": {
+      "preparing": "Preparando o backup...",
+      "points": "Enviando pontos: {{current}} de {{total}}",
+      "singlePoint": "Enviando o ponto para o Drive..."
+    },
+    "result": {
+      "completed": {
+        "title": "Backup concluído",
+        "message": "{{sent}} item(ns) enviado(s) com sucesso."
+      },
+      "completedWithPending": {
+        "title": "Backup concluído com pendências",
+        "message": "{{sent}} enviado(s), {{notSent}} não enviado(s). Os itens não enviados continuam pendentes."
+      },
+      "cancelled": {
+        "title": "Backup cancelado",
+        "message": "{{sent}} enviado(s) antes do cancelamento. {{notSent}} continuam pendentes."
+      },
+      "error": {
+        "title": "Não foi possível fazer o backup"
+      }
+    },
+    "reason": {
+      "timeout": "A conexão está lenta ou instável. Tente novamente.",
+      "offline": "Sem conexão com a internet.",
+      "auth": "Não foi possível acessar a conta do Google. Reconecte a conta e tente novamente.",
+      "quota": "O Google limitou temporariamente as solicitações ou o espaço do Drive acabou. Tente novamente mais tarde.",
+      "folderMissing": "A pasta do projeto não foi encontrada no Drive.",
+      "server": "O Google Drive está indisponível no momento. Tente novamente em instantes.",
+      "missingMedia": "{{count}} foto(s) ou áudio(s) não existem mais neste aparelho.",
+      "notEligible": "Só pontos aprovados ou coletados por você entram no backup.",
+      "unknown": "Ocorreu um erro inesperado. Veja os detalhes."
+    }
   },
   "driveRestore": {
     "restoreAction": "Restaurar Meus Projetos do Drive",

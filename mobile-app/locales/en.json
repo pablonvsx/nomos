@@ -1097,21 +1097,58 @@
     "activatedSuccess": "Drive backup activated successfully.",
     "errorActivating": "Could not activate Drive backup.",
     "backupAction": "Back Up",
-    "backupSummary": "{{backedUp}} point(s) saved, {{failed}} failed.",
     "backupPointAction": "Back up this point",
-    "backupPointSuccess": "Point saved to Drive successfully.",
     "discardMissingMediaTitle": "Media not found",
     "discardMissingMediaMessage": "{{count}} photo or audio file(s) from {{points}} point(s) no longer exist on this device and block the backup. Discarding them removes only the references to them in those points, and the backup will be tried again. This cannot be undone.",
     "discardMissingMediaConfirm": "Discard missing media",
-    "errorBackingUpPoint": "Could not back up the point.",
     "confirmAccountLinkTitle": "Link Google account",
     "confirmAccountLink": "This project will be linked to the account {{email}} and this cannot be changed later.",
     "useOtherAccount": "Use another account",
     "activating": "Activating Drive backup...",
-    "backingUp": "Preparing backup...",
-    "sendingPoint": "Uploading point {{current}} of {{total}}",
-    "backingUpPoint": "Uploading point to Drive...",
-    "retryingBackup": "Retrying backup..."
+    "modalTitle": "Drive backup",
+    "keepAppOpen": "Keep the app open until it finishes.",
+    "cancelTitle": "Cancel the backup?",
+    "cancelMessage": "What was already sent stays on Drive and the rest remains pending.",
+    "keepGoing": "Keep going",
+    "cancelConfirm": "Cancel backup",
+    "cancelling": "Cancelling after the current item...",
+    "showDetails": "Show details",
+    "hideDetails": "Hide details",
+    "alreadyRunning": "A backup is already in progress.",
+    "nothingToBackup": "There are no pending items to send.",
+    "stage": {
+      "preparing": "Preparing the backup...",
+      "points": "Sending points: {{current}} of {{total}}",
+      "singlePoint": "Sending the point to Drive..."
+    },
+    "result": {
+      "completed": {
+        "title": "Backup complete",
+        "message": "{{sent}} item(s) sent successfully."
+      },
+      "completedWithPending": {
+        "title": "Backup complete with pending items",
+        "message": "{{sent}} sent, {{notSent}} not sent. The items that were not sent remain pending."
+      },
+      "cancelled": {
+        "title": "Backup cancelled",
+        "message": "{{sent}} sent before cancelling. {{notSent}} remain pending."
+      },
+      "error": {
+        "title": "The backup could not be completed"
+      }
+    },
+    "reason": {
+      "timeout": "The connection is slow or unstable. Try again.",
+      "offline": "No internet connection.",
+      "auth": "Could not access the Google account. Reconnect the account and try again.",
+      "quota": "Google temporarily limited requests or the Drive storage is full. Try again later.",
+      "folderMissing": "The project folder was not found on Drive.",
+      "server": "Google Drive is unavailable right now. Try again in a moment.",
+      "missingMedia": "{{count}} photo(s) or audio note(s) no longer exist on this device.",
+      "notEligible": "Only approved points or points you collected yourself are backed up.",
+      "unknown": "An unexpected error occurred. See the details."
+    }
   },
   "driveRestore": {
     "restoreAction": "Restore My Projects from Drive",

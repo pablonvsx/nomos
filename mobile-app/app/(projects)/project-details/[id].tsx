@@ -53,6 +53,7 @@ import {
   getPointsWithModulesByProject,
   getPendingPointsByProject,
   getRejectedPointsByProject,
+  getBackupEligiblePointsByProject,
 } from "@/db/queries/points";
 import { buildPointEnvelope } from "@/db/mappers/point.mapper";
 import {
@@ -97,7 +98,8 @@ import {
   activateDriveBackup,
   GoogleAccountRequiredError,
 } from "@/core/drive-sync/project-drive-service";
-import { backupAllPendingPoints, backupPoint } from "@/core/drive-sync/backup-service";
+import { runPointsBackup, runSinglePointBackup } from "@/core/drive-sync/backup-runners";
+import { isBackupBusy, startBackup, type BackupFailure } from "@/core/drive-sync/backup-session";
 import { discardMissingMedia } from "@/core/points/discard-missing-media";
 import { syncActiveVegetationClassificationToDrive } from "@/core/drive-sync/catalog-sync-service";
 import {
@@ -139,8 +141,6 @@ function UnifiedProjectDetailsScreen() {
       : error instanceof Error
         ? error.message
         : fallback;
-  const describeFailure = (failure: { reason: string; timedOut: boolean }): string =>
-    failure.timedOut ? t("common.slowConnection") : failure.reason;
   const registry = useProtocolRegistry();
   const bus = useCapabilityBus();
   const { clearMapData } = useMapData();
@@ -200,7 +200,6 @@ function UnifiedProjectDetailsScreen() {
   const [pendingDriveIntent, setPendingDriveIntent] = useState<(() => void) | null>(null);
 
   // Drive backup upload states (Fase 6)
-  const [backingUpPointId, setBackingUpPointId] = useState<number | null>(null);
   const bottomPadding = useBottomContentPadding(64);
 
   // resetKey includes editDialogVisible: this screen never unmounts while
@@ -831,12 +830,10 @@ function UnifiedProjectDetailsScreen() {
   // Backup is blocked by photos/audio that no longer exist on this device.
   // Offer to drop those references (never the files that exist) and retry,
   // after an explicit confirmation since the references are lost for good.
-  const offerDiscardMissingMedia = (
-    failed: Array<{ pointId: number; pointLabel: string; missingMediaCount: number }>,
-  ) => {
-    const withMissing = failed.filter((f) => f.missingMediaCount > 0);
-    if (withMissing.length === 0) return;
-    const total = withMissing.reduce((sum, f) => sum + f.missingMediaCount, 0);
+  const offerDiscardMissingMedia = (failed: BackupFailure[]) => {
+    const withMissing = failed.filter((f) => (f.missingMediaCount ?? 0) > 0 && f.pointId !== undefined);
+    if (withMissing.length === 0 || !project) return;
+    const total = withMissing.reduce((sum, f) => sum + (f.missingMediaCount ?? 0), 0);
 
     confirm(
       t("driveBackup.discardMissingMediaTitle"),
@@ -845,33 +842,9 @@ function UnifiedProjectDetailsScreen() {
         points: withMissing.length.toString(),
       }),
       () =>
-        run(t("driveBackup.retryingBackup"), async (update) => {
-          try {
-            for (const failure of withMissing) {
-              await discardMissingMedia(failure.pointId);
-            }
-            const retry = await backupAllPendingPoints(project!.id, ({ current, total }) =>
-              update({
-                label: t("driveBackup.sendingPoint", { current: current.toString(), total: total.toString() }),
-                current,
-                total,
-              }),
-            );
-            const retryFailedText =
-              retry.failed.length > 0
-                ? "\n" + retry.failed.map((f) => `${f.pointLabel}: ${describeFailure(f)}`).join("\n")
-                : "";
-            alert(
-              t("common.success"),
-              t("driveBackup.backupSummary", {
-                backedUp: retry.backedUp.toString(),
-                failed: retry.failed.length.toString(),
-              }) + retryFailedText,
-            );
-            loadProjectData();
-          } catch (error) {
-            console.error("Error discarding missing media:", error);
-            alert(t("common.error"), describeError(error, t("driveBackup.errorBackingUpPoint")));
+        beginPointsBackup(async () => {
+          for (const failure of withMissing) {
+            await discardMissingMedia(failure.pointId!);
           }
         }),
       () => {},
@@ -879,6 +852,27 @@ function UnifiedProjectDetailsScreen() {
       t("common.cancel"),
       true,
     );
+  };
+
+  // One entry for every points backup: the global session owns the lock, the
+  // progress and the result modal, so this screen only starts it and reacts
+  // to the end (reload, then offer to discard missing media).
+  const beginPointsBackup = (prepare?: () => Promise<void>) => {
+    if (!project) return;
+    const projectId = project.id;
+    const started = startBackup({
+      scope: "points",
+      projectId,
+      run: async (context) => {
+        await prepare?.();
+        return runPointsBackup(projectId, context);
+      },
+      onFinished: () => loadProjectData({ silent: true }),
+      onDismissed: (result) => offerDiscardMissingMedia(result.failures),
+    });
+    if (started.status === "already-running") {
+      alert(t("common.info"), t("driveBackup.alreadyRunning"));
+    }
   };
 
   const handleBackupAllPoints = async () => {
@@ -891,36 +885,19 @@ function UnifiedProjectDetailsScreen() {
       return;
     }
 
-    await run(t("driveBackup.backingUp"), async (update) => {
-      try {
-        const summary = await backupAllPendingPoints(project.id, ({ current, total }) =>
-          update({
-            label: t("driveBackup.sendingPoint", { current: current.toString(), total: total.toString() }),
-            current,
-            total,
-          }),
-        );
-        const failedText =
-          summary.failed.length > 0
-            ? "\n" + summary.failed.map((f) => `${f.pointLabel}: ${describeFailure(f)}`).join("\n")
-            : "";
-        alert(
-          t("common.success"),
-          t("driveBackup.backupSummary", {
-            backedUp: summary.backedUp.toString(),
-            failed: summary.failed.length.toString(),
-          }) + failedText,
-          () => offerDiscardMissingMedia(summary.failed),
-        );
-        loadProjectData();
-      } catch (error) {
-        console.error("Error backing up points:", error);
-        alert(t("common.error"), describeError(error, t("driveBackup.errorBackingUpPoint")));
-      }
-    });
+    if (isBackupBusy()) {
+      alert(t("common.info"), t("driveBackup.alreadyRunning"));
+      return;
+    }
+    if ((await getBackupEligiblePointsByProject(project.id)).length === 0) {
+      alert(t("common.info"), t("driveBackup.nothingToBackup"));
+      return;
+    }
+    beginPointsBackup();
   };
 
   const handleBackupSinglePoint = async (pointId: number) => {
+    if (!project) return;
     if (!getCurrentGoogleAccount()) {
       setPendingDriveIntent(() => () => handleBackupSinglePoint(pointId));
       setDriveForceAccountChooser(false);
@@ -928,30 +905,17 @@ function UnifiedProjectDetailsScreen() {
       return;
     }
 
-    await run(t("driveBackup.backingUpPoint"), async () => {
-      setBackingUpPointId(pointId);
-      try {
-        const result = await backupPoint(pointId.toString());
-        if (result.success) {
-          alert(t("common.success"), t("driveBackup.backupPointSuccess"));
-          loadProjectData();
-        } else {
-          alert(
-            t("common.error"),
-            result.timedOut ? t("common.slowConnection") : (result.error ?? t("driveBackup.errorBackingUpPoint")),
-            () =>
-              offerDiscardMissingMedia([
-                { pointId, pointLabel: "", missingMediaCount: result.missingMediaCount ?? 0 },
-              ]),
-          );
-        }
-      } catch (error) {
-        console.error("Error backing up point:", error);
-        alert(t("common.error"), describeError(error, t("driveBackup.errorBackingUpPoint")));
-      } finally {
-        setBackingUpPointId(null);
-      }
+    const projectId = project.id;
+    const started = startBackup({
+      scope: "points",
+      projectId,
+      run: (context) => runSinglePointBackup(pointId, context),
+      onFinished: () => loadProjectData({ silent: true }),
+      onDismissed: (result) => offerDiscardMissingMedia(result.failures),
     });
+    if (started.status === "already-running") {
+      alert(t("common.info"), t("driveBackup.alreadyRunning"));
+    }
   };
 
   const renderSurveyPoint = ({ item }: { item: Point }) => {
@@ -992,7 +956,6 @@ function UnifiedProjectDetailsScreen() {
               <IconButton
                 icon={item.drive_synced_at ? "cloud-check" : "cloud-outline"}
                 size={22}
-                loading={backingUpPointId === item.id}
                 disabled={busy || Boolean(item.drive_synced_at)}
                 onPress={() => handleBackupSinglePoint(item.id)}
               />

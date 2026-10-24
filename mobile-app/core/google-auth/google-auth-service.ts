@@ -142,9 +142,37 @@ export async function signOutFromGoogle(): Promise<void> {
   await withGoogleTimeout(() => googleSignin.signOut(), GOOGLE_AUTH_TIMEOUT_MS);
 }
 
+// The Google Sign-In library admits ONE getTokens() call at a time: a second
+// call while the first is pending overwrites its promise ("PGMN-2: previous
+// promise did not settle"), and the first caller then never hears back. Every
+// Drive request asks for a token, so all callers share the call in flight.
+// The share is tied to the NATIVE promise, not to the caller's timeout: a
+// call that outlives its timeout is still pending natively, and the next
+// caller must join it instead of stacking another one on top.
+let tokenInFlight: { promise: Promise<string>; startedAt: number } | null = null;
+
+// A native call pending for this long is treated as lost (the library never
+// answered), so a new one may start instead of waiting on it forever.
+export const TOKEN_CALL_STALE_MS = GOOGLE_AUTH_TIMEOUT_MS * 2;
+
 export async function getDriveAccessToken(): Promise<string> {
   const googleSignin = requireGoogleSignin();
   ensureConfigured();
-  const { accessToken } = await withGoogleTimeout(() => googleSignin.getTokens(), GOOGLE_AUTH_TIMEOUT_MS);
-  return accessToken;
+  const now = Date.now();
+  if (!tokenInFlight || now - tokenInFlight.startedAt > TOKEN_CALL_STALE_MS) {
+    const promise = googleSignin.getTokens().then(({ accessToken }) => accessToken);
+    const entry = { promise, startedAt: now };
+    tokenInFlight = entry;
+    const release = () => {
+      if (tokenInFlight === entry) tokenInFlight = null;
+    };
+    promise.then(release, release);
+  }
+  const shared = tokenInFlight.promise;
+  return withGoogleTimeout(() => shared, GOOGLE_AUTH_TIMEOUT_MS);
+}
+
+/** Test hook: forgets the shared call. */
+export function resetTokenInFlightForTests(): void {
+  tokenInFlight = null;
 }

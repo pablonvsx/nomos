@@ -17,6 +17,8 @@ export interface ModalActionsProps {
   /** Paints the confirm button with the theme's error color. */
   destructive?: boolean;
   confirmIcon?: string;
+  /** "outline" for a confirm slot that carries a secondary action (e.g. a lone Cancel). Default "solid". */
+  confirmVariant?: "solid" | "outline";
   style?: StyleProp<ViewStyle>;
 }
 
@@ -36,6 +38,7 @@ export function ModalActions({
   loading,
   destructive,
   confirmIcon,
+  confirmVariant = "solid",
   style,
 }: ModalActionsProps) {
   const theme = useTheme();
@@ -45,7 +48,7 @@ export function ModalActions({
 
   const confirmButton = (
     <Button
-      mode="contained"
+      mode={confirmVariant === "outline" ? "outlined" : "contained"}
       onPress={guardPress(onConfirm, state.confirmBlocked)}
       disabled={state.confirmBlocked && !loading}
       loading={loading}

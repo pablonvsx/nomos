@@ -7,6 +7,7 @@ import { ThemeProvider, useTheme } from "../contexts/theme-context";
 import { I18nProvider } from "@/contexts/i18n-context";
 import { MapDataProvider } from "@/contexts/map-data-context";
 import { DialogProvider } from "../hooks/use-dialog";
+import { BackupModal } from "@/components/drive-sync/BackupModal";
 import { useAppBootstrap } from "@/hooks/use-app-bootstrap";
 import { ProtocolKernelProvider } from "@/contexts/protocol-registry-context";
 import "react-native-reanimated";
@@ -117,6 +118,7 @@ function ThemedApp() {
             that exist outside the Tab context 
           */}
         </Stack>
+        <BackupModal />
       </DialogProvider>
     </PaperProvider>
   );
