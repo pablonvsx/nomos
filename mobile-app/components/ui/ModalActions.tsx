@@ -7,7 +7,7 @@ import { guardPress, resolveModalActions } from "@/core/ui/modal-actions";
 export interface ModalActionsProps {
   confirmLabel: string;
   onConfirm: () => void;
-  /** Omit for a single-action modal (e.g. OK): the confirm button is centered at full width. */
+  /** Omit for a single-action modal (e.g. OK): the confirm button stays in the right column. */
   cancelLabel?: string;
   onCancel?: () => void;
   confirmDisabled?: boolean;
@@ -22,7 +22,10 @@ export interface ModalActionsProps {
 
 const MIN_HEIGHT = 48;
 
-/** Split modal footer: cancel (outlined) on the left half, confirm (solid) on the right half. */
+/**
+ * Split modal footer: cancel (outlined) on the left half, confirm (solid) on the right half.
+ * Without a cancel action the confirm button stays on the right half.
+ */
 export function ModalActions({
   confirmLabel,
   onConfirm,
@@ -58,7 +61,13 @@ export function ModalActions({
   );
 
   if (state.layout === "single") {
-    return <View style={[styles.single, style]}>{confirmButton}</View>;
+    // Same slot the confirm button has in the split layout: the right half.
+    return (
+      <View style={[styles.row, style]}>
+        <View style={styles.column} />
+        <View style={styles.column}>{confirmButton}</View>
+      </View>
+    );
   }
 
   return (
@@ -83,7 +92,6 @@ export function ModalActions({
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignSelf: "stretch", paddingVertical: 8 },
   column: { flex: 1, alignItems: "center", paddingHorizontal: 8 },
-  single: { alignSelf: "stretch", alignItems: "center", paddingVertical: 8, paddingHorizontal: 8 },
   button: { minWidth: 120, maxWidth: "100%" },
   content: { minHeight: MIN_HEIGHT },
   label: { flexShrink: 1 },

@@ -11,7 +11,7 @@ export interface ModalActionsInput {
 }
 
 export interface ModalActionsState {
-  /** "split": two equal columns. "single": the confirm button centered at full width. */
+  /** "split": two equal columns. "single": only the confirm button, in the right column. */
   layout: "split" | "single";
   confirmBlocked: boolean;
   cancelBlocked: boolean;
