@@ -13,6 +13,7 @@ import { speciesNameKey } from "@/core/species-catalog/name-key";
 interface FakeProject {
   id: number;
   name: string;
+  description?: string;
   protocol_id: string;
   protocol_source: "official" | "custom";
   project_uuid: string | null;
@@ -341,6 +342,14 @@ describe("buildProjectConfigPackage", () => {
     expect(pkg.package_role_for_importer).toBe("collaborator");
   });
 
+  it("carries the project description", async () => {
+    const project = seedOfficialProject({ description: "Notas de campo" });
+
+    const pkg = await buildProjectConfigPackage(project.id);
+
+    expect(pkg.project_description).toBe("Notas de campo");
+  });
+
   it("reports owner_email when the project has one, and standard classification when active", async () => {
     const project = seedOfficialProject({ owner_email: "owner@example.com" });
 
@@ -471,6 +480,20 @@ describe("applyProjectConfigPackage — import behavior", () => {
     expect(vegClassifications[0].uuid).toBe("veg-uuid-1");
     expect(project.vegetation_classification_type).toBe("custom");
     expect(project.active_custom_vegetation_classification_id).toBe(vegClassifications[0].id);
+  });
+
+  it("creates the local project with the package's description", async () => {
+    await applyProjectConfigPackage(samplePackage({ project_description: "Notas de campo" }));
+
+    expect(ProjectsQueries.createProject).toHaveBeenCalledWith(
+      "Projeto Compartilhado",
+      expect.any(String),
+      "Notas de campo",
+      "official",
+      "shared-project-uuid",
+      null,
+      "collaborator",
+    );
   });
 
   it("always creates the local project as a collaborator copy (section 3.1) - never null, never owner", async () => {

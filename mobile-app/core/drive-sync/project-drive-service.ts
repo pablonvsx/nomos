@@ -23,6 +23,8 @@ export interface ProjectManifest {
   format_version: 1;
   project_uuid: string;
   project_name: string;
+  /** The project's description; written by activation and by every project-data backup. */
+  project_description?: string;
   protocol_id: string;
   protocol_source: "official" | "custom";
   owner_email: string;
@@ -146,6 +148,7 @@ export async function activateDriveBackup(projectId: number): Promise<void> {
     format_version: MANIFEST_FORMAT_VERSION,
     project_uuid: pkg.project_uuid,
     project_name: pkg.project_name,
+    project_description: pkg.project_description ?? "",
     protocol_id: pkg.protocol_id,
     protocol_source: pkg.protocol_source,
     owner_email: account.email,

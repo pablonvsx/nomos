@@ -132,9 +132,14 @@ describe("buildProjectDataItems", () => {
     expect(edited.get("species:s1")).toBe(before.get("species:s1"));
   });
 
-  it("the manifest changes with the project name or the active classification", () => {
+  it("the manifest changes with the project name, the description or the active classification", () => {
     const before = byKey(pkg());
     expect(byKey(pkg({ project_name: "Outro" })).get("manifest")).not.toBe(before.get("manifest"));
+    const described = byKey(pkg({ project_description: "Notas de campo" }));
+    expect(described.get("manifest")).not.toBe(before.get("manifest"));
+    // Only the manifest is affected by a description edit.
+    expect(described.get("species:s1")).toBe(before.get("species:s1"));
+    expect(described.get("vegclass:v1")).toBe(before.get("vegclass:v1"));
     expect(
       byKey(pkg({ active_vegetation_classification: { type: "custom", custom_classification_uuid: "v1" } })).get("manifest"),
     ).not.toBe(before.get("manifest"));

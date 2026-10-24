@@ -158,6 +158,14 @@ function UnifiedProjectDetailsScreen() {
   const driveLinkedOwner = project?.collaboration_role === "owner" && Boolean(project?.drive_folder_id);
   const projectDataBackup = useBackupStatus(project?.id, "project", driveLinkedOwner);
   const pointsBackup = useBackupStatus(project?.id, "points", driveLinkedOwner);
+  // Anything that changes what the backup would send (classifications, name, description, the active
+  // classification) calls this so the card updates on the spot instead of on the next focus. A ref,
+  // so loadProjectData and the modal callbacks do not depend on the hooks' changing identities.
+  const refreshBackupStatusRef = useRef<() => void>(() => {});
+  refreshBackupStatusRef.current = () => {
+    projectDataBackup.refresh();
+    pointsBackup.refresh();
+  };
   const [protocolLabel, setProtocolLabel] = useState<string>("");
   const [surveyPoints, setSurveyPoints] = useState<Point[]>([]);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
@@ -350,6 +358,7 @@ function UnifiedProjectDetailsScreen() {
       console.error("Error loading project:", error);
       alert(t("common.error"), t("projectView.loadError"));
     } finally {
+      refreshBackupStatusRef.current();
       if (!options?.silent) setIsLoading(false);
     }
   }, [id, router, t]);
@@ -1190,6 +1199,7 @@ function UnifiedProjectDetailsScreen() {
                     if (project) {
                       const projectId = project.id;
                       setActiveVegetationClassification(projectId, null, "standard")
+                        .then(() => refreshBackupStatusRef.current())
                         .catch(err => {
                           console.error("Error saving vegetation classification type:", err);
                         });
@@ -1557,12 +1567,14 @@ function UnifiedProjectDetailsScreen() {
             getVegetationClassificationsByProject(project.id).then(classifications => {
               setCustomVegClassifications(classifications);
             });
+            refreshBackupStatusRef.current();
           }}
           onClassificationsChanged={() => {
             // Reload classifications list when changed
             getVegetationClassificationsByProject(project.id).then(classifications => {
               setCustomVegClassifications(classifications);
             });
+            refreshBackupStatusRef.current();
           }}
         />
       )}
@@ -1574,6 +1586,7 @@ function UnifiedProjectDetailsScreen() {
           visible={vegClassificationSelectorVisible}
           onClose={() => {
             setVegClassificationSelectorVisible(false);
+            refreshBackupStatusRef.current();
             // Reload the configuration after closing
             if (project.id) {
               getActiveVegetationClassificationConfig(project.id).then(config => {
@@ -1593,6 +1606,7 @@ function UnifiedProjectDetailsScreen() {
             }
           }}
           onConfigChange={() => {
+            refreshBackupStatusRef.current();
             // Reload configuration when it changes
             if (project && project.id) {
               getActiveVegetationClassificationConfig(project.id).then(config => {

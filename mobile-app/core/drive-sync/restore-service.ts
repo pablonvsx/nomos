@@ -121,7 +121,7 @@ export async function restoreOwnProjectFromDrive(driveFolderId: string): Promise
   const newProjectId = await createProject(
     manifest.project_name,
     localProtocolId,
-    "",
+    manifest.project_description ?? "",
     manifest.protocol_source,
     manifest.project_uuid,
     manifest.owner_email,

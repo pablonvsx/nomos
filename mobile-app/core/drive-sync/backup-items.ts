@@ -105,6 +105,7 @@ export function buildProjectDataItems(pkg: ProjectConfigPackage): ProjectDataIte
     { key: "manifest", label: pkg.project_name, group: "manifest" },
     {
       project_name: pkg.project_name,
+      project_description: pkg.project_description ?? "",
       protocol_id: pkg.protocol_id,
       protocol_source: pkg.protocol_source,
       active_vegetation_classification: pkg.active_vegetation_classification,

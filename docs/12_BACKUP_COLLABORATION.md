@@ -484,16 +484,19 @@ lookup by name would be ambiguous. The Drive paths come from
 package (`module-media.ts`) keeps its own naming.
 
 `manifest.json` (`ProjectManifest`, `project-drive-service.ts`) holds
-`format_version`, `project_uuid`, `project_name`, `protocol_id`,
-`protocol_source`, `owner_email`, and `active_vegetation_classification`
+`format_version`, `project_uuid`, `project_name`, `project_description`,
+`protocol_id`, `protocol_source`, `owner_email`, and `active_vegetation_classification`
 (`{ type: 'standard' }` or `{ type: 'custom', custom_classification_uuid }`).
 It is never reconstructed from local state — every writer goes through
 `updateManifest(driveFolderId, updater)`, which reads the current file,
 applies the updater, and refuses to write (throws, nothing is sent) if
 the result would change `project_uuid`, drop a non-null `owner_email`,
 or change `format_version`. This read-modify-write discipline is what
-keeps two independent writers (activation, and the catalog sync below)
-from ever clobbering each other's fields.
+keeps two independent writers (activation, and the on-demand project-data
+backup) from ever clobbering each other's fields. The project's name and
+description are part of the manifest (and of the configuration package, and
+are restored from either), so editing either one makes the project-data
+backup pending.
 
 ## On-demand backup, scopes and change detection
 

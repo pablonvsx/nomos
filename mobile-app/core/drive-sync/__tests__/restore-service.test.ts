@@ -336,6 +336,21 @@ describe("restoreOwnProjectFromDrive - identity preservation", () => {
     const created = projects.find((p) => p.id === result.projectId)!;
     expect(created.project_uuid).toBe("very-specific-uuid-42");
   });
+
+  it("restores the project description from the manifest", async () => {
+    getManifestMock.mockResolvedValue(baseManifest({ project_description: "Notas de campo" }));
+
+    await restore("folder-1");
+
+    expect(createProjectMock).toHaveBeenCalledWith(
+      "Projeto Restaurado",
+      expect.any(String),
+      "Notas de campo",
+      "official",
+      "project-uuid-1",
+      "owner@example.com",
+    );
+  });
 });
 
 describe("restoreOwnProjectFromDrive - species catalog", () => {

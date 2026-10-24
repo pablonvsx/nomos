@@ -98,6 +98,7 @@ export async function backupProjectData(params: {
       // that would lose the project_uuid or the owner_email.
       const next = payload as {
         project_name: string;
+        project_description?: string;
         protocol_id: string;
         protocol_source: "official" | "custom";
         active_vegetation_classification: { type: "standard" | "custom"; custom_classification_uuid?: string };
@@ -105,6 +106,7 @@ export async function backupProjectData(params: {
       await updateManifest(driveFolderId, (current) => ({
         ...current,
         project_name: next.project_name,
+        project_description: next.project_description ?? "",
         protocol_id: next.protocol_id,
         protocol_source: next.protocol_source,
         active_vegetation_classification: next.active_vegetation_classification,

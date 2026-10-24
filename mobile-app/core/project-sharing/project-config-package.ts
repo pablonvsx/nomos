@@ -37,6 +37,7 @@ export interface ProjectConfigPackage {
   format_version: 1;
   project_uuid: string;
   project_name: string;
+  project_description?: string;
   protocol_id: string;
   protocol_source: "official" | "custom";
   custom_protocol?: { uuid: string; name: string; theme: string; schema: unknown };
@@ -121,6 +122,7 @@ export async function buildProjectConfigPackage(
     format_version: CONFIG_PACKAGE_FORMAT_VERSION,
     project_uuid: projectUuid,
     project_name: project.name,
+    project_description: project.description ?? "",
     protocol_id: project.protocol_id,
     protocol_source: project.protocol_source,
     custom_protocol: customProtocol,
@@ -237,7 +239,7 @@ export async function applyProjectConfigPackage(
     const newProjectId = await createProject(
       pkg.project_name,
       localProtocolId,
-      "",
+      pkg.project_description ?? "",
       pkg.protocol_source,
       pkg.project_uuid,
       pkg.owner_email,

@@ -36,6 +36,7 @@ function pkg(overrides: Partial<ProjectConfigPackage> = {}): ProjectConfigPackag
     format_version: 1,
     project_uuid: "p",
     project_name: "Campo",
+    project_description: "Notas de campo",
     protocol_id: "nomos-paisageo-v1",
     protocol_source: "official",
     species_catalog: [
@@ -82,7 +83,7 @@ describe("backupProjectData", () => {
     expect(outcome).toMatchObject({ sent: 4, failures: [], cancelled: false, notAttempted: 0 });
     expect(done).toEqual(["vegclass:v1", "species:s1", "species:s2", "manifest"]);
     expect(drive.tree()).toEqual(["species-catalog/", "species-catalog/s1.json", "species-catalog/s2.json", "vegetation-classes/", "vegetation-classes/v1.json"]);
-    expect(manifestState.current).toMatchObject({ project_name: "Campo", active_vegetation_classification: { type: "custom", custom_classification_uuid: "v1" } });
+    expect(manifestState.current).toMatchObject({ project_name: "Campo", project_description: "Notas de campo", active_vegetation_classification: { type: "custom", custom_classification_uuid: "v1" } });
   });
 
   it("sends only what is pending: nothing pending means no Drive call at all", async () => {
