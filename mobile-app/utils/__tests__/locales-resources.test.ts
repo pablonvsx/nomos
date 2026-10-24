@@ -55,7 +55,7 @@ describe("resources and citation locale keys", () => {
   it("keeps every citation reference filled by the same placeholders", () => {
     for (const lang of LANGUAGES) {
       const placeholders = locales[lang].about.citeReference.match(/\{\{\w+\}\}/g)?.sort();
-      expect(placeholders).toEqual(["{{author}}", "{{doi}}", "{{version}}", "{{year}}"]);
+      expect(placeholders).toEqual(["{{author}}", "{{doi}}", "{{year}}"]);
     }
   });
 

@@ -425,7 +425,7 @@
     "viewLicense": "View Full License",
     "cite": "How to cite",
     "citeDesc": "If you use Nomos in academic work, please cite it as shown below.",
-    "citeReference": "{{author}}. Nomos: an app for environmental inventories. Version {{version}}. Recife: Federal University of Pernambuco, {{year}}. DOI: {{doi}}.",
+    "citeReference": "{{author}}. Nomos: an app for environmental inventories. Recife: Federal University of Pernambuco, {{year}}. DOI: {{doi}}.",
     "openDoi": "Open DOI",
     "copyReference": "Copy reference",
     "copied": "Reference copied to the clipboard.",

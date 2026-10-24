@@ -425,7 +425,7 @@
     "viewLicense": "Voir la Licence Complète",
     "cite": "Comment citer",
     "citeDesc": "Si vous utilisez Nomos dans des travaux académiques, citez-le selon la référence ci-dessous.",
-    "citeReference": "{{author}}. Nomos : application pour les inventaires environnementaux. Version {{version}}. Recife : Université fédérale de Pernambuco, {{year}}. DOI : {{doi}}.",
+    "citeReference": "{{author}}. Nomos : application pour les inventaires environnementaux. Recife : Université fédérale de Pernambuco, {{year}}. DOI : {{doi}}.",
     "openDoi": "Ouvrir le DOI",
     "copyReference": "Copier la référence",
     "copied": "Référence copiée dans le presse-papiers.",

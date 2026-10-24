@@ -15,7 +15,7 @@ import { BUTTON_RADIUS } from "@/constants/shape";
 import { useBottomContentPadding } from "@/hooks/use-bottom-content-padding";
 import { useAlertDialog } from "@/hooks/use-dialog";
 import { ZENODO_DOI, ZENODO_DOI_URL } from "@/constants/links";
-import { CITATION_YEAR, formatAuthorAbnt, stripVersionPrefix } from "@/utils/citation";
+import { CITATION_YEAR, formatAuthorAbnt } from "@/utils/citation";
 import { openExternalUrl } from "@/utils/open-external-url";
 
 export default function AboutScreen() {
@@ -26,7 +26,6 @@ export default function AboutScreen() {
 
   const citation = t("about.citeReference", {
     author: formatAuthorAbnt(t("about.authorName")),
-    version: stripVersionPrefix(t("home.version")),
     year: String(CITATION_YEAR),
     doi: ZENODO_DOI,
   });

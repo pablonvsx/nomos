@@ -15,8 +15,3 @@ export function formatAuthorAbnt(fullName: string): string {
   const surname = parts[parts.length - 1].toUpperCase();
   return `${surname}, ${parts.slice(0, -1).join(" ")}`;
 }
-
-/** "v1.0.0" -> "1.0.0". */
-export function stripVersionPrefix(version: string): string {
-  return version.trim().replace(/^v/i, "");
-}

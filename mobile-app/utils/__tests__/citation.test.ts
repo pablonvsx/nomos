@@ -1,5 +1,5 @@
 import { ZENODO_DOI, ZENODO_DOI_URL } from "@/constants/links";
-import { formatAuthorAbnt, stripVersionPrefix } from "../citation";
+import { formatAuthorAbnt } from "../citation";
 
 describe("formatAuthorAbnt", () => {
   it("puts the upper-case surname first", () => {
@@ -8,16 +8,6 @@ describe("formatAuthorAbnt", () => {
 
   it("handles a single name", () => {
     expect(formatAuthorAbnt("Neves")).toBe("NEVES");
-  });
-});
-
-describe("stripVersionPrefix", () => {
-  it("removes a leading v", () => {
-    expect(stripVersionPrefix("v1.0.0")).toBe("1.0.0");
-  });
-
-  it("leaves a bare version untouched", () => {
-    expect(stripVersionPrefix("1.0.0")).toBe("1.0.0");
   });
 });
 

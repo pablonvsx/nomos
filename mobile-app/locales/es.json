@@ -424,7 +424,7 @@
     "viewLicense": "Ver Licencia Completa",
     "cite": "Cómo citar",
     "citeDesc": "Si utiliza Nomos en trabajos académicos, cítelo según la referencia a continuación.",
-    "citeReference": "{{author}}. Nomos: aplicación para inventarios ambientales. Versión {{version}}. Recife: Universidad Federal de Pernambuco, {{year}}. DOI: {{doi}}.",
+    "citeReference": "{{author}}. Nomos: aplicación para inventarios ambientales. Recife: Universidad Federal de Pernambuco, {{year}}. DOI: {{doi}}.",
     "openDoi": "Abrir DOI",
     "copyReference": "Copiar referencia",
     "copied": "Referencia copiada al portapapeles.",
