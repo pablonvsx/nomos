@@ -423,6 +423,13 @@
     "licenseName": "GNU GPL v3.0",
     "licenseDesc": "Este projeto é de código aberto sob a licença GNU GPL v3.0 (copyleft). É permitido usar, estudar, modificar e redistribuir o software, inclusive comercialmente, desde que trabalhos derivados sejam distribuídos sob a mesma licença e com o código-fonte disponível.",
     "viewLicense": "Ver Licença Completa",
+    "cite": "Como citar",
+    "citeDesc": "Se utilizar o Nomos em trabalhos acadêmicos, cite-o conforme a referência abaixo.",
+    "citeReference": "{{author}}. Nomos: aplicativo para inventários ambientais. Versão {{version}}. Recife: Universidade Federal de Pernambuco, {{year}}. DOI: {{doi}}.",
+    "openDoi": "Abrir DOI",
+    "copyReference": "Copiar referência",
+    "copied": "Referência copiada para a área de transferência.",
+    "openDoiError": "Não foi possível abrir o DOI. Verifique se há um navegador instalado no aparelho e tente novamente.",
     "institutionalCredits": "Apoio Institucional",
     "institutionalCreditsDesc": "O Nomos conta com apoio institucional e científico de entidades vinculadas à pesquisa, ao fomento e à produção acadêmica."
   },

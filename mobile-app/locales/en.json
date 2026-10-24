@@ -423,6 +423,13 @@
     "licenseName": "GNU GPL v3.0",
     "licenseDesc": "This project is open source under the GNU GPL v3.0 license (copyleft). You may use, study, modify, and redistribute the software, including commercially, provided derivative works are distributed under the same license with source code available.",
     "viewLicense": "View Full License",
+    "cite": "How to cite",
+    "citeDesc": "If you use Nomos in academic work, please cite it as shown below.",
+    "citeReference": "{{author}}. Nomos: an app for environmental inventories. Version {{version}}. Recife: Federal University of Pernambuco, {{year}}. DOI: {{doi}}.",
+    "openDoi": "Open DOI",
+    "copyReference": "Copy reference",
+    "copied": "Reference copied to the clipboard.",
+    "openDoiError": "The DOI could not be opened. Check that a web browser is installed on this device and try again.",
     "institutionalCredits": "Institutional Support",
     "institutionalCreditsDesc": "Nomos is supported by institutional and scientific entities linked to research, funding, and academic production."
   },
