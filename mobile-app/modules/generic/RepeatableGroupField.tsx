@@ -5,7 +5,7 @@ import { Card, Text, Button, IconButton, Portal, Modal, useTheme } from "react-n
 import type { DynamicGroupRule, LanguageCode } from "@/protocol-kernel/types";
 import { useI18n } from "@/contexts/i18n-context";
 import { DialogProvider } from "@/hooks/use-dialog";
-import { BUTTON_RADIUS } from "@/constants/shape";
+import { BUTTON_RADIUS, MODAL_RADIUS } from "@/constants/shape";
 import { ModalActions } from "@/components/ui/ModalActions";
 import { GenericFieldRow } from "./GenericFieldRow";
 
@@ -158,5 +158,5 @@ const styles = StyleSheet.create({
   container: { marginBottom: 16 },
   itemCard: { marginBottom: 8 },
   itemHeader: { flexDirection: "row", alignItems: "center" },
-  modalContent: { margin: 20, padding: 20, borderRadius: 12, maxHeight: "85%" },
+  modalContent: { margin: 20, padding: 20, borderRadius: MODAL_RADIUS, maxHeight: "85%" },
 });

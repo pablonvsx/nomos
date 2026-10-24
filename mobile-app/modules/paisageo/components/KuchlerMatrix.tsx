@@ -1,5 +1,6 @@
 // src/components/inputs/KuchlerMatrix.tsx
 
+import { MODAL_RADIUS } from "@/constants/shape";
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { View, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
@@ -769,7 +770,7 @@ const styles = StyleSheet.create({
   cellLabel: { fontSize: 8, marginTop: 2, textAlign: "center" },
   emptyCellText: { fontSize: 18 },
   footerText: { fontStyle: "italic", marginTop: 8, textAlign: "center" },
-  modalContent: { padding: 20, margin: 16, borderRadius: 12, maxHeight: "80%" },
+  modalContent: { padding: 20, margin: 16, borderRadius: MODAL_RADIUS, maxHeight: "80%" },
   modalTitle: { ...MODAL_TITLE_STYLE, marginBottom: 16, textAlign: "center" },
   modalSubtitle: { marginBottom: 12, textAlign: "center", fontStyle: "italic" },
   coverGrid: { flexDirection: "column", gap: 8 },

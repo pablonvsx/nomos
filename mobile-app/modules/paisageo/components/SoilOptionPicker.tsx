@@ -1,4 +1,5 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { MODAL_RADIUS } from "@/constants/shape";
 import React, { useState } from "react";
 import { View, StyleSheet, Pressable, FlatList } from "react-native";
 import {
@@ -140,5 +141,5 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   optionRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10 },
-  modalContent: { padding: 20, margin: 20, borderRadius: 8, maxHeight: "80%" },
+  modalContent: { padding: 20, margin: 20, borderRadius: MODAL_RADIUS, maxHeight: "80%" },
 });

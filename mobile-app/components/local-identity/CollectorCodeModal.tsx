@@ -1,4 +1,5 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { MODAL_RADIUS } from "@/constants/shape";
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import {
@@ -108,7 +109,7 @@ const styles = StyleSheet.create({
   modal: {
     marginHorizontal: 16,
     marginVertical: 32,
-    borderRadius: 16,
+    borderRadius: MODAL_RADIUS,
   },
   header: {
     flexDirection: "row",

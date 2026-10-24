@@ -19,7 +19,7 @@ import { useI18n } from "@/contexts/i18n-context";
 import { useProtocolTranslations } from "@/hooks/use-protocol-translations";
 import InfoBubble from "@/components/ui/InfoBubble";
 import { ModalActions } from "@/components/ui/ModalActions";
-import { BUTTON_RADIUS, SEGMENTED_BUTTONS_SHAPE_THEME } from "@/constants/shape";
+import { BUTTON_RADIUS, SEGMENTED_BUTTONS_SHAPE_THEME, MODAL_RADIUS } from "@/constants/shape";
 import SoilOptionPicker from "./SoilOptionPicker";
 import {
   SoilLayer,
@@ -773,7 +773,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     gap: 2,
   },
-  modalContent: { padding: 20, margin: 20, borderRadius: 8, maxHeight: "90%" },
+  modalContent: { padding: 20, margin: 20, borderRadius: MODAL_RADIUS, maxHeight: "90%" },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",

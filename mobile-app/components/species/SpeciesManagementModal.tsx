@@ -58,7 +58,7 @@ import { ProjectSpeciesCatalog } from "@/types/database";
 import type { SpeciesLinkSearchResult } from "@/core/species-catalog/specieslink";
 import { LocationPickerModal } from "@/components/survey/InsertLocationModal";
 import { APIKeyManager } from "@/core/species-catalog/api-key-manager";
-import { BUTTON_RADIUS, SEGMENTED_BUTTONS_SHAPE_THEME, MODAL_SHAPE_STYLE } from "@/constants/shape";
+import { BUTTON_RADIUS, SEGMENTED_BUTTONS_SHAPE_THEME, MODAL_SHAPE_STYLE, MODAL_RADIUS } from "@/constants/shape";
 import * as DocumentPicker from "expo-document-picker";
 import { File, Paths } from "expo-file-system/next";
 import * as Sharing from "expo-sharing";
@@ -1522,7 +1522,7 @@ function SpeciesManagementModal({
 const styles = StyleSheet.create({
   modal: {
     margin: 16,
-    borderRadius: 12,
+    borderRadius: MODAL_RADIUS,
     maxHeight: "90%",
   },
   header: {

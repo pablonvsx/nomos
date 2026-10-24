@@ -1,5 +1,5 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
-import { MODAL_SHAPE_STYLE } from "@/constants/shape";
+import { MODAL_SHAPE_STYLE, MODAL_RADIUS } from "@/constants/shape";
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   modal: {
     marginHorizontal: 16,
     marginVertical: 32,
-    borderRadius: 16,
+    borderRadius: MODAL_RADIUS,
     maxHeight: '88%',
   },
   header: {
