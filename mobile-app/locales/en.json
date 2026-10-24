@@ -1119,7 +1119,11 @@
     "stage": {
       "preparing": "Preparing the backup...",
       "points": "Sending points: {{current}} of {{total}}",
-      "singlePoint": "Sending the point to Drive..."
+      "singlePoint": "Sending the point to Drive...",
+      "protocol": "Sending the protocol...",
+      "classifications": "Sending vegetation classifications: {{current}} of {{total}}",
+      "catalog": "Sending the species catalog: {{current}} of {{total}}",
+      "manifest": "Updating the project manifest..."
     },
     "result": {
       "completed": {
@@ -1136,6 +1140,9 @@
       },
       "error": {
         "title": "The backup could not be completed"
+      },
+      "completedNothing": {
+        "message": "Nothing needed to be sent. The backup record was updated."
       }
     },
     "reason": {
@@ -1146,8 +1153,29 @@
       "folderMissing": "The project folder was not found on Drive.",
       "server": "Google Drive is unavailable right now. Try again in a moment.",
       "missingMedia": "{{count}} photo(s) or audio note(s) no longer exist on this device.",
-      "notEligible": "Only approved points or points you collected yourself are backed up.",
       "unknown": "An unexpected error occurred. See the details."
+    },
+    "cardTitle": "Drive backup",
+    "scopeProject": "Project data",
+    "scopePoints": "Points",
+    "backupButton": "Back up",
+    "accountMismatch": "The connected Google account is not this project's owner. Reconnect with the right account.",
+    "status": {
+      "checking": "Checking...",
+      "upToDate": "Up to date with Drive ({{date}})",
+      "nothingToSend": "Nothing to send",
+      "pending": "{{count}} item(s) pending",
+      "never": "No backup yet: {{count}} item(s) to send",
+      "unverifiable": "The backup could not be verified",
+      "unverifiableAccount": "Connect the owner's account to verify the backup"
+    },
+    "exportWarning": {
+      "title": "Export project package",
+      "pending": "The project has changes that are not in the Drive backup yet.",
+      "unverifiable": "The Drive backup could not be verified.",
+      "offline": "No connection: the backup cannot be made right now.",
+      "exportAnyway": "Export anyway",
+      "backup": "Back up"
     }
   },
   "driveRestore": {

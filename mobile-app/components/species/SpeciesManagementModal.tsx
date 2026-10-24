@@ -68,8 +68,6 @@ import {
   CatalogParseError,
 } from "@/core/species-catalog/species-catalog-sharing";
 import { importSpeciesFromCatalog } from "@/db/queries/project-species";
-import { getProjectById } from "@/db/queries/projects";
-import { syncSpeciesCatalogToDrive } from "@/core/drive-sync/catalog-sync-service";
 
 interface SpeciesManagementModalProps {
   visible: boolean;
@@ -225,7 +223,6 @@ function SpeciesManagementModal({
 
       await loadProjectSpecies();
       if (importResult.inserted > 0) {
-        triggerSpeciesCatalogSync();
       }
 
       const lines = [
@@ -282,17 +279,6 @@ function SpeciesManagementModal({
     } finally {
       setIsLoadingSpecies(false);
     }
-  };
-
-  // Best-effort, non-blocking push of any newly added catalog rows to Drive
-  // (audit finding IMPORTANTE 3 - activateDriveBackup only ever pushed the
-  // catalog once, at activation time). Fire-and-forget: never awaited by
-  // callers, never surfaces an error to the UI - the local write already
-  // succeeded regardless of what happens here.
-  const triggerSpeciesCatalogSync = () => {
-    getProjectById(projectId)
-      .then((project) => project && syncSpeciesCatalogToDrive(project))
-      .catch(() => {});
   };
 
   const toggleFamilyExpanded = (family: string) => {
@@ -517,7 +503,6 @@ function SpeciesManagementModal({
       if (inserted > 0) {
         alert(t("common.success"), t("species.imported"));
         await loadProjectSpecies();
-        triggerSpeciesCatalogSync();
         onSpeciesImported?.(inserted);
       } else if (failed > 0) {
         alert(t("common.error"), t("species.addFailed"));
@@ -562,7 +547,6 @@ function SpeciesManagementModal({
       const summary = await importSpeciesFromSpeciesLink(projectId, speciesLinkResults);
       await loadProjectSpecies();
       if (summary.inserted > 0) {
-        triggerSpeciesCatalogSync();
       }
       onSpeciesImported?.(summary.inserted);
       showBatchImportSummary(summary);
@@ -584,7 +568,6 @@ function SpeciesManagementModal({
       if (inserted > 0) {
         alert(t("common.success"), t("species.imported"));
         await loadProjectSpecies();
-        triggerSpeciesCatalogSync();
         onSpeciesImported?.(inserted);
       } else if (failed > 0) {
         alert(t("common.error"), t("species.addFailed"));
@@ -607,7 +590,6 @@ function SpeciesManagementModal({
       const summary = await importSpeciesFromGBIF(projectId, searchResults);
       await loadProjectSpecies();
       if (summary.inserted > 0) {
-        triggerSpeciesCatalogSync();
       }
       onSpeciesImported?.(summary.inserted);
       showBatchImportSummary(summary);
@@ -664,7 +646,6 @@ function SpeciesManagementModal({
         commonNames: [{ name: "", language: currentLanguage }],
       });
       await loadProjectSpecies();
-      triggerSpeciesCatalogSync();
     } catch (error) {
       console.error("Error adding species:", error);
     }

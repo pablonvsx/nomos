@@ -9,6 +9,9 @@
 import { FakeFile, FakeDirectory, FakePaths, resetFakeFs, fsState } from "../../project-sharing/__tests__/fixtures/fake-environment";
 import type { DriveFile } from "../drive-api-client";
 
+jest.mock("@/core/drive-sync/backup-status-service", () => ({
+  seedBackupSnapshots: jest.fn(async () => undefined),
+}));
 jest.mock("expo-file-system", () => ({
   File: FakeFile,
   Directory: FakeDirectory,

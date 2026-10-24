@@ -1119,7 +1119,11 @@
     "stage": {
       "preparing": "Preparando o backup...",
       "points": "Enviando pontos: {{current}} de {{total}}",
-      "singlePoint": "Enviando o ponto para o Drive..."
+      "singlePoint": "Enviando o ponto para o Drive...",
+      "protocol": "Enviando o protocolo...",
+      "classifications": "Enviando classificações de vegetação: {{current}} de {{total}}",
+      "catalog": "Enviando o catálogo de espécies: {{current}} de {{total}}",
+      "manifest": "Atualizando o manifesto do projeto..."
     },
     "result": {
       "completed": {
@@ -1136,6 +1140,9 @@
       },
       "error": {
         "title": "Não foi possível fazer o backup"
+      },
+      "completedNothing": {
+        "message": "Nada precisou ser enviado. O registro do backup foi atualizado."
       }
     },
     "reason": {
@@ -1146,8 +1153,29 @@
       "folderMissing": "A pasta do projeto não foi encontrada no Drive.",
       "server": "O Google Drive está indisponível no momento. Tente novamente em instantes.",
       "missingMedia": "{{count}} foto(s) ou áudio(s) não existem mais neste aparelho.",
-      "notEligible": "Só pontos aprovados ou coletados por você entram no backup.",
       "unknown": "Ocorreu um erro inesperado. Veja os detalhes."
+    },
+    "cardTitle": "Backup no Drive",
+    "scopeProject": "Dados do projeto",
+    "scopePoints": "Pontos",
+    "backupButton": "Fazer backup",
+    "accountMismatch": "A conta do Google conectada não é a do dono deste projeto. Reconecte com a conta correta.",
+    "status": {
+      "checking": "Verificando...",
+      "upToDate": "Em dia com o Drive ({{date}})",
+      "nothingToSend": "Nada para enviar",
+      "pending": "{{count}} item(ns) pendente(s)",
+      "never": "Backup ainda não feito: {{count}} item(ns) para enviar",
+      "unverifiable": "Não foi possível verificar o backup",
+      "unverifiableAccount": "Conecte a conta do dono para verificar o backup"
+    },
+    "exportWarning": {
+      "title": "Exportar pacote do projeto",
+      "pending": "O projeto tem alterações que ainda não estão no backup do Drive.",
+      "unverifiable": "Não foi possível verificar o backup do Drive.",
+      "offline": "Sem conexão: não é possível fazer o backup agora.",
+      "exportAnyway": "Exportar mesmo assim",
+      "backup": "Fazer backup"
     }
   },
   "driveRestore": {

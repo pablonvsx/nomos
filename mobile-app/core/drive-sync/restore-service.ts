@@ -1,3 +1,4 @@
+import { seedBackupSnapshots } from "@/core/drive-sync/backup-status-service";
 import { Directory, File, Paths } from "expo-file-system";
 import {
   downloadBinaryFile,
@@ -292,6 +293,14 @@ export async function restoreOwnProjectFromDrive(driveFolderId: string): Promise
         });
         imported += 1;
       }
+    }
+
+    // What was just restored IS what Drive holds, so both scopes start "up to
+    // date". Best effort: failing to record it must never undo a restore.
+    try {
+      await seedBackupSnapshots(newProjectId);
+    } catch (seedError) {
+      console.error("Error recording the restore backup snapshot:", seedError);
     }
 
     return {

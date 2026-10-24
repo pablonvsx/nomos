@@ -8,12 +8,14 @@ const db = SQLite.openDatabaseSync("nomos.db");
 const RESET_DATABASE_ON_INIT = false; // Set to true for development/testing purposes only
 
 // Bump whenever a new column-migration set is added to migrateSchema() below.
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 async function resetDatabase() {
   console.warn("⚠️ RESET_DATABASE_ON_INIT is enabled. Dropping all tables...");
 
   // Drop child tables first to avoid FK dependency issues.
+  await db.execAsync("DROP TABLE IF EXISTS drive_backup_items");
+  await db.execAsync("DROP TABLE IF EXISTS drive_backup_scope");
   await db.execAsync("DROP TABLE IF EXISTS project_species_common_names");
   await db.execAsync("DROP TABLE IF EXISTS project_species_catalog");
   await db.execAsync("DROP TABLE IF EXISTS species");
@@ -65,6 +67,11 @@ async function migrateSchema(): Promise<void> {
   await addColumnIfMissing("custom_protocols", "uuid", "TEXT");
   await addColumnIfMissing("project_species_catalog", "uuid", "TEXT");
   await addColumnIfMissing("vegetation_classifications", "uuid", "TEXT");
+
+  // Version 1 -> 2: the Drive backup snapshot tables (drive_backup_items and
+  // drive_backup_scope). They are new tables, not new columns, so they come
+  // from the CREATE TABLE IF NOT EXISTS statements in initDatabase(), which
+  // run on every start before this migration; nothing to alter here.
 
   await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 }
@@ -263,6 +270,29 @@ export async function initDatabase() {
         FOREIGN KEY (point_id) REFERENCES points(id) ON DELETE CASCADE,
 
         CHECK (scientific_name IS NOT NULL OR common_names IS NOT NULL)
+      );
+    `);
+
+    // Drive backup snapshot (local only, see db/queries/backup-snapshot.ts):
+    // what was last sent per project and scope, one row per item.
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS drive_backup_items (
+        project_id INTEGER NOT NULL,
+        scope TEXT NOT NULL,          -- 'points' | 'project'
+        item_key TEXT NOT NULL,
+        fingerprint TEXT NOT NULL,
+        synced_at TEXT NOT NULL,
+        PRIMARY KEY (project_id, scope, item_key),
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      );
+    `);
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS drive_backup_scope (
+        project_id INTEGER NOT NULL,
+        scope TEXT NOT NULL,
+        last_backup_at TEXT NOT NULL,
+        PRIMARY KEY (project_id, scope),
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
       );
     `);
 

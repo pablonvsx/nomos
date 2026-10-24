@@ -121,7 +121,9 @@ function FinishedContent({ result }: { result: BackupResult }) {
   const messageKey =
     result.outcome === "error"
       ? result.error?.reasonKey ?? "driveBackup.reason.unknown"
-      : `driveBackup.result.${result.outcome}.message`;
+      : result.outcome === "completed" && result.sent === 0
+        ? "driveBackup.result.completedNothing.message"
+        : `driveBackup.result.${result.outcome}.message`;
 
   const details = [
     ...result.failures.map((f) => (f.detail ? `${f.label}: ${f.detail}` : null)),

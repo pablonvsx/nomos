@@ -1116,7 +1116,11 @@
     "stage": {
       "preparing": "Preparando la copia de seguridad...",
       "points": "Enviando puntos: {{current}} de {{total}}",
-      "singlePoint": "Enviando el punto a Drive..."
+      "singlePoint": "Enviando el punto a Drive...",
+      "protocol": "Enviando el protocolo...",
+      "classifications": "Enviando clasificaciones de vegetación: {{current}} de {{total}}",
+      "catalog": "Enviando el catálogo de especies: {{current}} de {{total}}",
+      "manifest": "Actualizando el manifiesto del proyecto..."
     },
     "result": {
       "completed": {
@@ -1133,6 +1137,9 @@
       },
       "error": {
         "title": "No se pudo completar la copia de seguridad"
+      },
+      "completedNothing": {
+        "message": "No fue necesario enviar nada. Se actualizó el registro de la copia."
       }
     },
     "reason": {
@@ -1143,8 +1150,29 @@
       "folderMissing": "No se encontró la carpeta del proyecto en Drive.",
       "server": "Google Drive no está disponible en este momento. Inténtelo en unos instantes.",
       "missingMedia": "{{count}} foto(s) o audio(s) ya no existen en este dispositivo.",
-      "notEligible": "Solo los puntos aprobados o recolectados por usted entran en la copia.",
       "unknown": "Ocurrió un error inesperado. Vea los detalles."
+    },
+    "cardTitle": "Copia de seguridad en Drive",
+    "scopeProject": "Datos del proyecto",
+    "scopePoints": "Puntos",
+    "backupButton": "Hacer copia",
+    "accountMismatch": "La cuenta de Google conectada no es la del dueño de este proyecto. Vuelva a conectar con la cuenta correcta.",
+    "status": {
+      "checking": "Verificando...",
+      "upToDate": "Al día con Drive ({{date}})",
+      "nothingToSend": "Nada que enviar",
+      "pending": "{{count}} elemento(s) pendiente(s)",
+      "never": "Aún sin copia: {{count}} elemento(s) por enviar",
+      "unverifiable": "No se pudo verificar la copia de seguridad",
+      "unverifiableAccount": "Conecte la cuenta del dueño para verificar la copia"
+    },
+    "exportWarning": {
+      "title": "Exportar paquete del proyecto",
+      "pending": "El proyecto tiene cambios que aún no están en la copia de Drive.",
+      "unverifiable": "No se pudo verificar la copia de seguridad de Drive.",
+      "offline": "Sin conexión: no se puede hacer la copia ahora.",
+      "exportAnyway": "Exportar de todos modos",
+      "backup": "Hacer copia"
     }
   },
   "driveRestore": {

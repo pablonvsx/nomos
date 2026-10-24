@@ -1,3 +1,4 @@
+import { seedBackupSnapshots } from "@/core/drive-sync/backup-status-service";
 import {
   ensureFolder,
   findChildByName,
@@ -153,6 +154,16 @@ export async function activateDriveBackup(projectId: number): Promise<void> {
   await uploadJsonFile("manifest.json", projectFolderId, manifest);
 
   await setProjectAsOwner(projectId, projectFolderId, account.email);
+
+  // Everything the project data holds was just uploaded: record it as backed
+  // up, so the first look at the backup status says "up to date". Best
+  // effort: if it fails, the status shows these items as pending and the next
+  // backup re-sends them (idempotent).
+  try {
+    await seedBackupSnapshots(projectId, ["project"]);
+  } catch (error) {
+    console.error("Error recording the activation backup snapshot:", error);
+  }
 }
 
 const NOMOS_PROJECT_FOLDER_PREFIX = "Nomos_";

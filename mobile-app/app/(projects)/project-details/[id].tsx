@@ -52,8 +52,7 @@ import {
   classifyProjectPoints,
   getPointsWithModulesByProject,
   getPendingPointsByProject,
-  getRejectedPointsByProject,
-  getBackupEligiblePointsByProject,
+  getRejectedPointsByProject
 } from "@/db/queries/points";
 import { buildPointEnvelope } from "@/db/mappers/point.mapper";
 import {
@@ -98,10 +97,16 @@ import {
   activateDriveBackup,
   GoogleAccountRequiredError,
 } from "@/core/drive-sync/project-drive-service";
-import { runPointsBackup, runSinglePointBackup } from "@/core/drive-sync/backup-runners";
+import { runPointsBackup, runProjectDataBackup, runSinglePointBackup } from "@/core/drive-sync/backup-runners";
+import { pointItemKey } from "@/core/drive-sync/backup-items";
+import { computeBackupStatus } from "@/core/drive-sync/backup-status-service";
+import { decideExportGate, type ExportGateReason } from "@/core/project-sharing/export-gate";
+import { useBackupStatus } from "@/hooks/use-backup-status";
+import { DriveBackupCard } from "@/components/drive-sync/DriveBackupCard";
+import { ExportWarningDialog } from "@/components/drive-sync/ExportWarningDialog";
+import { isOnline } from "@/utils/connectivity";
 import { isBackupBusy, startBackup, type BackupFailure } from "@/core/drive-sync/backup-session";
 import { discardMissingMedia } from "@/core/points/discard-missing-media";
-import { syncActiveVegetationClassificationToDrive } from "@/core/drive-sync/catalog-sync-service";
 import {
   useProtocolRegistry,
   useCapabilityBus,
@@ -149,6 +154,10 @@ function UnifiedProjectDetailsScreen() {
   const [project, setProject] = useState<Project | null>(null);
   // Which collaboration actions this project's role may see (section 10.0 table).
   const visibility = getProjectActionVisibility(project?.collaboration_role);
+  // The Drive backup status (what changed since the last backup) only exists for an owner with the backup active.
+  const driveLinkedOwner = project?.collaboration_role === "owner" && Boolean(project?.drive_folder_id);
+  const projectDataBackup = useBackupStatus(project?.id, "project", driveLinkedOwner);
+  const pointsBackup = useBackupStatus(project?.id, "points", driveLinkedOwner);
   const [protocolLabel, setProtocolLabel] = useState<string>("");
   const [surveyPoints, setSurveyPoints] = useState<Point[]>([]);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
@@ -196,6 +205,7 @@ function UnifiedProjectDetailsScreen() {
 
   // Drive backup activation states (Fase 5)
   const [driveConnectionModalVisible, setDriveConnectionModalVisible] = useState(false);
+  const [exportWarning, setExportWarning] = useState<{ reason: ExportGateReason; canBackup: boolean } | null>(null);
   const [driveForceAccountChooser, setDriveForceAccountChooser] = useState(false);
   const [pendingDriveIntent, setPendingDriveIntent] = useState<(() => void) | null>(null);
 
@@ -639,7 +649,7 @@ function UnifiedProjectDetailsScreen() {
     });
   };
 
-  const handleExportConfigPackage = async () => {
+  const runConfigPackageExport = async () => {
     if (!project) return;
     await run(t("common.exporting"), async () => {
       try {
@@ -649,6 +659,37 @@ function UnifiedProjectDetailsScreen() {
         console.error("Error exporting project config package:", error);
         alert(t("common.error"), t("projectView.errorExportingConfigPackage"));
       }
+    });
+  };
+
+  // The owner of a Drive-linked project is warned when the package is ahead of the backup (or
+  // that cannot be checked); anyone else exports straight away. The warning never blocks.
+  const handleExportConfigPackage = async () => {
+    if (!project) return;
+    if (!driveLinkedOwner) {
+      await runConfigPackageExport();
+      return;
+    }
+    const status = await computeBackupStatus(project.id, "project");
+    const gate = decideExportGate({
+      role: project.collaboration_role,
+      driveFolderId: project.drive_folder_id,
+      status: status.kind,
+      online: await isOnline(),
+    });
+    if (gate.kind === "direct") {
+      await runConfigPackageExport();
+      return;
+    }
+    setExportWarning({ reason: gate.reason, canBackup: gate.canBackup });
+  };
+
+  const handleExportWarningBackup = () => {
+    setExportWarning(null);
+    if (!ensureOwnerAccount(handleExportWarningBackup)) return;
+    // The export resumes by itself only if the backup ends with nothing left pending.
+    beginProjectDataBackup(() => {
+      runConfigPackageExport();
     });
   };
 
@@ -875,35 +916,77 @@ function UnifiedProjectDetailsScreen() {
     }
   };
 
-  const handleBackupAllPoints = async () => {
-    if (!project) return;
-
-    if (!getCurrentGoogleAccount()) {
-      setPendingDriveIntent(() => handleBackupAllPoints);
+  // A backup needs the OWNER's Google account. Returns true when it is connected and is the owner's;
+  // otherwise it opens the connection modal (resuming `resume`) or explains the mismatch.
+  const ensureOwnerAccount = (resume: () => void): boolean => {
+    const account = getCurrentGoogleAccount();
+    if (!account) {
+      setPendingDriveIntent(() => resume);
       setDriveForceAccountChooser(false);
       setDriveConnectionModalVisible(true);
-      return;
+      return false;
     }
+    const owner = project?.owner_email?.trim().toLowerCase();
+    if (owner && account.email.trim().toLowerCase() !== owner) {
+      alert(t("common.error"), t("driveBackup.accountMismatch"));
+      return false;
+    }
+    return true;
+  };
+
+  const handleBackupAllPoints = async () => {
+    if (!project) return;
+    if (!ensureOwnerAccount(handleBackupAllPoints)) return;
 
     if (isBackupBusy()) {
       alert(t("common.info"), t("driveBackup.alreadyRunning"));
       return;
     }
-    if ((await getBackupEligiblePointsByProject(project.id)).length === 0) {
+    const status = await computeBackupStatus(project.id, "points");
+    if (status.kind === "upToDate") {
       alert(t("common.info"), t("driveBackup.nothingToBackup"));
       return;
     }
     beginPointsBackup();
   };
 
-  const handleBackupSinglePoint = async (pointId: number) => {
+  // Backup of the project's own data (protocol, classifications, species catalog, manifest).
+  const beginProjectDataBackup = (onCompleted?: () => void) => {
     if (!project) return;
-    if (!getCurrentGoogleAccount()) {
-      setPendingDriveIntent(() => () => handleBackupSinglePoint(pointId));
-      setDriveForceAccountChooser(false);
-      setDriveConnectionModalVisible(true);
+    const projectId = project.id;
+    const started = startBackup({
+      scope: "project",
+      projectId,
+      run: (context) => runProjectDataBackup(projectId, context),
+      onFinished: () => loadProjectData({ silent: true }),
+      onDismissed: (result) => {
+        if (result.outcome === "completed") onCompleted?.();
+      },
+    });
+    if (started.status === "already-running") {
+      alert(t("common.info"), t("driveBackup.alreadyRunning"));
+    }
+  };
+
+  const handleBackupProjectData = async () => {
+    if (!project) return;
+    if (!ensureOwnerAccount(handleBackupProjectData)) return;
+
+    if (isBackupBusy()) {
+      alert(t("common.info"), t("driveBackup.alreadyRunning"));
       return;
     }
+    const status = await computeBackupStatus(project.id, "project");
+    if (status.kind === "upToDate") {
+      alert(t("common.info"), t("driveBackup.nothingToBackup"));
+      return;
+    }
+    beginProjectDataBackup();
+  };
+
+  const handleBackupSinglePoint = async (pointId: number) => {
+    if (!project) return;
+    if (!ensureOwnerAccount(() => handleBackupSinglePoint(pointId))) return;
 
     const projectId = project.id;
     const started = startBackup({
@@ -956,7 +1039,7 @@ function UnifiedProjectDetailsScreen() {
               <IconButton
                 icon={item.drive_synced_at ? "cloud-check" : "cloud-outline"}
                 size={22}
-                disabled={busy || Boolean(item.drive_synced_at)}
+                disabled={busy || (Boolean(item.drive_synced_at) && !pointsBackup.status?.pendingKeys.has(pointItemKey(item.id)))}
                 onPress={() => handleBackupSinglePoint(item.id)}
               />
             )}
@@ -1072,6 +1155,17 @@ function UnifiedProjectDetailsScreen() {
           </Card.Content>
         </Card>
 
+        {/* Drive backup: what is pending per scope, owner only */}
+        {visibility.backup && driveLinkedOwner && (
+          <DriveBackupCard
+            projectStatus={projectDataBackup.status}
+            pointsStatus={pointsBackup.status}
+            busy={busy || isBackupBusy()}
+            onBackupProject={handleBackupProjectData}
+            onBackupPoints={handleBackupAllPoints}
+          />
+        )}
+
         {/* Vegetation Classification — shown whenever the project's active modules include "vegetation" */}
         {hasVegetationModule && <Card style={[styles.card, { backgroundColor: paperTheme.colors.surface }]}>
           <Card.Content>
@@ -1096,16 +1190,6 @@ function UnifiedProjectDetailsScreen() {
                     if (project) {
                       const projectId = project.id;
                       setActiveVegetationClassification(projectId, null, "standard")
-                        .then(() => {
-                          // Best-effort, non-blocking push to Drive (audit
-                          // finding IMPORTANTE 3) - fetches the project
-                          // fresh instead of reusing component state, same
-                          // pattern as every other catalog-sync call site
-                          // (audit finding MENOR 4).
-                          getProjectById(projectId)
-                            .then((freshProject) => freshProject && syncActiveVegetationClassificationToDrive(freshProject, "standard"))
-                            .catch(() => {});
-                        })
                         .catch(err => {
                           console.error("Error saving vegetation classification type:", err);
                         });
@@ -1429,6 +1513,16 @@ function UnifiedProjectDetailsScreen() {
           onResolved={handleDuplicateResolved}
         />
       )}
+
+      <ExportWarningDialog
+        warning={exportWarning}
+        onDismiss={() => setExportWarning(null)}
+        onExportAnyway={() => {
+          setExportWarning(null);
+          runConfigPackageExport();
+        }}
+        onBackup={handleExportWarningBackup}
+      />
 
       {/* Google Connection Modal (Fase 5/6) - triggered when a Drive action needs an account that isn't connected yet */}
       <GoogleConnectionModal

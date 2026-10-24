@@ -1119,7 +1119,11 @@
     "stage": {
       "preparing": "Préparation de la sauvegarde...",
       "points": "Envoi des points : {{current}} sur {{total}}",
-      "singlePoint": "Envoi du point vers Drive..."
+      "singlePoint": "Envoi du point vers Drive...",
+      "protocol": "Envoi du protocole...",
+      "classifications": "Envoi des classifications de végétation : {{current}} sur {{total}}",
+      "catalog": "Envoi du catalogue d'espèces : {{current}} sur {{total}}",
+      "manifest": "Mise à jour du manifeste du projet..."
     },
     "result": {
       "completed": {
@@ -1136,6 +1140,9 @@
       },
       "error": {
         "title": "La sauvegarde n'a pas pu être terminée"
+      },
+      "completedNothing": {
+        "message": "Rien n'a dû être envoyé. Le registre de la sauvegarde a été mis à jour."
       }
     },
     "reason": {
@@ -1146,8 +1153,29 @@
       "folderMissing": "Le dossier du projet est introuvable sur Drive.",
       "server": "Google Drive est indisponible pour le moment. Réessayez dans un instant.",
       "missingMedia": "{{count}} photo(s) ou note(s) audio n'existent plus sur cet appareil.",
-      "notEligible": "Seuls les points approuvés ou collectés par vous sont sauvegardés.",
       "unknown": "Une erreur inattendue s'est produite. Voir les détails."
+    },
+    "cardTitle": "Sauvegarde sur Drive",
+    "scopeProject": "Données du projet",
+    "scopePoints": "Points",
+    "backupButton": "Sauvegarder",
+    "accountMismatch": "Le compte Google connecté n'est pas celui du propriétaire de ce projet. Reconnectez-vous avec le bon compte.",
+    "status": {
+      "checking": "Vérification...",
+      "upToDate": "À jour avec Drive ({{date}})",
+      "nothingToSend": "Rien à envoyer",
+      "pending": "{{count}} élément(s) en attente",
+      "never": "Pas encore de sauvegarde : {{count}} élément(s) à envoyer",
+      "unverifiable": "La sauvegarde n'a pas pu être vérifiée",
+      "unverifiableAccount": "Connectez le compte du propriétaire pour vérifier la sauvegarde"
+    },
+    "exportWarning": {
+      "title": "Exporter le paquet du projet",
+      "pending": "Le projet a des modifications qui ne sont pas encore dans la sauvegarde Drive.",
+      "unverifiable": "La sauvegarde Drive n'a pas pu être vérifiée.",
+      "offline": "Pas de connexion : la sauvegarde est impossible pour le moment.",
+      "exportAnyway": "Exporter quand même",
+      "backup": "Sauvegarder"
     }
   },
   "driveRestore": {

@@ -119,4 +119,16 @@ describe("results and errors", () => {
     dismissBackupResult();
     expect(onDismissed).toHaveBeenCalledWith(completed);
   });
+
+  it("hands a cancelled or failed result to onDismissed, so a follow-up (like the export) can tell it must not continue", async () => {
+    const cancelled: BackupResult = { outcome: "cancelled", sent: 1, notSent: 2, failures: [] };
+    const onDismissed = jest.fn();
+    const started = startBackup({ scope: "project", projectId: 1, run: async () => cancelled, onDismissed });
+    if (started.status === "started") await started.done;
+
+    dismissBackupResult();
+
+    expect(onDismissed).toHaveBeenCalledWith(cancelled);
+    expect(onDismissed.mock.calls[0][0].outcome).not.toBe("completed");
+  });
 });

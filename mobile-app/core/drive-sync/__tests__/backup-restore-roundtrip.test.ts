@@ -8,6 +8,9 @@
 import { FakeFile, FakeDirectory, FakePaths, resetFakeFs, fsState } from "../../project-sharing/__tests__/fixtures/fake-environment";
 import { createInMemoryDrive, FOLDER_MIME_TYPE, ROOT_ID } from "./fixtures/in-memory-drive";
 
+jest.mock("@/core/drive-sync/backup-status-service", () => ({
+  seedBackupSnapshots: jest.fn(async () => undefined),
+}));
 jest.mock("expo-file-system", () => ({ File: FakeFile, Directory: FakeDirectory, Paths: FakePaths }));
 
 // ---- One shared fake Drive ----

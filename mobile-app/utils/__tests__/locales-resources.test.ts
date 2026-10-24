@@ -4,10 +4,16 @@ import { join } from "path";
 const LANGUAGES = ["pt", "en", "es", "fr"] as const;
 const EM_DASH = "—";
 
+function leafKeys(value: unknown, prefix = ""): string[] {
+  if (value === null || typeof value !== "object") return [prefix];
+  return Object.entries(value as Record<string, unknown>).flatMap(([k, v]) => leafKeys(v, prefix ? `${prefix}.${k}` : k));
+}
+
 type Locale = {
   tabs: Record<string, string>;
   resources: Record<string, string>;
   about: Record<string, string>;
+  driveBackup: Record<string, unknown>;
 };
 
 const locales = Object.fromEntries(
@@ -42,6 +48,13 @@ describe("resources and citation locale keys", () => {
         expect(locales[lang].resources[key].length).toBeGreaterThan(0);
         expect(locales[lang].about[key]).toBeUndefined();
       }
+    }
+  });
+
+  it("defines the same driveBackup keys (backup modal, status, export warning) in every language", () => {
+    const reference = leafKeys(locales.pt.driveBackup).sort();
+    for (const lang of LANGUAGES) {
+      expect(leafKeys(locales[lang].driveBackup).sort()).toEqual(reference);
     }
   });
 

@@ -33,6 +33,9 @@ function seedProject(overrides: Partial<FakeProjectRow> = {}): FakeProjectRow {
 const getProjectByIdMock = jest.fn(async (id: number) => projects.find((p) => p.id === id) ?? null);
 const setProjectAsOwnerMock = jest.fn(async (...args: unknown[]) => true);
 
+jest.mock("@/core/drive-sync/backup-status-service", () => ({
+  seedBackupSnapshots: jest.fn(async () => undefined),
+}));
 jest.mock("@/db/queries/projects", () => ({
   getProjectById: (id: number) => getProjectByIdMock(id),
   setProjectAsOwner: (...args: unknown[]) => setProjectAsOwnerMock(...args),

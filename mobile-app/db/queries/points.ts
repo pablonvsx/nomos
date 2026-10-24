@@ -192,6 +192,28 @@ export async function getBackupEligiblePointsByProject(projectId: number): Promi
 }
 
 /**
+ * Every point of a project that is a candidate for the Drive backup (approved,
+ * or collected directly by the owner), whether or not it was sent before.
+ * Change detection compares these against the local snapshot, so a point
+ * edited after its backup shows up as pending again. Errors are not
+ * swallowed: an unreadable list must surface as "cannot verify".
+ */
+export async function getBackupCandidatePointsByProject(projectId: number): Promise<Point[]> {
+  return db.getAllAsync<Point>(
+    `SELECT * FROM points WHERE project_id = ? AND ${VISIBLE_POINT_CONDITION} ORDER BY point_number ASC`,
+    [projectId],
+  );
+}
+
+/** The module rows of every point of a project, in one query (change detection). */
+export async function getPointModulesByProject(projectId: number): Promise<PointModule[]> {
+  return db.getAllAsync<PointModule>(
+    `SELECT pm.* FROM point_modules pm JOIN points p ON p.id = pm.point_id WHERE p.project_id = ?`,
+    [projectId],
+  );
+}
+
+/**
  * Approves or rejects a point. Rejecting requires a reason; approving
  * always clears any previous rejection reason.
  */
