@@ -53,7 +53,7 @@
   },
   "tabs": {
     "home": "Home",
-    "help": "Help",
+    "resources": "Resources",
     "settings": "Settings"
   },
   "settings": {
@@ -387,8 +387,8 @@
     "class": "Landscape Type",
     "physiognomy": "Physiognomy "
   },
-  "help": {
-    "title": "Help",
+  "resources": {
+    "title": "Resources",
     "about": "Nomos is an app for field environmental surveys. It lets you record collection points with GPS, fill in forms according to the project's protocol, attach photos and audio notes, and export your data, all working without an internet connection.",
     "pageInfo": "Tutorials, guides and the latest version of the app are available on the project page.",
     "openPage": "Open project page",

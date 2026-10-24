@@ -8,7 +8,7 @@ import { BUTTON_RADIUS } from "@/constants/shape";
 import { PROJECT_PAGE_URL } from "@/constants/links";
 import { openExternalUrl } from "@/utils/open-external-url";
 
-export default function HelpScreen() {
+export default function ResourcesScreen() {
   const paperTheme = usePaperTheme();
   const { t } = useI18n();
   const { alert } = useAlertDialog();
@@ -17,7 +17,7 @@ export default function HelpScreen() {
   const openProjectPage = async () => {
     const opened = await openExternalUrl(PROJECT_PAGE_URL, (url) => Linking.openURL(url));
     if (!opened) {
-      alert(t("help.openErrorTitle"), t("help.openError"));
+      alert(t("resources.openErrorTitle"), t("resources.openError"));
     }
   };
 
@@ -39,7 +39,7 @@ export default function HelpScreen() {
             variant="headlineMedium"
             style={[styles.title, { color: paperTheme.colors.onBackground }]}
           >
-            {t("help.title")}
+            {t("resources.title")}
           </Text>
         </View>
 
@@ -47,23 +47,23 @@ export default function HelpScreen() {
           variant="bodyMedium"
           style={[styles.paragraph, { color: paperTheme.colors.onSurface }]}
         >
-          {t("help.about")}
+          {t("resources.about")}
         </Text>
         <Text
           variant="bodyMedium"
           style={[styles.paragraph, { color: paperTheme.colors.onSurface }]}
         >
-          {t("help.pageInfo")}
+          {t("resources.pageInfo")}
         </Text>
 
         <Button
           mode="contained"
           icon="open-in-new"
           style={[styles.pageButton, { borderRadius: BUTTON_RADIUS }]}
-          accessibilityLabel={t("help.openPageA11y")}
+          accessibilityLabel={t("resources.openPageA11y")}
           onPress={openProjectPage}
         >
-          {t("help.openPage")}
+          {t("resources.openPage")}
         </Button>
       </View>
     </ScrollView>

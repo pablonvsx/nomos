@@ -32,9 +32,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="help"
+        name="resources"
         options={{
-          title: t("tabs.help"),
+          title: t("tabs.resources"),
           tabBarIcon: ({ color }) => (
             <IconSymbol
               size={28}
