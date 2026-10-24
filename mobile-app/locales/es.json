@@ -388,12 +388,13 @@
   },
   "resources": {
     "title": "Recursos",
-    "about": "Nomos es una aplicación para inventarios ambientales en campo. Permite registrar puntos de recolección con GPS, completar formularios según el protocolo del proyecto, adjuntar fotos y notas de audio y exportar los datos, todo funcionando sin conexión a internet.",
-    "pageInfo": "Los tutoriales, las guías y la descarga de la versión más reciente de la aplicación están disponibles en la página del proyecto.",
-    "openPage": "Abrir página del proyecto",
-    "openPageA11y": "Abrir la página del proyecto en el navegador",
+    "intro": "Los tutoriales, las guías de uso, la descarga de la versión más reciente y las novedades de Nomos están disponibles en el sitio del proyecto.",
+    "openSite": "Abrir sitio de Nomos",
+    "openSiteA11y": "Abrir el sitio de Nomos en el navegador",
+    "requiresInternet": "Requiere conexión a internet",
+    "installedVersion": "Versión instalada: {{version}}",
     "openErrorTitle": "Enlace no disponible",
-    "openError": "No se pudo abrir la página del proyecto. Verifique que haya un navegador instalado en el dispositivo e inténtelo de nuevo."
+    "openError": "No se pudo abrir el sitio de Nomos. Verifique que haya un navegador instalado en el dispositivo e inténtelo de nuevo."
   },
   "about": {
     "title": "Acerca del Proyecto",

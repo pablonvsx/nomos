@@ -35,6 +35,7 @@ export default function TabLayout() {
         name="resources"
         options={{
           title: t("tabs.resources"),
+          tabBarAccessibilityLabel: t("tabs.resources"),
           tabBarIcon: ({ color }) => (
             <IconSymbol
               size={28}

@@ -389,12 +389,13 @@
   },
   "resources": {
     "title": "Resources",
-    "about": "Nomos is an app for field environmental surveys. It lets you record collection points with GPS, fill in forms according to the project's protocol, attach photos and audio notes, and export your data, all working without an internet connection.",
-    "pageInfo": "Tutorials, guides and the latest version of the app are available on the project page.",
-    "openPage": "Open project page",
-    "openPageA11y": "Open the project page in the browser",
+    "intro": "Tutorials, usage guides, the latest version download and Nomos news are available on the project website.",
+    "openSite": "Open Nomos website",
+    "openSiteA11y": "Open the Nomos website in the browser",
+    "requiresInternet": "Requires an internet connection",
+    "installedVersion": "Installed version: {{version}}",
     "openErrorTitle": "Link unavailable",
-    "openError": "The project page could not be opened. Check that a web browser is installed on this device and try again."
+    "openError": "The Nomos website could not be opened. Check that a web browser is installed on this device and try again."
   },
   "about": {
     "title": "About the Project",

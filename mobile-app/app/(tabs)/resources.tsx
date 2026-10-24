@@ -14,7 +14,7 @@ export default function ResourcesScreen() {
   const { alert } = useAlertDialog();
 
   // Opened only on tap: the app is offline-first, nothing depends on this link.
-  const openProjectPage = async () => {
+  const openSite = async () => {
     const opened = await openExternalUrl(PROJECT_PAGE_URL, (url) => Linking.openURL(url));
     if (!opened) {
       alert(t("resources.openErrorTitle"), t("resources.openError"));
@@ -47,24 +47,31 @@ export default function ResourcesScreen() {
           variant="bodyMedium"
           style={[styles.paragraph, { color: paperTheme.colors.onSurface }]}
         >
-          {t("resources.about")}
-        </Text>
-        <Text
-          variant="bodyMedium"
-          style={[styles.paragraph, { color: paperTheme.colors.onSurface }]}
-        >
-          {t("resources.pageInfo")}
+          {t("resources.intro")}
         </Text>
 
         <Button
           mode="contained"
           icon="open-in-new"
-          style={[styles.pageButton, { borderRadius: BUTTON_RADIUS }]}
-          accessibilityLabel={t("resources.openPageA11y")}
-          onPress={openProjectPage}
+          style={[styles.siteButton, { borderRadius: BUTTON_RADIUS }]}
+          accessibilityLabel={t("resources.openSiteA11y")}
+          onPress={openSite}
         >
-          {t("resources.openPage")}
+          {t("resources.openSite")}
         </Button>
+        <Text
+          variant="bodySmall"
+          style={[styles.hint, { color: paperTheme.colors.onSurfaceVariant }]}
+        >
+          {t("resources.requiresInternet")}
+        </Text>
+
+        <Text
+          variant="bodyMedium"
+          style={[styles.version, { color: paperTheme.colors.onSurfaceVariant }]}
+        >
+          {t("resources.installedVersion", { version: t("home.version") })}
+        </Text>
       </View>
     </ScrollView>
   );
@@ -90,10 +97,18 @@ const styles = StyleSheet.create({
   },
   paragraph: {
     lineHeight: 22,
-    textAlign: "justify",
+    textAlign: "left",
     marginBottom: 16,
   },
-  pageButton: {
+  siteButton: {
     marginTop: 8,
+  },
+  hint: {
+    marginTop: 8,
+    textAlign: "center",
+  },
+  version: {
+    marginTop: 32,
+    textAlign: "center",
   },
 });

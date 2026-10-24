@@ -389,12 +389,13 @@
   },
   "resources": {
     "title": "Ressources",
-    "about": "Nomos est une application pour les inventaires environnementaux de terrain. Elle permet d'enregistrer des points de collecte avec le GPS, de remplir des formulaires selon le protocole du projet, de joindre des photos et des notes audio et d'exporter les données, le tout sans connexion internet.",
-    "pageInfo": "Les tutoriels, les guides et le téléchargement de la dernière version de l'application sont disponibles sur la page du projet.",
-    "openPage": "Ouvrir la page du projet",
-    "openPageA11y": "Ouvrir la page du projet dans le navigateur",
+    "intro": "Les tutoriels, les guides d'utilisation, le téléchargement de la dernière version et les actualités de Nomos sont disponibles sur le site du projet.",
+    "openSite": "Ouvrir le site de Nomos",
+    "openSiteA11y": "Ouvrir le site de Nomos dans le navigateur",
+    "requiresInternet": "Nécessite une connexion internet",
+    "installedVersion": "Version installée : {{version}}",
     "openErrorTitle": "Lien indisponible",
-    "openError": "Impossible d'ouvrir la page du projet. Vérifiez qu'un navigateur est installé sur l'appareil et réessayez."
+    "openError": "Impossible d'ouvrir le site de Nomos. Vérifiez qu'un navigateur est installé sur l'appareil et réessayez."
   },
   "about": {
     "title": "À Propos du Projet",

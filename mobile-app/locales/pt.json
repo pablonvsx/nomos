@@ -389,12 +389,13 @@
   },
   "resources": {
     "title": "Recursos",
-    "about": "O Nomos é um aplicativo para inventários ambientais em campo. Ele permite registrar pontos de coleta com GPS, preencher formulários de acordo com o protocolo do projeto, anexar fotos e notas de áudio e exportar os dados, tudo funcionando sem conexão com a internet.",
-    "pageInfo": "Tutoriais, guias e o download da versão mais recente do aplicativo estão disponíveis na página do projeto.",
-    "openPage": "Abrir página do projeto",
-    "openPageA11y": "Abrir a página do projeto no navegador",
+    "intro": "Tutoriais, guias de uso, o download da versão mais recente e as novidades do Nomos estão disponíveis no site do projeto.",
+    "openSite": "Abrir site do Nomos",
+    "openSiteA11y": "Abrir o site do Nomos no navegador",
+    "requiresInternet": "Requer conexão com a internet",
+    "installedVersion": "Versão instalada: {{version}}",
     "openErrorTitle": "Link indisponível",
-    "openError": "Não foi possível abrir a página do projeto. Verifique se há um navegador instalado no aparelho e tente novamente."
+    "openError": "Não foi possível abrir o site do Nomos. Verifique se há um navegador instalado no aparelho e tente novamente."
   },
   "about": {
     "title": "Sobre o Projeto",
