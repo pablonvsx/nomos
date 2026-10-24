@@ -389,19 +389,12 @@
   },
   "resources": {
     "title": "Resources",
-    "intro": "Tutorials, usage guides, the latest version download and Nomos news are available on the Nomos page.",
+    "intro": "Tutorials, usage guides, how to cite Nomos, the latest version download and news are available on the Nomos page.",
     "openSite": "Open Nomos page",
     "openSiteA11y": "Open the Nomos page in the browser",
     "installedVersion": "Installed version: {{version}}",
     "openErrorTitle": "Link unavailable",
-    "openError": "The Nomos page could not be opened. Check that a web browser is installed on this device and try again.",
-    "cite": "How to cite",
-    "citeDesc": "If you use Nomos in academic work, please cite it as shown below.",
-    "citeReference": "{{author}}. Nomos: an app for environmental inventories. Recife: Federal University of Pernambuco, {{year}}. DOI: {{doi}}.",
-    "openDoi": "Open DOI",
-    "copyReference": "Copy reference",
-    "copied": "Reference copied to the clipboard.",
-    "openDoiError": "The DOI could not be opened. Check that a web browser is installed on this device and try again."
+    "openError": "The Nomos page could not be opened. Check that a web browser is installed on this device and try again."
   },
   "about": {
     "title": "About the Project",
@@ -424,7 +417,7 @@
     "techFrameworkTitle": "Framework and Language",
     "techFrameworkDesc": "React Native e TypeScript",
     "techArchitectureTitle": "Architecture",
-    "techArchitectureDesc": "100% offline app (data stored locally via SQLite), with an extensible plugin/protocol-based architecture",
+    "techArchitectureDesc": "Designed as offline-first: data collection and storage work without internet, which is used only for optional features, such as the Drive backup. The architecture is extensible and plugin-based, allowing new survey protocols to be added.",
     "license": "License",
     "licenseName": "GNU GPL v3.0",
     "licenseDesc": "This project is open source under the GNU GPL v3.0 license (copyleft). You may use, study, modify, and redistribute the software, including commercially, provided derivative works are distributed under the same license with source code available.",
@@ -1172,10 +1165,12 @@
       "checking": "Checking...",
       "upToDate": "Up to date with Drive ({{date}})",
       "nothingToSend": "Nothing to send",
-      "pending": "{{count}} item(s) pending",
-      "never": "No backup yet: {{count}} item(s) to send",
       "unverifiable": "The backup could not be verified",
-      "unverifiableAccount": "Connect the owner's account to verify the backup"
+      "unverifiableAccount": "Connect the owner's account to verify the backup",
+      "pendingOne": "{{count}} item pending",
+      "pendingOther": "{{count}} items pending",
+      "neverOne": "No backup yet: {{count}} item to send",
+      "neverOther": "No backup yet: {{count}} items to send"
     },
     "exportWarning": {
       "title": "Export project package",

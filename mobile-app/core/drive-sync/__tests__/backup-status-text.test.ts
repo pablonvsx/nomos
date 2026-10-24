@@ -20,9 +20,14 @@ describe("backupStatusText", () => {
     expect(backupStatusText(status({ kind: "upToDate" }), fmt).key).toBe("driveBackup.status.nothingToSend");
   });
 
-  it("shows how many items are pending, or never backed up", () => {
-    expect(backupStatusText(status({ kind: "pending", pendingCount: 3 }), fmt)).toEqual({ key: "driveBackup.status.pending", params: { count: "3" } });
-    expect(backupStatusText(status({ kind: "never", pendingCount: 5 }), fmt)).toEqual({ key: "driveBackup.status.never", params: { count: "5" } });
+  it("shows how many items are pending, in the singular for one and the plural for more", () => {
+    expect(backupStatusText(status({ kind: "pending", pendingCount: 1 }), fmt)).toEqual({ key: "driveBackup.status.pendingOne", params: { count: "1" } });
+    expect(backupStatusText(status({ kind: "pending", pendingCount: 3 }), fmt)).toEqual({ key: "driveBackup.status.pendingOther", params: { count: "3" } });
+  });
+
+  it("does the same when a backup was never made", () => {
+    expect(backupStatusText(status({ kind: "never", pendingCount: 1 }), fmt)).toEqual({ key: "driveBackup.status.neverOne", params: { count: "1" } });
+    expect(backupStatusText(status({ kind: "never", pendingCount: 5 }), fmt)).toEqual({ key: "driveBackup.status.neverOther", params: { count: "5" } });
   });
 
   it("explains an unverifiable status, and shows 'checking' before the first answer", () => {

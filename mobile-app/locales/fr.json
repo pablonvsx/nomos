@@ -389,19 +389,12 @@
   },
   "resources": {
     "title": "Ressources",
-    "intro": "Les tutoriels, les guides d'utilisation, le téléchargement de la dernière version et les actualités de Nomos sont disponibles sur la page de Nomos.",
+    "intro": "Les tutoriels, les guides d'utilisation, comment citer Nomos, le téléchargement de la dernière version et les actualités sont disponibles sur la page de Nomos.",
     "openSite": "Ouvrir la page de Nomos",
     "openSiteA11y": "Ouvrir la page de Nomos dans le navigateur",
     "installedVersion": "Version installée : {{version}}",
     "openErrorTitle": "Lien indisponible",
-    "openError": "Impossible d'ouvrir la page de Nomos. Vérifiez qu'un navigateur est installé sur l'appareil et réessayez.",
-    "cite": "Comment citer",
-    "citeDesc": "Si vous utilisez Nomos dans des travaux académiques, citez-le selon la référence ci-dessous.",
-    "citeReference": "{{author}}. Nomos : application pour les inventaires environnementaux. Recife : Université fédérale de Pernambuco, {{year}}. DOI : {{doi}}.",
-    "openDoi": "Ouvrir le DOI",
-    "copyReference": "Copier la référence",
-    "copied": "Référence copiée dans le presse-papiers.",
-    "openDoiError": "Impossible d'ouvrir le DOI. Vérifiez qu'un navigateur est installé sur l'appareil et réessayez."
+    "openError": "Impossible d'ouvrir la page de Nomos. Vérifiez qu'un navigateur est installé sur l'appareil et réessayez."
   },
   "about": {
     "title": "À Propos du Projet",
@@ -424,7 +417,7 @@
     "techFrameworkTitle": "Framework et Langage",
     "techFrameworkDesc": "React Native e TypeScript",
     "techArchitectureTitle": "Architecture",
-    "techArchitectureDesc": "Application 100% hors ligne (données stockées localement via SQLite), avec une architecture extensible basée sur des plugins/protocoles",
+    "techArchitectureDesc": "Conçue comme offline-first : la collecte et le stockage fonctionnent sans internet, qui n'est utilisé que pour des fonctions optionnelles, comme la sauvegarde sur Drive. L'architecture est extensible et basée sur des plugins, qui permettent d'ajouter de nouveaux protocoles de relevé.",
     "license": "Licence",
     "licenseName": "GNU GPL v3.0",
     "licenseDesc": "Ce projet est open source sous licence GNU GPL v3.0 (copyleft). Vous pouvez utiliser, étudier, modifier et redistribuer le logiciel, y compris commercialement, à condition que les travaux dérivés soient distribués sous la même licence avec le code source disponible.",
@@ -1172,10 +1165,12 @@
       "checking": "Vérification...",
       "upToDate": "À jour avec Drive ({{date}})",
       "nothingToSend": "Rien à envoyer",
-      "pending": "{{count}} élément(s) en attente",
-      "never": "Pas encore de sauvegarde : {{count}} élément(s) à envoyer",
       "unverifiable": "La sauvegarde n'a pas pu être vérifiée",
-      "unverifiableAccount": "Connectez le compte du propriétaire pour vérifier la sauvegarde"
+      "unverifiableAccount": "Connectez le compte du propriétaire pour vérifier la sauvegarde",
+      "pendingOne": "{{count}} élément en attente",
+      "pendingOther": "{{count}} éléments en attente",
+      "neverOne": "Pas encore de sauvegarde : {{count}} élément à envoyer",
+      "neverOther": "Pas encore de sauvegarde : {{count}} éléments à envoyer"
     },
     "exportWarning": {
       "title": "Exporter le paquet du projet",

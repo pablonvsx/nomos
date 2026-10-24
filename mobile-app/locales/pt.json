@@ -389,19 +389,12 @@
   },
   "resources": {
     "title": "Recursos",
-    "intro": "Tutoriais, guias de uso, o download da versão mais recente e as novidades do Nomos estão disponíveis na página do Nomos.",
+    "intro": "Tutoriais, guias de uso, como citar o Nomos, o download da versão mais recente e as novidades estão disponíveis na página do Nomos.",
     "openSite": "Abrir página do Nomos",
     "openSiteA11y": "Abrir a página do Nomos no navegador",
     "installedVersion": "Versão instalada: {{version}}",
     "openErrorTitle": "Link indisponível",
-    "openError": "Não foi possível abrir a página do Nomos. Verifique se há um navegador instalado no aparelho e tente novamente.",
-    "cite": "Como citar",
-    "citeDesc": "Se utilizar o Nomos em trabalhos acadêmicos, cite-o conforme a referência abaixo.",
-    "citeReference": "{{author}}. Nomos: aplicativo para inventários ambientais. Recife: Universidade Federal de Pernambuco, {{year}}. DOI: {{doi}}.",
-    "openDoi": "Abrir DOI",
-    "copyReference": "Copiar referência",
-    "copied": "Referência copiada para a área de transferência.",
-    "openDoiError": "Não foi possível abrir o DOI. Verifique se há um navegador instalado no aparelho e tente novamente."
+    "openError": "Não foi possível abrir a página do Nomos. Verifique se há um navegador instalado no aparelho e tente novamente."
   },
   "about": {
     "title": "Sobre o Projeto",
@@ -424,7 +417,7 @@
     "techFrameworkTitle": "Framework e Linguagem",
     "techFrameworkDesc": "React Native e TypeScript",
     "techArchitectureTitle": "Arquitetura",
-    "techArchitectureDesc": "Aplicativo 100% offline (dados armazenados localmente via SQLite), com arquitetura extensível baseada em plugins/protocolos",
+    "techArchitectureDesc": "Concebida como offline-first: a coleta e o armazenamento funcionam sem internet, que é usada apenas em recursos opcionais, como o backup no Drive. A arquitetura é extensível e baseada em plugins, que permitem acrescentar novos protocolos de levantamento.",
     "license": "Licença de Uso",
     "licenseName": "GNU GPL v3.0",
     "licenseDesc": "Este projeto é de código aberto sob a licença GNU GPL v3.0 (copyleft). É permitido usar, estudar, modificar e redistribuir o software, inclusive comercialmente, desde que trabalhos derivados sejam distribuídos sob a mesma licença e com o código-fonte disponível.",
@@ -1172,10 +1165,12 @@
       "checking": "Verificando...",
       "upToDate": "Em dia com o Drive ({{date}})",
       "nothingToSend": "Nada para enviar",
-      "pending": "{{count}} item(ns) pendente(s)",
-      "never": "Backup ainda não feito: {{count}} item(ns) para enviar",
       "unverifiable": "Não foi possível verificar o backup",
-      "unverifiableAccount": "Conecte a conta do dono para verificar o backup"
+      "unverifiableAccount": "Conecte a conta do dono para verificar o backup",
+      "pendingOne": "{{count}} item pendente",
+      "pendingOther": "{{count}} itens pendentes",
+      "neverOne": "Backup ainda não feito: {{count}} item para enviar",
+      "neverOther": "Backup ainda não feito: {{count}} itens para enviar"
     },
     "exportWarning": {
       "title": "Exportar pacote do projeto",

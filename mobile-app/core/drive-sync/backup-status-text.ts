@@ -17,10 +17,17 @@ export function backupStatusText(status: BackupStatus | null, formatDate: (iso: 
       return status.lastBackupAt
         ? { key: "driveBackup.status.upToDate", params: { date: formatDate(status.lastBackupAt) } }
         : { key: "driveBackup.status.nothingToSend" };
+    // One key per form ("1 item pendente" / "N itens pendentes"): no "item(ns)" in the text.
     case "pending":
-      return { key: "driveBackup.status.pending", params: { count: String(status.pendingCount) } };
+      return {
+        key: status.pendingCount === 1 ? "driveBackup.status.pendingOne" : "driveBackup.status.pendingOther",
+        params: { count: String(status.pendingCount) },
+      };
     case "never":
-      return { key: "driveBackup.status.never", params: { count: String(status.pendingCount) } };
+      return {
+        key: status.pendingCount === 1 ? "driveBackup.status.neverOne" : "driveBackup.status.neverOther",
+        params: { count: String(status.pendingCount) },
+      };
     case "unverifiable":
       return { key: status.reason === "account" ? "driveBackup.status.unverifiableAccount" : "driveBackup.status.unverifiable" };
   }

@@ -23,9 +23,7 @@ const locales = Object.fromEntries(
   ]),
 ) as Record<(typeof LANGUAGES)[number], Locale>;
 
-const CITE_KEYS = ["cite", "citeDesc", "citeReference", "openDoi", "copyReference", "copied", "openDoiError"];
-
-/** The texts this feature owns: the whole Resources namespace (citation included) and the About intro. */
+/** The texts this feature owns: the whole Resources namespace and the About intro. */
 function ownedTexts(locale: Locale): [string, string][] {
   return [
     ...Object.entries(locale.resources).map(([k, v]) => [`resources.${k}`, v] as [string, string]),
@@ -33,7 +31,7 @@ function ownedTexts(locale: Locale): [string, string][] {
   ];
 }
 
-describe("resources and citation locale keys", () => {
+describe("resources locale keys", () => {
   it("defines the same resources keys in every language", () => {
     const reference = Object.keys(locales.pt.resources).sort();
     for (const lang of LANGUAGES) {
@@ -41,21 +39,20 @@ describe("resources and citation locale keys", () => {
     }
   });
 
-  it("defines the citation keys under resources, and none are left on the About screen", () => {
+  it("no longer carries the citation keys, on the Resources screen or on About (the page of the app has them)", () => {
     for (const lang of LANGUAGES) {
-      for (const key of CITE_KEYS) {
-        expect(typeof locales[lang].resources[key]).toBe("string");
-        expect(locales[lang].resources[key].length).toBeGreaterThan(0);
+      for (const key of ["cite", "citeDesc", "citeReference", "openDoi", "copyReference", "copied", "openDoiError"]) {
+        expect(locales[lang].resources[key]).toBeUndefined();
         expect(locales[lang].about[key]).toBeUndefined();
       }
     }
   });
 
-  it("defines the same driveBackup keys (backup modal, status, export warning) in every language", () => {
-    const reference = leafKeys(locales.pt.driveBackup).sort();
-    for (const lang of LANGUAGES) {
-      expect(leafKeys(locales[lang].driveBackup).sort()).toEqual(reference);
-    }
+  it("mentions how to cite in the Resources intro", () => {
+    expect(locales.pt.resources.intro).toContain("como citar");
+    expect(locales.en.resources.intro).toContain("how to cite");
+    expect(locales.es.resources.intro).toContain("cómo citar");
+    expect(locales.fr.resources.intro).toContain("comment citer");
   });
 
   it("no longer carries the internet requirement line", () => {
@@ -74,13 +71,6 @@ describe("resources and citation locale keys", () => {
   it("does not hardcode the app version in the locale files", () => {
     for (const lang of LANGUAGES) {
       expect((locales[lang] as unknown as { home: Record<string, string> }).home.version).toBeUndefined();
-    }
-  });
-
-  it("keeps every citation reference filled by the same placeholders", () => {
-    for (const lang of LANGUAGES) {
-      const placeholders = locales[lang].resources.citeReference.match(/\{\{\w+\}\}/g)?.sort();
-      expect(placeholders).toEqual(["{{author}}", "{{doi}}", "{{year}}"]);
     }
   });
 

@@ -388,19 +388,12 @@
   },
   "resources": {
     "title": "Recursos",
-    "intro": "Los tutoriales, las guías de uso, la descarga de la versión más reciente y las novedades de Nomos están disponibles en la página de Nomos.",
+    "intro": "Los tutoriales, las guías de uso, cómo citar Nomos, la descarga de la versión más reciente y las novedades están disponibles en la página de Nomos.",
     "openSite": "Abrir página de Nomos",
     "openSiteA11y": "Abrir la página de Nomos en el navegador",
     "installedVersion": "Versión instalada: {{version}}",
     "openErrorTitle": "Enlace no disponible",
-    "openError": "No se pudo abrir la página de Nomos. Verifique que haya un navegador instalado en el dispositivo e inténtelo de nuevo.",
-    "cite": "Cómo citar",
-    "citeDesc": "Si utiliza Nomos en trabajos académicos, cítelo según la referencia a continuación.",
-    "citeReference": "{{author}}. Nomos: aplicación para inventarios ambientales. Recife: Universidad Federal de Pernambuco, {{year}}. DOI: {{doi}}.",
-    "openDoi": "Abrir DOI",
-    "copyReference": "Copiar referencia",
-    "copied": "Referencia copiada al portapapeles.",
-    "openDoiError": "No se pudo abrir el DOI. Verifique que haya un navegador instalado en el dispositivo e inténtelo de nuevo."
+    "openError": "No se pudo abrir la página de Nomos. Verifique que haya un navegador instalado en el dispositivo e inténtelo de nuevo."
   },
   "about": {
     "title": "Acerca del Proyecto",
@@ -423,7 +416,7 @@
     "techFrameworkTitle": "Framework y Lenguaje",
     "techFrameworkDesc": "React Native e TypeScript",
     "techArchitectureTitle": "Arquitectura",
-    "techArchitectureDesc": "Aplicación 100% offline (datos almacenados localmente vía SQLite), con arquitectura extensible basada en plugins/protocolos",
+    "techArchitectureDesc": "Concebida como offline-first: la recolección y el almacenamiento funcionan sin internet, que se usa solo en recursos opcionales, como la copia de seguridad en Drive. La arquitectura es extensible y basada en plugins, que permiten añadir nuevos protocolos de levantamiento.",
     "license": "Licencia de Uso",
     "licenseName": "GNU GPL v3.0",
     "licenseDesc": "Este proyecto es de código abierto bajo la licencia GNU GPL v3.0 (copyleft). Se permite usar, estudiar, modificar y redistribuir el software, incluso comercialmente, siempre que los trabajos derivados se distribuyan bajo la misma licencia y con el código fuente disponible.",
@@ -1169,10 +1162,12 @@
       "checking": "Verificando...",
       "upToDate": "Al día con Drive ({{date}})",
       "nothingToSend": "Nada que enviar",
-      "pending": "{{count}} elemento(s) pendiente(s)",
-      "never": "Aún sin copia: {{count}} elemento(s) por enviar",
       "unverifiable": "No se pudo verificar la copia de seguridad",
-      "unverifiableAccount": "Conecte la cuenta del dueño para verificar la copia"
+      "unverifiableAccount": "Conecte la cuenta del dueño para verificar la copia",
+      "pendingOne": "{{count}} elemento pendiente",
+      "pendingOther": "{{count}} elementos pendientes",
+      "neverOne": "Aún sin copia: {{count}} elemento por enviar",
+      "neverOther": "Aún sin copia: {{count}} elementos por enviar"
     },
     "exportWarning": {
       "title": "Exportar paquete del proyecto",

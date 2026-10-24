@@ -88,7 +88,7 @@ A pre-built APK of the latest release is also available under [Releases](https:/
 
 - **User guide and field materials:** [Google Drive folder](https://drive.google.com/drive/folders/1Ikc18svAf_pBV3j8QSXvILa6XqKRPcRI?usp=sharing) — practical usage guide, printable field sheet, and the vegetation classification catalog. The installable APK is also available here.
 - **Architecture documentation:** see the `docs/` directory in this repository for the layered architecture, data model, and internationalization notes. All documents are written in English.
-- **Project page and tutorials:** tutorials, guides, and the latest app download are on the project page: https://pablonvsx.github.io/nomos/ (the in-app Resources tab links to it and also shows the installed version and how to cite Nomos). The former in-app tutorial texts and native protocols catalog are preserved in [`docs/tutoriais-app-legado.md`](docs/tutoriais-app-legado.md) and [`docs/protocolos-nativos-app-legado.md`](docs/protocolos-nativos-app-legado.md).
+- **Project page and tutorials:** tutorials, guides, and the latest app download are on the project page: https://pablonvsx.github.io/nomos/ (the in-app Resources tab links to it and shows the installed version; how to cite Nomos is on that page too). The former in-app tutorial texts and native protocols catalog are preserved in [`docs/tutoriais-app-legado.md`](docs/tutoriais-app-legado.md) and [`docs/protocolos-nativos-app-legado.md`](docs/protocolos-nativos-app-legado.md).
 - **Archival record (DOI):** citable deposit on Zenodo covering all versions: https://doi.org/10.5281/zenodo.22069700
 
 ---
