@@ -10,7 +10,6 @@
 
 import { fingerprintOf, type BackupItem } from "@/core/drive-sync/change-detection";
 import { parseAudioNotes, parsePhotoUris } from "@/db/mappers/json-utils";
-import { getPointDisplayLabel } from "@/core/points/point-label";
 import type { Point, PointModule } from "@/types/database";
 import type { ProjectConfigPackage } from "@/core/project-sharing/project-config-package";
 
@@ -49,7 +48,9 @@ export async function buildPointItems(input: PointItemInput): Promise<BackupItem
 
     items.push({
       key: pointItemKey(point.id),
-      label: getPointDisplayLabel(point),
+      kind: "point",
+      label: "",
+      point: { number: point.point_number, lat: point.lat, lon: point.lon },
       fingerprint: fingerprintOf({
         lat: point.lat,
         lon: point.lon,
@@ -92,17 +93,26 @@ export function buildProjectDataItems(pkg: ProjectConfigPackage): ProjectDataIte
   };
 
   if (pkg.protocol_source === "custom" && pkg.custom_protocol) {
-    add({ key: "protocol", label: pkg.custom_protocol.name, group: "protocol" }, pkg.custom_protocol);
+    add(
+      { key: "protocol", kind: "protocol", label: pkg.custom_protocol.name?.trim() ?? "", group: "protocol" },
+      pkg.custom_protocol,
+    );
   }
   for (const entry of pkg.vegetation_classes) {
-    add({ key: `vegclass:${entry.uuid}`, label: String(entry.name ?? entry.uuid), group: "classifications" }, entry);
+    add(
+      { key: `vegclass:${entry.uuid}`, kind: "classification", label: String(entry.name ?? "").trim(), group: "classifications" },
+      entry,
+    );
   }
   for (const entry of pkg.species_catalog) {
-    add({ key: `species:${entry.uuid}`, label: entry.scientific_name, group: "catalog" }, entry);
+    add(
+      { key: `species:${entry.uuid}`, kind: "species", label: (entry.scientific_name ?? "").trim(), group: "catalog" },
+      entry,
+    );
   }
   // The manifest points at the active classification, so it is sent last.
   add(
-    { key: "manifest", label: pkg.project_name, group: "manifest" },
+    { key: "manifest", kind: "manifest", label: pkg.project_name?.trim() ?? "", group: "manifest" },
     {
       project_name: pkg.project_name,
       project_description: pkg.project_description ?? "",

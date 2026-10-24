@@ -24,6 +24,10 @@ describe("deriveBackupModalView", () => {
     expect(deriveBackupModalView({ phase: "idle" }, initialBackupModalUi)).toEqual({ kind: "hidden" });
   });
 
+  it("stays hidden while the pre-flight runs: no progress modal until it passes", () => {
+    expect(deriveBackupModalView({ phase: "checking", scope: "points", projectId: 1 }, initialBackupModalUi)).toEqual({ kind: "hidden" });
+  });
+
   it("shows progress as a fraction while running, indeterminate before the total is known", () => {
     expect(deriveBackupModalView(running(), initialBackupModalUi)).toEqual({ kind: "running", progress: 0.25 });
     expect(deriveBackupModalView(running({ total: 0, current: 0 }), initialBackupModalUi)).toEqual({

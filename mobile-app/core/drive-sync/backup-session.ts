@@ -6,14 +6,27 @@
 // BackupModal.tsx renders it.
 
 import { describeBackupError, type BackupReasonKey } from "@/core/drive-sync/backup-errors";
+import type { PreflightFailure } from "@/core/drive-sync/backup-preflight";
+import type { BackupItemKind } from "@/core/drive-sync/change-detection";
 
 export type BackupScope = "points" | "project";
 
-export type BackupOutcome = "completed" | "completedWithPending" | "cancelled" | "error";
+/**
+ * How a run ended (the table is in backup-results.ts, classifyRun):
+ * - completed: every pending item was sent;
+ * - incomplete: at least one item was sent and at least one failed for its own reason;
+ * - interrupted: the connection dropped mid-run after at least one item was sent;
+ * - cancelled: the person cancelled;
+ * - error: nothing was sent (no connection, a token failure, every item failed).
+ */
+export type BackupOutcome = "completed" | "incomplete" | "interrupted" | "cancelled" | "error";
 
 export interface BackupFailure {
-  /** What failed: a point label or a project item name. */
+  kind: BackupItemKind;
+  /** The name of what failed (species, classification, protocol, project); "" when it has none. Never an id. */
   label: string;
+  /** Points: the number the list shows and where the point is; the screen words it ("Ponto 2"). */
+  point?: { number: number; lat: number; lon: number };
   reasonKey: BackupReasonKey;
   reasonParams?: Record<string, string>;
   /** Technical detail, for the collapsed "details" view. */
@@ -31,7 +44,7 @@ export interface BackupResult {
   notSent: number;
   failures: BackupFailure[];
   /** Only for outcome "error": the whole run failed before or outside any item. */
-  error?: { reasonKey: BackupReasonKey; detail: string };
+  error?: { reasonKey: BackupReasonKey; reasonParams?: Record<string, string>; detail: string };
 }
 
 export interface BackupStage {
@@ -42,6 +55,8 @@ export interface BackupStage {
 
 export type BackupSessionState =
   | { phase: "idle" }
+  /** The pre-flight is running: the lock is held, but there is nothing to show yet. */
+  | { phase: "checking"; scope: BackupScope; projectId: number }
   | {
       phase: "running";
       scope: BackupScope;
@@ -104,7 +119,43 @@ export function startBackup(options: StartBackupOptions): StartBackupStatus {
   // A plain module variable guards re-entry, so two taps in the same frame
   // (or two screens) cannot both slip through before a re-render.
   if (state.phase !== "idle") return { status: "already-running" };
+  return begin(options);
+}
 
+export type StartWithPreflightStatus = StartBackupStatus | { status: "blocked"; failure: PreflightFailure };
+
+/**
+ * Like startBackup, but first runs `preflight` while holding the lock (so no
+ * second start can slip in), and only opens the progress modal when it passes.
+ * When it fails, or throws, the lock is ALWAYS released, `onBlocked` is told why,
+ * and nothing else happens: `run` is never called, no item and no snapshot is touched.
+ */
+export async function startBackupWithPreflight(
+  options: StartBackupOptions & {
+    preflight: () => Promise<PreflightFailure | null>;
+    onBlocked: (failure: PreflightFailure) => void;
+  },
+): Promise<StartWithPreflightStatus> {
+  if (state.phase !== "idle") return { status: "already-running" };
+
+  setState({ phase: "checking", scope: options.scope, projectId: options.projectId });
+  let failure: PreflightFailure | null;
+  try {
+    failure = await options.preflight();
+  } catch (error) {
+    console.error("Backup pre-flight failed unexpectedly:", error);
+    failure = "unreachable";
+  }
+
+  if (failure) {
+    setState({ phase: "idle" });
+    options.onBlocked(failure);
+    return { status: "blocked", failure };
+  }
+  return begin(options);
+}
+
+function begin(options: StartBackupOptions): StartBackupStatus {
   const { scope, projectId } = options;
   onDismissed = options.onDismissed;
   setState({ phase: "running", scope, projectId, stage: null, current: 0, total: 0, cancelRequested: false });

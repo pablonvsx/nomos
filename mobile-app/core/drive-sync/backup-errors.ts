@@ -28,7 +28,7 @@ function messageOf(error: unknown): string {
 }
 
 const DRIVE_STATUS = /Drive API error \((\d{3})\)/;
-const OFFLINE = /network request failed|failed to fetch|network error|unable to resolve host|enotfound|econnreset|offline/i;
+const OFFLINE = /network request failed|failed to fetch|unable to resolve host|enotfound|econnreset|offline/i;
 const AUTH = /getTokens|PGMN|sign[- ]?in|login|play services|DEVELOPER_ERROR|invalid[_ ]credentials|unauthenticated/i;
 const QUOTA = /rate ?limit|quota|userRateLimitExceeded|storageQuotaExceeded|too many requests/i;
 
@@ -54,4 +54,18 @@ export function describeBackupError(error: unknown): BackupReason {
   if (QUOTA.test(detail)) return { key: "driveBackup.reason.quota", detail };
   if (AUTH.test(detail)) return { key: "driveBackup.reason.auth", detail };
   return { key: "driveBackup.reason.unknown", detail };
+}
+
+/**
+ * The connection itself is gone (no network at all), as opposed to a problem with one item.
+ * A timeout is deliberately NOT one: on a slow link one large photo can time out while the next
+ * point still goes through, so a timeout stays a failure of its own item.
+ */
+export function isConnectionReason(key: BackupReasonKey): boolean {
+  return key === "driveBackup.reason.offline";
+}
+
+/** True when `error` says there is no network: the remaining items would fail the same way. */
+export function isConnectionError(error: unknown): boolean {
+  return isConnectionReason(describeBackupError(error).key);
 }

@@ -28,6 +28,9 @@ jest.mock("@/db/queries/backup-snapshot", () => ({
   deleteSnapshotItems: jest.fn(async (_p: number, _s: string, keys: string[]) => keys.forEach((k) => snapshotRows.delete(k))),
   setScopeBackupTime: jest.fn(async (_p: number, _s: string, at: string) => void (scopeTime = at)),
 }));
+jest.mock("@/core/drive-sync/drive-api-client", () => ({ findChildByName: jest.fn() }));
+jest.mock("@/core/google-auth/google-auth-service", () => ({ getDriveAccessToken: jest.fn() }));
+jest.mock("@/core/net/connectivity", () => ({ isOnline: jest.fn() }));
 jest.mock("@/db/queries/points", () => ({ getPoint: jest.fn() }));
 jest.mock("@/db/queries/projects", () => ({
   getProjectById: jest.fn(async () => ({ id: 1, collaboration_role: "owner", drive_folder_id: "folder" })),
@@ -40,7 +43,7 @@ import type { BackupContext } from "../backup-session";
 
 const ctx: BackupContext = { report: jest.fn(), isCancelled: () => false };
 const point = (id: number) => ({ id, point_number: id });
-const pItem = (id: number, fp: string) => ({ key: pointItemKey(id), label: `Ponto ${id}`, fingerprint: fp });
+const pItem = (id: number, fp: string) => ({ key: pointItemKey(id), kind: "point" as const, label: "", fingerprint: fp });
 
 beforeEach(() => {
   snapshotRows.clear();
@@ -61,7 +64,7 @@ describe("runPointsBackup", () => {
     backupAllPendingPoints.mockImplementation(async (_id: number, _progress: unknown, options: { points: ReturnType<typeof point>[]; onPointDone: (p: unknown, r: unknown) => Promise<void> }) => {
       expect(options.points.map((p) => p.id)).toEqual([2, 3]); // point 1 is up to date
       for (const p of options.points) await options.onPointDone(p, { success: true });
-      return { backedUp: 2, failed: [], cancelled: false, notAttempted: 0 };
+      return { backedUp: 2, failed: [], cancelled: false, connectionLost: false, notAttempted: 0 };
     });
 
     const result = await runPointsBackup(1, ctx);
@@ -77,12 +80,12 @@ describe("runPointsBackup", () => {
     backupAllPendingPoints.mockImplementation(async (_i: number, _p: unknown, options: { points: ReturnType<typeof point>[]; onPointDone: (p: unknown, r: unknown) => Promise<void> }) => {
       await options.onPointDone(options.points[0], { success: true });
       await options.onPointDone(options.points[1], { success: false, error: "Drive API error (503): x" });
-      return { backedUp: 1, failed: [{ pointId: 2, pointLabel: "Ponto 2", reason: "Drive API error (503): x", missingMediaCount: 0, timedOut: false }], cancelled: false, notAttempted: 0 };
+      return { backedUp: 1, failed: [{ pointId: 2, pointNumber: 2, lat: -8, lon: -34, reason: "Drive API error (503): x", missingMediaCount: 0, timedOut: false }], cancelled: false, connectionLost: false, notAttempted: 0 };
     });
 
     const result = await runPointsBackup(1, ctx);
 
-    expect(result.outcome).toBe("completedWithPending");
+    expect(result.outcome).toBe("incomplete");
     expect(snapshotRows.has(pointItemKey(1))).toBe(true);
     expect(snapshotRows.has(pointItemKey(2))).toBe(false);
     expect(result.failures[0].reasonKey).toBe("driveBackup.reason.server");
@@ -91,7 +94,7 @@ describe("runPointsBackup", () => {
   it("drops points deleted locally from the snapshot without touching Drive", async () => {
     snapshotRows.set(pointItemKey(9), "gone");
     collectPointItems.mockResolvedValue({ items: [], points: [] });
-    backupAllPendingPoints.mockResolvedValue({ backedUp: 0, failed: [], cancelled: false, notAttempted: 0 });
+    backupAllPendingPoints.mockResolvedValue({ backedUp: 0, failed: [], cancelled: false, connectionLost: false, notAttempted: 0 });
 
     await runPointsBackup(1, ctx);
 
@@ -102,7 +105,7 @@ describe("runPointsBackup", () => {
     collectPointItems.mockResolvedValue({ items: [pItem(1, "a"), pItem(2, "b")], points: [point(1), point(2)] });
     backupAllPendingPoints.mockImplementation(async (_i: number, _p: unknown, options: { points: ReturnType<typeof point>[]; onPointDone: (p: unknown, r: unknown) => Promise<void> }) => {
       await options.onPointDone(options.points[0], { success: true });
-      return { backedUp: 1, failed: [], cancelled: true, notAttempted: 1 };
+      return { backedUp: 1, failed: [], cancelled: true, connectionLost: false, notAttempted: 1 };
     });
 
     const result = await runPointsBackup(1, ctx);
@@ -114,7 +117,7 @@ describe("runPointsBackup", () => {
 });
 
 describe("runProjectDataBackup", () => {
-  const dItem = (key: string, fp: string) => ({ key, label: key, fingerprint: fp, group: "catalog" as const });
+  const dItem = (key: string, fp: string) => ({ key, kind: "species" as const, label: key, fingerprint: fp, group: "catalog" as const });
 
   it("sends only pending items and records them one by one", async () => {
     snapshotRows.set("species:s1", "same");
@@ -125,7 +128,7 @@ describe("runProjectDataBackup", () => {
     backupProjectData.mockImplementation(async (params: { pending: { key: string }[]; onItemDone: (i: unknown) => Promise<void> }) => {
       expect(params.pending.map((i) => i.key)).toEqual(["species:s2"]);
       await params.onItemDone(params.pending[0]);
-      return { sent: 1, failures: [], cancelled: false, notAttempted: 0 };
+      return { sent: 1, failures: [], cancelled: false, connectionLost: false, notAttempted: 0 };
     });
 
     const result = await runProjectDataBackup(1, ctx);
@@ -134,11 +137,24 @@ describe("runProjectDataBackup", () => {
     expect(snapshotRows.get("species:s2")).toBe("new");
   });
 
-  it("is 'completedWithPending' when the manifest was held back", async () => {
+  it("is 'incomplete' when something was sent and the manifest was held back", async () => {
     collectProjectDataItems.mockResolvedValue({ items: [dItem("manifest", "m")], payloads: new Map() });
-    backupProjectData.mockResolvedValue({ sent: 0, failures: [], cancelled: false, notAttempted: 1 });
+    backupProjectData.mockResolvedValue({ sent: 1, failures: [], cancelled: false, connectionLost: false, notAttempted: 1 });
 
-    expect(await runProjectDataBackup(1, ctx)).toMatchObject({ outcome: "completedWithPending", notSent: 1 });
+    expect(await runProjectDataBackup(1, ctx)).toMatchObject({ outcome: "incomplete", sent: 1, notSent: 1 });
+  });
+
+  it("is 'interrupted' when the connection dropped after some items were sent", async () => {
+    collectProjectDataItems.mockResolvedValue({ items: [dItem("species:a", "1"), dItem("species:b", "2")], payloads: new Map() });
+    backupProjectData.mockResolvedValue({
+      sent: 1,
+      failures: [{ kind: "species", label: "b", reasonKey: "driveBackup.reason.offline", detail: "Network request failed" }],
+      cancelled: false,
+      connectionLost: true,
+      notAttempted: 0,
+    });
+
+    expect(await runProjectDataBackup(1, ctx)).toMatchObject({ outcome: "interrupted", sent: 1, notSent: 1 });
   });
 
   it("refuses a project that is not an owner with Drive backup", async () => {

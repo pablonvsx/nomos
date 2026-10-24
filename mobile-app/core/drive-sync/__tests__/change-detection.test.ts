@@ -6,7 +6,7 @@ import {
   type BackupItem,
 } from "../change-detection";
 
-const item = (key: string, value: unknown): BackupItem => ({ key, label: key, fingerprint: fingerprintOf(value) });
+const item = (key: string, value: unknown): BackupItem => ({ key, kind: "species", label: key, fingerprint: fingerprintOf(value) });
 
 describe("fingerprintOf", () => {
   it("does not depend on object key order", () => {

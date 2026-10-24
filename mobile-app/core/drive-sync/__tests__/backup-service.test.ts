@@ -595,7 +595,7 @@ describe("backupAllPendingPoints - progress callback", () => {
     const project = seedProject();
     const onProgress = jest.fn();
 
-    await expect(backupAllPendingPoints(project.id)).resolves.toEqual({ backedUp: 0, failed: [], cancelled: false, notAttempted: 0 });
+    await expect(backupAllPendingPoints(project.id)).resolves.toEqual({ backedUp: 0, failed: [], cancelled: false, connectionLost: false, notAttempted: 0 });
     await backupAllPendingPoints(project.id, onProgress);
 
     expect(onProgress).not.toHaveBeenCalled();
@@ -1040,5 +1040,81 @@ describe("backup cancellation", () => {
     expect(summary.backedUp).toBe(1);
     expect(captured.drive_synced_at).not.toBeNull();
     expect(later.drive_synced_at).toBeNull();
+  });
+});
+
+describe("a lost connection stops the batch", () => {
+  it("stops at the first network error: the rest are not attempted and not counted as failed", async () => {
+    const project = seedProject();
+    seedPoint(project.id);
+    seedPoint(project.id);
+    seedPoint(project.id);
+    ensureFolderMock.mockRejectedValue(new Error("Network request failed"));
+
+    const summary = await backupAllPendingPoints(project.id);
+
+    expect(summary.connectionLost).toBe(true);
+    expect(summary.backedUp).toBe(0);
+    expect(summary.failed).toHaveLength(1);
+    expect(summary.notAttempted).toBe(2);
+    expect(ensureFolderMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps what was sent before the connection dropped", async () => {
+    const project = seedProject();
+    const first = seedPoint(project.id);
+    seedPoint(project.id);
+    seedPoint(project.id);
+    uploadJsonFileMock.mockImplementation(async (name: string, parentId: string, content: unknown) => {
+      if ((content as { point_uuid?: string }).point_uuid === uuidOf(2)) throw new Error("Network request failed");
+      return mockDrive.api.uploadJsonFile(name, parentId, content);
+    });
+
+    const summary = await backupAllPendingPoints(project.id);
+
+    expect(summary).toMatchObject({ backedUp: 1, connectionLost: true, notAttempted: 1 });
+    expect(first.drive_synced_at).not.toBeNull();
+  });
+
+  it("does NOT stop for a failure that belongs to one point", async () => {
+    const project = seedProject();
+    seedPoint(project.id);
+    seedPoint(project.id);
+    uploadJsonFileMock.mockImplementationOnce(async () => {
+      throw new Error("Drive API error (403): userRateLimitExceeded");
+    });
+
+    const summary = await backupAllPendingPoints(project.id);
+
+    expect(summary.connectionLost).toBe(false);
+    expect(summary.failed).toHaveLength(1);
+    expect(summary.backedUp + summary.failed.length).toBe(2);
+  });
+
+  it("flags a point whose media upload hit a network error", async () => {
+    fsState.set("file:///capture/photo1.jpg", { isDir: false, content: "bytes" });
+    const project = seedProject();
+    const point = seedPoint(project.id, { photos: JSON.stringify([{ uri: "file:///capture/photo1.jpg", timestamp: 1 }]) });
+    uploadBinaryFileMock.mockRejectedValueOnce(new Error("Network request failed"));
+
+    const result = await backupPoint(point.id.toString());
+
+    expect(result).toMatchObject({ success: false, connectionLost: true });
+  });
+});
+
+describe("failed points are identified by their number, not by a placeholder", () => {
+  it("carries the point number and coordinates of the failing point (the owner's point has no collector code)", async () => {
+    const project = seedProject();
+    seedPoint(project.id);
+    const second = seedPoint(project.id, { created_by: null, lat: -8.05, lon: -34.9 });
+    failJsonFor(second.id, new Error("Drive API error (500): boom"));
+
+    const summary = await backupAllPendingPoints(project.id);
+
+    expect(summary.failed).toEqual([
+      expect.objectContaining({ pointId: second.id, pointNumber: second.point_number, lat: -8.05, lon: -34.9 }),
+    ]);
+    expect(JSON.stringify(summary.failed)).not.toContain("?");
   });
 });

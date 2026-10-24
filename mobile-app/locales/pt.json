@@ -1132,19 +1132,23 @@
         "title": "Backup concluído",
         "message": "{{sent}} item(ns) enviado(s) com sucesso."
       },
-      "completedWithPending": {
-        "title": "Backup concluído com pendências",
-        "message": "{{sent}} enviado(s), {{notSent}} não enviado(s). Os itens não enviados continuam pendentes."
-      },
       "cancelled": {
         "title": "Backup cancelado",
         "message": "{{sent}} enviado(s) antes do cancelamento. {{notSent}} continuam pendentes."
       },
       "error": {
-        "title": "Não foi possível fazer o backup"
+        "title": "Não foi possível concluir o backup"
       },
       "completedNothing": {
         "message": "Nada precisou ser enviado. O registro do backup foi atualizado."
+      },
+      "incomplete": {
+        "title": "Backup incompleto",
+        "message": "{{sent}} enviado(s), {{notSent}} não enviado(s). Os itens não enviados continuam pendentes."
+      },
+      "interrupted": {
+        "title": "Backup interrompido",
+        "message": "A conexão foi perdida. {{sent}} enviado(s), {{notSent}} pendente(s)."
       }
     },
     "reason": {
@@ -1178,6 +1182,29 @@
       "offline": "Sem conexão: não é possível fazer o backup agora.",
       "exportAnyway": "Exportar mesmo assim",
       "backup": "Fazer backup"
+    },
+    "preflight": {
+      "offline": {
+        "title": "Sem conexão",
+        "message": "Conecte-se à internet e tente novamente. Nada foi enviado."
+      },
+      "unreachable": {
+        "title": "Não foi possível acessar o Google Drive",
+        "message": "Verifique sua conexão e tente novamente. Nada foi enviado."
+      },
+      "auth": {
+        "title": "Conta do Google indisponível",
+        "message": "Reconecte a conta do dono do projeto e tente novamente. Nada foi enviado."
+      }
+    },
+    "item": {
+      "unnamed": {
+        "point": "Ponto sem nome",
+        "species": "Espécie sem nome",
+        "classification": "Classificação sem nome",
+        "protocol": "Protocolo sem nome",
+        "manifest": "Projeto sem nome"
+      }
     }
   },
   "driveRestore": {

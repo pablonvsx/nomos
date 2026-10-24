@@ -9,10 +9,9 @@ import {
   type BackupAllOptions,
   type BackupResult as PointBackupResult,
 } from "@/core/drive-sync/backup-service";
-import { failureFromReason, resultFromPointsSummary } from "@/core/drive-sync/backup-results";
+import { classifyRun, failureFromReason, resultFromPointsSummary } from "@/core/drive-sync/backup-results";
 import type { BackupContext, BackupResult } from "@/core/drive-sync/backup-session";
 import { getPoint } from "@/db/queries/points";
-import { getPointDisplayLabel } from "@/core/points/point-label";
 import { collectPointItems, collectProjectDataItems } from "@/core/drive-sync/backup-collectors";
 import { pointItemKey } from "@/core/drive-sync/backup-items";
 import { backupProjectData } from "@/core/drive-sync/project-data-backup";
@@ -24,6 +23,28 @@ import {
   setScopeBackupTime,
 } from "@/db/queries/backup-snapshot";
 import { getProjectById } from "@/db/queries/projects";
+import { findChildByName } from "@/core/drive-sync/drive-api-client";
+import { runPreflightWith, type PreflightFailure } from "@/core/drive-sync/backup-preflight";
+import { getDriveAccessToken } from "@/core/google-auth/google-auth-service";
+import { isOnline } from "@/core/net/connectivity";
+
+/**
+ * The pre-flight every backup start goes through, for both scopes, the single
+ * point backup and the export warning's "Fazer backup": connection, token and
+ * one light Drive request. null means it is safe to open the progress modal.
+ */
+export async function preflightBackup(projectId: number): Promise<PreflightFailure | null> {
+  const project = await getProjectById(projectId);
+  const folderId = project?.drive_folder_id;
+  return runPreflightWith({
+    isOnline,
+    getToken: getDriveAccessToken,
+    probe: async (timeoutMs) => {
+      // The project folder's own manifest lookup: a small GET the client already knows how to make.
+      if (folderId) await findChildByName(folderId, "manifest.json", timeoutMs);
+    },
+  });
+}
 
 /** Records the removals and the time once a run has changed anything in the snapshot. */
 async function recordRun(projectId: number, scope: "points" | "project", removedKeys: string[]): Promise<void> {
@@ -95,13 +116,13 @@ export async function runProjectDataBackup(projectId: number, context: BackupCon
 
   if (changedSnapshot || diff.removedKeys.length > 0) await recordRun(projectId, "project", diff.removedKeys);
 
-  const notSent = outcome.failures.length + outcome.notAttempted;
-  return {
-    outcome: outcome.cancelled ? "cancelled" : outcome.failures.length > 0 || notSent > 0 ? "completedWithPending" : "completed",
+  return classifyRun({
     sent: outcome.sent,
-    notSent,
     failures: outcome.failures,
-  };
+    notAttempted: outcome.notAttempted,
+    cancelled: outcome.cancelled,
+    connectionLost: outcome.connectionLost,
+  });
 }
 
 /** Sends one point (the per-point button), through the same lock and modal. */
@@ -112,7 +133,6 @@ export async function runSinglePointBackup(
 ): Promise<BackupResult> {
   context.report({ key: "driveBackup.stage.singlePoint" }, 0, 1);
   const found = await getPoint(pointId);
-  const label = found ? getPointDisplayLabel(found.point) : String(pointId);
   const owner = found?.point;
   const captured = owner ? await collectPointItems(owner.project_id) : null;
   const result = await backupPoint(pointId.toString(), undefined, { shouldCancel: context.isCancelled });
@@ -125,18 +145,24 @@ export async function runSinglePointBackup(
   }
   await onDone?.(result);
 
-  if (result.cancelled) return { outcome: "cancelled", sent: 0, notSent: 1, failures: [] };
-  if (result.success) return { outcome: "completed", sent: 1, notSent: 0, failures: [] };
-  return {
-    outcome: "completedWithPending",
-    sent: 0,
-    notSent: 1,
-    failures: [
-      failureFromReason(label, result.error ?? "", {
-        missingMediaCount: result.missingMediaCount,
-        timedOut: result.timedOut,
-        pointId,
-      }),
-    ],
-  };
+  const failures = result.success || result.cancelled
+    ? []
+    : [
+        failureFromReason(
+          { kind: "point", label: "", point: owner ? { number: owner.point_number, lat: owner.lat, lon: owner.lon } : undefined },
+          result.error ?? "",
+          {
+            missingMediaCount: result.missingMediaCount,
+            timedOut: result.timedOut,
+            pointId,
+          },
+        ),
+      ];
+  return classifyRun({
+    sent: result.success ? 1 : 0,
+    failures,
+    notAttempted: result.cancelled ? 1 : 0,
+    cancelled: result.cancelled === true,
+    connectionLost: result.connectionLost === true,
+  });
 }

@@ -15,7 +15,7 @@ jest.mock("@/db/queries/projects", () => ({ getProjectById: jest.fn() }));
 import { computeBackupStatusWith, seedSnapshotWith, type StatusDeps } from "../backup-status-service";
 import { fingerprintOf, type BackupItem } from "../change-detection";
 
-const item = (key: string, value: unknown): BackupItem => ({ key, label: key, fingerprint: fingerprintOf(value) });
+const item = (key: string, value: unknown): BackupItem => ({ key, kind: "species", label: key, fingerprint: fingerprintOf(value) });
 
 class FakeBackup {
   current: BackupItem[] = [];

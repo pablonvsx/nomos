@@ -1129,10 +1129,6 @@
         "title": "Copia de seguridad completada",
         "message": "{{sent}} elemento(s) enviado(s) con éxito."
       },
-      "completedWithPending": {
-        "title": "Copia completada con pendientes",
-        "message": "{{sent}} enviado(s), {{notSent}} no enviado(s). Los elementos no enviados siguen pendientes."
-      },
       "cancelled": {
         "title": "Copia de seguridad cancelada",
         "message": "{{sent}} enviado(s) antes de cancelar. {{notSent}} siguen pendientes."
@@ -1142,6 +1138,14 @@
       },
       "completedNothing": {
         "message": "No fue necesario enviar nada. Se actualizó el registro de la copia."
+      },
+      "incomplete": {
+        "title": "Copia incompleta",
+        "message": "{{sent}} enviado(s), {{notSent}} no enviado(s). Los elementos no enviados siguen pendientes."
+      },
+      "interrupted": {
+        "title": "Copia interrumpida",
+        "message": "Se perdió la conexión. {{sent}} enviado(s), {{notSent}} pendiente(s)."
       }
     },
     "reason": {
@@ -1175,6 +1179,29 @@
       "offline": "Sin conexión: no se puede hacer la copia ahora.",
       "exportAnyway": "Exportar de todos modos",
       "backup": "Hacer copia"
+    },
+    "preflight": {
+      "offline": {
+        "title": "Sin conexión",
+        "message": "Conéctese a internet e inténtelo de nuevo. No se envió nada."
+      },
+      "unreachable": {
+        "title": "No se pudo acceder a Google Drive",
+        "message": "Verifique su conexión e inténtelo de nuevo. No se envió nada."
+      },
+      "auth": {
+        "title": "Cuenta de Google no disponible",
+        "message": "Vuelva a conectar la cuenta del dueño del proyecto e inténtelo de nuevo. No se envió nada."
+      }
+    },
+    "item": {
+      "unnamed": {
+        "point": "Punto sin nombre",
+        "species": "Especie sin nombre",
+        "classification": "Clasificación sin nombre",
+        "protocol": "Protocolo sin nombre",
+        "manifest": "Proyecto sin nombre"
+      }
     }
   },
   "driveRestore": {

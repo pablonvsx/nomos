@@ -41,6 +41,17 @@ async function fingerprintOfPoint(p: Point, modules: PointModule[] = [], media: 
 }
 
 describe("buildPointItems - what makes a point pending", () => {
+  it("describes a point by its number and where it is, never by a '?' placeholder (the owner's own points have no collector code)", async () => {
+    const [built] = await buildPointItems({
+      points: [point({ id: 5, point_number: 2, created_by: null as unknown as string, lat: -8.05, lon: -34.9 })],
+      modules: [],
+      mediaIdentity: identity,
+      moduleMediaUris: async () => [],
+    });
+    expect(built).toMatchObject({ kind: "point", label: "", point: { number: 2, lat: -8.05, lon: -34.9 } });
+    expect(JSON.stringify(built)).not.toContain("?");
+  });
+
   it("keys items by point id", async () => {
     const [built] = await buildPointItems({ points: [point({ id: 7 })], modules: [], mediaIdentity: identity, moduleMediaUris: async () => [] });
     expect(built.key).toBe(pointItemKey(7));

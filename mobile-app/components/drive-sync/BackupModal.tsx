@@ -8,9 +8,10 @@ import { useI18n } from "@/contexts/i18n-context";
 import {
   dismissBackupResult,
   requestBackupCancel,
-  type BackupFailure,
   type BackupResult,
 } from "@/core/drive-sync/backup-session";
+import { failureHeading } from "@/core/drive-sync/backup-labels";
+import { predominantReason } from "@/core/drive-sync/backup-results";
 import { deriveBackupModalView, initialBackupModalUi, reduceBackupModal } from "@/core/ui/backup-modal-state";
 import { useBackupSession } from "@/hooks/use-backup-session";
 
@@ -117,33 +118,33 @@ function FinishedContent({ result }: { result: BackupResult }) {
   const [showDetails, setShowDetails] = useState(false);
 
   const params = { sent: String(result.sent), notSent: String(result.notSent) };
-  const titleKey = `driveBackup.result.${result.outcome}.title`;
-  const messageKey =
-    result.outcome === "error"
-      ? result.error?.reasonKey ?? "driveBackup.reason.unknown"
-      : result.outcome === "completed" && result.sent === 0
-        ? "driveBackup.result.completedNothing.message"
-        : `driveBackup.result.${result.outcome}.message`;
+  // No connection at all reads the same as the pre-flight dialog: "Sem conexão", nothing was sent.
+  const offline = result.outcome === "error" && result.error?.reasonKey === "driveBackup.reason.offline";
 
-  const details = [
-    ...result.failures.map((f) => (f.detail ? `${f.label}: ${f.detail}` : null)),
-    result.error?.detail ?? null,
-  ].filter((line): line is string => Boolean(line));
+  const title = offline ? t("driveBackup.preflight.offline.title") : t(`driveBackup.result.${result.outcome}.title`);
+
+  let message: string;
+  if (offline) {
+    message = t("driveBackup.preflight.offline.message");
+  } else if (result.outcome === "error") {
+    message = t(result.error?.reasonKey ?? "driveBackup.reason.unknown", result.error?.reasonParams);
+  } else if (result.outcome === "completed" && result.sent === 0) {
+    message = t("driveBackup.result.completedNothing.message");
+  } else {
+    message = t(`driveBackup.result.${result.outcome}.message`, params);
+    // Incomplete: counts plus, at most, the reason most items share. Item by item is in the details.
+    const predominant = result.outcome === "incomplete" ? predominantReason(result.failures) : null;
+    if (predominant) message += `\n${t(predominant.reasonKey, predominant.reasonParams)}`;
+  }
+
+  const details = failureDetailLines(result, t);
 
   return (
     <>
-      <Text style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>{t(titleKey)}</Text>
+      <Text style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>{title}</Text>
       <Text variant="bodyMedium" style={[styles.body, { color: theme.colors.onSurface }]}>
-        {t(messageKey, params)}
+        {message}
       </Text>
-
-      {result.failures.length > 0 && (
-        <ScrollView style={styles.failures}>
-          {result.failures.map((failure, index) => (
-            <FailureLine key={`${failure.label}-${index}`} failure={failure} />
-          ))}
-        </ScrollView>
-      )}
 
       {details.length > 0 && (
         <>
@@ -155,7 +156,7 @@ function FinishedContent({ result }: { result: BackupResult }) {
           {showDetails && (
             <ScrollView style={styles.details}>
               <Text selectable variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                {details.join("\n")}
+                {details.join("\n\n")}
               </Text>
             </ScrollView>
           )}
@@ -167,15 +168,15 @@ function FinishedContent({ result }: { result: BackupResult }) {
   );
 }
 
-function FailureLine({ failure }: { failure: BackupFailure }) {
-  const theme = useTheme();
-  const { t } = useI18n();
-  return (
-    <Text variant="bodySmall" style={[styles.failureLine, { color: theme.colors.onSurfaceVariant }]}>
-      {failure.label ? `${failure.label}: ` : ""}
-      {t(failure.reasonKey, failure.reasonParams)}
-    </Text>
-  );
+/** One block per failed item: its name, the reason in plain words, then the technical text. */
+function failureDetailLines(result: BackupResult, t: (key: string, params?: Record<string, string>) => string): string[] {
+  const lines = result.failures.map((failure) => {
+    const head = `${failureHeading(failure, t)}: `;
+    const technical = failure.detail ? `\n${failure.detail}` : "";
+    return `${head}${t(failure.reasonKey, failure.reasonParams)}${technical}`;
+  });
+  if (lines.length === 0 && result.error?.detail) lines.push(result.error.detail);
+  return lines;
 }
 
 const styles = StyleSheet.create({
@@ -184,8 +185,6 @@ const styles = StyleSheet.create({
   body: { marginTop: 12 },
   bar: { height: 6, borderRadius: 3, marginTop: 16, marginBottom: 12 },
   cancellingRow: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 16 },
-  failures: { marginTop: 12, maxHeight: 160 },
-  failureLine: { marginBottom: 4 },
   detailsToggle: { alignSelf: "flex-start", paddingVertical: 8, marginTop: 4 },
   details: { maxHeight: 120, marginBottom: 8 },
 });

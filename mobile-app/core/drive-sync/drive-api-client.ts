@@ -81,14 +81,18 @@ export async function createFolder(name: string, parentId: string): Promise<Driv
   );
 }
 
-export async function findChildByName(parentId: string, name: string): Promise<DriveFile | null> {
+export async function findChildByName(
+  parentId: string,
+  name: string,
+  timeoutMs: number = DRIVE_METADATA_TIMEOUT_MS,
+): Promise<DriveFile | null> {
   const headers = await authHeaders();
   const escaped = name.replace(/'/g, "\\'");
   const query = encodeURIComponent(`'${parentId}' in parents and name = '${escaped}' and trashed = false`);
   const data = await driveRequest(
     `${DRIVE_API_BASE}/files?q=${query}&fields=files(id,name,mimeType,modifiedTime)`,
     { headers },
-    DRIVE_METADATA_TIMEOUT_MS,
+    timeoutMs,
     readJson<{ files?: DriveFile[] }>,
   );
   return data.files?.[0] ?? null;

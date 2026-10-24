@@ -15,6 +15,7 @@ import { failureFromReason } from "@/core/drive-sync/backup-results";
 import type { BackupItem } from "@/core/drive-sync/change-detection";
 import { updateManifest } from "@/core/drive-sync/project-drive-service";
 import type { BackupContext, BackupFailure, BackupStage } from "@/core/drive-sync/backup-session";
+import { isConnectionError } from "@/core/drive-sync/backup-errors";
 import { isNetworkTimeoutError } from "@/core/net/network-timeout";
 import type { ProjectDataPayloads } from "@/core/drive-sync/backup-items";
 
@@ -33,8 +34,10 @@ export interface ProjectDataBackupOutcome {
   sent: number;
   failures: BackupFailure[];
   cancelled: boolean;
-  /** Pending items never attempted (cancelled, or the manifest held back). */
+  /** Pending items never attempted (cancelled, connection lost, or the manifest held back). */
   notAttempted: number;
+  /** The first network error stopped the run: the rest would fail the same way. */
+  connectionLost: boolean;
 }
 
 /**
@@ -54,6 +57,7 @@ export async function backupProjectData(params: {
   let sent = 0;
   let attempted = 0;
   let cancelled = false;
+  let connectionLost = false;
 
   // File name -> id inside a folder, listed once per folder per run.
   const folderIds = new Map<string, string>();
@@ -144,12 +148,16 @@ export async function backupProjectData(params: {
     } catch (error) {
       console.error(`Error sending ${item.key} to Drive:`, error);
       failures.push(
-        failureFromReason(item.label, error instanceof Error ? error.message : String(error), {
+        failureFromReason(item, error instanceof Error ? error.message : String(error), {
           timedOut: isNetworkTimeoutError(error),
         }),
       );
       if (item.group === "classifications") classificationProblem = true;
       groupDone.set(group, position);
+      if (isConnectionError(error)) {
+        connectionLost = true;
+        break;
+      }
       continue;
     }
 
@@ -164,5 +172,5 @@ export async function backupProjectData(params: {
     }
   }
 
-  return { sent, failures, cancelled, notAttempted: pending.length - attempted };
+  return { sent, failures, cancelled, connectionLost, notAttempted: pending.length - attempted };
 }

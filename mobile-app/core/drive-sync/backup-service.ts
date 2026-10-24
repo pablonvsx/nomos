@@ -21,8 +21,8 @@ import { getModuleMediaFields, mapModuleMediaUris } from "@/core/project-sharing
 import { parseAudioNotes, parsePhotoUris } from "@/db/mappers/json-utils";
 import type { PointPackageAudioNote, PointPackageEntry } from "@/core/project-sharing/export-points";
 import { isNetworkTimeoutError } from "@/core/net/network-timeout";
+import { isConnectionError } from "@/core/drive-sync/backup-errors";
 import { isBackupEligibleStatus } from "@/core/drive-sync/backup-eligibility";
-import { getPointDisplayLabel } from "@/core/points/point-label";
 import {
   APPROVED_FOLDER,
   POINT_JSON_FILENAME,
@@ -65,17 +65,26 @@ export interface BackupResult {
   timedOut?: boolean;
   /** The person asked to cancel while this point was in progress: nothing was marked as backed up. */
   cancelled?: boolean;
+  /**
+   * A failure of the connection itself (no network, a stalled one), not of this
+   * point: the points after it would fail the same way, so a batch stops here.
+   */
+  connectionLost?: boolean;
 }
 
 export interface BackupSummary {
   backedUp: number;
   /** True when the run stopped early because the person cancelled. */
   cancelled: boolean;
+  /** True when the run stopped at the first network error (the rest are in notAttempted). */
+  connectionLost: boolean;
   /** Eligible points that were never attempted because of the cancel. */
   notAttempted: number;
   failed: Array<{
     pointId: number;
-    pointLabel: string;
+    pointNumber: number;
+    lat: number;
+    lon: number;
     reason: string;
     missingMediaCount: number;
     timedOut: boolean;
@@ -135,7 +144,7 @@ export async function backupPoint(
     pointFolderId = await locateOrCreatePointFolder(cache, project.drive_folder_id, pointUuid, point, createdHere);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return { success: false, error: message, timedOut: isNetworkTimeoutError(error) };
+    return { success: false, error: message, timedOut: isNetworkTimeoutError(error), connectionLost: isConnectionError(error) };
   }
 
   // Media is part of the collection (section 8): every photo, audio note and
@@ -144,6 +153,7 @@ export async function backupPoint(
   const mediaProblems: string[] = [];
   let missingMediaCount = 0;
   let timedOut = false;
+  let connectionLost = false;
 
   const failedFolders = new Map<string, Error>();
   const ensureSubfolder = async (parentId: string, name: string): Promise<string> => {
@@ -185,6 +195,7 @@ export async function backupPoint(
 
   const noteFailure = (error: unknown): string => {
     if (isNetworkTimeoutError(error)) timedOut = true;
+    if (isConnectionError(error)) connectionLost = true;
     return error instanceof Error ? error.message : String(error);
   };
 
@@ -269,7 +280,7 @@ export async function backupPoint(
     // stays null: an existing Drive JSON must never be rewritten with fewer
     // media than the point really has. The folders created so far stay, and
     // the next attempt reuses them.
-    return { success: false, error: mediaProblems.join(" "), missingMediaCount, timedOut };
+    return { success: false, error: mediaProblems.join(" "), missingMediaCount, timedOut, connectionLost };
   }
 
   const entry: PointPackageEntry = {
@@ -304,7 +315,7 @@ export async function backupPoint(
       : await uploadJsonFile(POINT_JSON_FILENAME, pointFolderId, entry);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return { success: false, error: message, timedOut: isNetworkTimeoutError(error) };
+    return { success: false, error: message, timedOut: isNetworkTimeoutError(error), connectionLost: isConnectionError(error) };
   }
 
   const syncedAt = uploaded.modifiedTime ?? new Date().toISOString();
@@ -375,6 +386,7 @@ export async function backupAllPendingPoints(
 
   let backedUp = 0;
   let cancelled = false;
+  let connectionLost = false;
   let attempted = 0;
   const failed: BackupSummary["failed"] = [];
 
@@ -396,6 +408,7 @@ export async function backupAllPendingPoints(
         success: false,
         error: error instanceof Error ? error.message : String(error),
         timedOut: isNetworkTimeoutError(error),
+        connectionLost: isConnectionError(error),
       };
     }
 
@@ -411,7 +424,9 @@ export async function backupAllPendingPoints(
     } else {
       failed.push({
         pointId: point.id,
-        pointLabel: getPointDisplayLabel(point),
+        pointNumber: point.point_number,
+        lat: point.lat,
+        lon: point.lon,
         reason: result.error ?? "Erro desconhecido.",
         missingMediaCount: result.missingMediaCount ?? 0,
         timedOut: result.timedOut ?? false,
@@ -423,7 +438,13 @@ export async function backupAllPendingPoints(
     } catch (error) {
       console.error("Error in backup onPointDone:", error);
     }
+
+    // The connection itself is gone: do not insist point by point, the rest would fail the same way.
+    if (!result.success && result.connectionLost) {
+      connectionLost = true;
+      break;
+    }
   }
 
-  return { backedUp, failed, cancelled, notAttempted: points.length - attempted };
+  return { backedUp, failed, cancelled, connectionLost, notAttempted: points.length - attempted };
 }

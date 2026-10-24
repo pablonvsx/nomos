@@ -95,7 +95,7 @@ driven by the global backup session, so it keeps the person until the end
 whatever screen started it: Back and a tap outside ask whether to cancel, and
 a finished backup closes only with OK. Its states: `running` → (`confirmingCancel`
 → `cancelling`) → `finished` with the outcome `completed`,
-`completedWithPending`, `cancelled` or `error`. The export warning appears only
+`incomplete`, `interrupted`, `cancelled` or `error`. Before the modal opens, a pre-flight (connection, token, one light Drive request) can block the start with a plain "No connection" dialog; nothing is sent and, from the export warning, OK returns to the warning. The export warning appears only
 for the owner of a Drive-linked project whose project data is pending or
 unverifiable; closing it cancels, and **Export anyway** is always available
 (see "Export warning" in [12_BACKUP_COLLABORATION.md](12_BACKUP_COLLABORATION.md)).

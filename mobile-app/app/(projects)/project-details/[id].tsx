@@ -97,15 +97,26 @@ import {
   activateDriveBackup,
   GoogleAccountRequiredError,
 } from "@/core/drive-sync/project-drive-service";
-import { runPointsBackup, runProjectDataBackup, runSinglePointBackup } from "@/core/drive-sync/backup-runners";
+import {
+  preflightBackup,
+  runPointsBackup,
+  runProjectDataBackup,
+  runSinglePointBackup,
+} from "@/core/drive-sync/backup-runners";
 import { pointItemKey } from "@/core/drive-sync/backup-items";
+import { formatPointName } from "@/core/points/point-label";
 import { computeBackupStatus } from "@/core/drive-sync/backup-status-service";
 import { decideExportGate, type ExportGateReason } from "@/core/project-sharing/export-gate";
 import { useBackupStatus } from "@/hooks/use-backup-status";
 import { DriveBackupCard } from "@/components/drive-sync/DriveBackupCard";
 import { ExportWarningDialog } from "@/components/drive-sync/ExportWarningDialog";
-import { isOnline } from "@/utils/connectivity";
-import { isBackupBusy, startBackup, type BackupFailure } from "@/core/drive-sync/backup-session";
+import { isOnline } from "@/core/net/connectivity";
+import {
+  isBackupBusy,
+  startBackupWithPreflight,
+  type BackupFailure,
+  type StartBackupOptions,
+} from "@/core/drive-sync/backup-session";
 import { discardMissingMedia } from "@/core/points/discard-missing-media";
 import {
   useProtocolRegistry,
@@ -694,12 +705,17 @@ function UnifiedProjectDetailsScreen() {
   };
 
   const handleExportWarningBackup = () => {
+    const warning = exportWarning;
     setExportWarning(null);
     if (!ensureOwnerAccount(handleExportWarningBackup)) return;
-    // The export resumes by itself only if the backup ends with nothing left pending.
-    beginProjectDataBackup(() => {
-      runConfigPackageExport();
-    });
+    // The export resumes by itself only if the backup ends with nothing left pending. If the
+    // pre-flight blocks the start (no connection...), OK on its dialog brings the warning back.
+    beginProjectDataBackup(
+      () => {
+        runConfigPackageExport();
+      },
+      () => setExportWarning(warning),
+    );
   };
 
   const handleExportAllPoints = async () => {
@@ -907,10 +923,34 @@ function UnifiedProjectDetailsScreen() {
   // One entry for every points backup: the global session owns the lock, the
   // progress and the result modal, so this screen only starts it and reacts
   // to the end (reload, then offer to discard missing media).
+  // The one way a backup is started from this screen. The pre-flight (connection, token, one light Drive
+  // request) runs first, while holding the single-flight lock; if it fails no progress modal opens, nothing
+  // is touched, and a plain dialog says why. `onBlockedOk` runs when that dialog is dismissed (the export
+  // warning uses it to come back, so "Exportar mesmo assim" is still there).
+  const launchBackup = async (options: StartBackupOptions, onBlockedOk?: () => void) => {
+    const started = await startBackupWithPreflight({
+      ...options,
+      preflight: () => preflightBackup(options.projectId),
+      onBlocked: (failure) =>
+        alert(
+          t(`driveBackup.preflight.${failure}.title`),
+          t(`driveBackup.preflight.${failure}.message`),
+          onBlockedOk,
+        ),
+    });
+    // The running backup's modal is global and already on screen; this only covers a race.
+    if (started.status === "already-running") {
+      alert(t("common.info"), t("driveBackup.alreadyRunning"));
+    }
+  };
+
+  // One entry for every points backup: the global session owns the lock, the
+  // progress and the result modal, so this screen only starts it and reacts
+  // to the end (reload, then offer to discard missing media).
   const beginPointsBackup = (prepare?: () => Promise<void>) => {
     if (!project) return;
     const projectId = project.id;
-    const started = startBackup({
+    return launchBackup({
       scope: "points",
       projectId,
       run: async (context) => {
@@ -920,9 +960,6 @@ function UnifiedProjectDetailsScreen() {
       onFinished: () => loadProjectData({ silent: true }),
       onDismissed: (result) => offerDiscardMissingMedia(result.failures),
     });
-    if (started.status === "already-running") {
-      alert(t("common.info"), t("driveBackup.alreadyRunning"));
-    }
   };
 
   // A backup needs the OWNER's Google account. Returns true when it is connected and is the owner's;
@@ -960,21 +997,21 @@ function UnifiedProjectDetailsScreen() {
   };
 
   // Backup of the project's own data (protocol, classifications, species catalog, manifest).
-  const beginProjectDataBackup = (onCompleted?: () => void) => {
+  const beginProjectDataBackup = (onCompleted?: () => void, onBlockedOk?: () => void) => {
     if (!project) return;
     const projectId = project.id;
-    const started = startBackup({
-      scope: "project",
-      projectId,
-      run: (context) => runProjectDataBackup(projectId, context),
-      onFinished: () => loadProjectData({ silent: true }),
-      onDismissed: (result) => {
-        if (result.outcome === "completed") onCompleted?.();
+    return launchBackup(
+      {
+        scope: "project",
+        projectId,
+        run: (context) => runProjectDataBackup(projectId, context),
+        onFinished: () => loadProjectData({ silent: true }),
+        onDismissed: (result) => {
+          if (result.outcome === "completed") onCompleted?.();
+        },
       },
-    });
-    if (started.status === "already-running") {
-      alert(t("common.info"), t("driveBackup.alreadyRunning"));
-    }
+      onBlockedOk,
+    );
   };
 
   const handleBackupProjectData = async () => {
@@ -998,16 +1035,13 @@ function UnifiedProjectDetailsScreen() {
     if (!ensureOwnerAccount(() => handleBackupSinglePoint(pointId))) return;
 
     const projectId = project.id;
-    const started = startBackup({
+    await launchBackup({
       scope: "points",
       projectId,
       run: (context) => runSinglePointBackup(pointId, context),
       onFinished: () => loadProjectData({ silent: true }),
       onDismissed: (result) => offerDiscardMissingMedia(result.failures),
     });
-    if (started.status === "already-running") {
-      alert(t("common.info"), t("driveBackup.alreadyRunning"));
-    }
   };
 
   const renderSurveyPoint = ({ item }: { item: Point }) => {
@@ -1031,7 +1065,7 @@ function UnifiedProjectDetailsScreen() {
           <View style={styles.pointHeader}>
             <View style={{ flex: 1, paddingLeft: 40 }}>
               <Text variant="titleMedium" style={{ fontWeight: "bold" }}>
-                {pointLabel} {item.point_number}
+                {formatPointName(pointLabel, item)}
               </Text>
               
               {item.landscape_class_id && (

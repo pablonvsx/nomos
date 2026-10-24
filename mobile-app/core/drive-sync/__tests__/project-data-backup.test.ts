@@ -148,6 +148,21 @@ describe("backupProjectData", () => {
     expect(updateManifestMock).not.toHaveBeenCalled();
   });
 
+  it("a network error stops the run at the first item and counts the rest as not attempted", async () => {
+    const { items, payloads } = buildProjectDataItems(pkg());
+    const ensureSpy = jest.spyOn(drive.api, "ensureFolder").mockImplementation(async () => {
+      throw new Error("Network request failed");
+    });
+
+    const outcome = await run(items, payloads, context());
+
+    ensureSpy.mockRestore();
+    expect(outcome.connectionLost).toBe(true);
+    expect(outcome.sent).toBe(0);
+    expect(outcome.failures).toHaveLength(1);
+    expect(outcome.notAttempted).toBe(items.length - 1);
+  });
+
   it("a failure recording the snapshot does not lose the upload or abort the run", async () => {
     const { items, payloads } = buildProjectDataItems(pkg());
     const outcome = await run(items, payloads, context(), async () => {

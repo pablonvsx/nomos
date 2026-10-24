@@ -1,4 +1,4 @@
-import { describeBackupError } from "../backup-errors";
+import { describeBackupError, isConnectionError } from "../backup-errors";
 import { DriveTimeoutError } from "../drive-errors";
 
 describe("describeBackupError", () => {
@@ -35,5 +35,15 @@ describe("describeBackupError", () => {
     const reason = describeBackupError("something odd");
     expect(reason.key).toBe("driveBackup.reason.unknown");
     expect(reason.detail).toBe("something odd");
+  });
+});
+
+describe("isConnectionError", () => {
+  it("is true for no network, false for a stalled connection and for a problem with one item", () => {
+    expect(isConnectionError(new Error("Network request failed"))).toBe(true);
+    expect(isConnectionError(new DriveTimeoutError(30_000))).toBe(false); // slow, not gone: the next item may still go
+    expect(isConnectionError(new Error("Drive API error (403): userRateLimitExceeded"))).toBe(false);
+    expect(isConnectionError(new Error("Drive API error (503): backend"))).toBe(false);
+    expect(isConnectionError("Foto 1 não encontrada no dispositivo.")).toBe(false);
   });
 });

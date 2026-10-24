@@ -567,31 +567,87 @@ scope is verifiably up to date.
 
 State lives in a module store, not in a screen
 (`core/drive-sync/backup-session.ts`, read through `hooks/use-backup-session.ts`),
-so it survives navigation. `startBackup({ scope, projectId, run, onFinished,
-onDismissed })` returns `already-running` when a backup of **any** scope or
-project is running or its result has not been dismissed yet; a plain module
-variable guards re-entry, so two taps in the same frame cannot both start.
-`BackupModal` (mounted once in `app/_layout.tsx`) renders the session and holds
-the person until the end:
+so it survives navigation. Every start goes through the **pre-flight** (below)
+via `startBackupWithPreflight({ scope, projectId, run, preflight, onBlocked,
+onFinished, onDismissed })`, which returns `already-running` when a backup of
+**any** scope or project is checking, running, or has a result not yet
+dismissed; a plain module variable guards re-entry, so two taps in the same
+frame cannot both start. `BackupModal` (mounted once in `app/_layout.tsx`)
+renders the session and holds the person until the end:
 
+- `checking`: the pre-flight is running. The lock is held, nothing is shown.
 - `running`: stage and "N of M", a progress bar, "Keep the app open until it
   finishes" and **Cancel**. Android Back and a tap outside open the cancel
   confirmation instead of closing.
 - `confirmingCancel` → `cancelling` → result `cancelled`: the run stops between
   items; what was sent stays sent, the rest stays pending.
-- `finished`: stays until **OK** (single action, `ModalActions`). Outcomes:
-  `completed` ("Backup complete" only when nothing failed and nothing was left),
-  `completedWithPending` (sent, not sent and a readable reason each),
-  `cancelled` and `error`. The view rules are the pure reducer
+- `finished`: stays until **OK** (single action: `ModalActions` places a lone
+  button in the right column). The view rules are the pure reducer
   `core/ui/backup-modal-state.ts`.
+
+### Pre-flight: a backup that cannot reach Drive never starts
+
+`core/drive-sync/backup-preflight.ts` (wired in `backup-runners.ts`,
+`preflightBackup`) runs while the lock is held, before the progress modal opens,
+for both scopes, the single-point backup and the export warning's "Fazer
+backup":
+
+1. **Connection**: `isOnline()` (NetInfo, `core/net/connectivity.ts`). Offline
+   fails at once, without touching the network (airplane mode).
+2. **Token**: `getDriveAccessToken()`; a network failure there is `offline`, any
+   other is `auth`.
+3. **One light Drive request** (`findChildByName` on the project folder's
+   `manifest.json`) with a 6 s limit that really aborts the request.
+
+The result is `null | "offline" | "unreachable" | "auth"`. On a failure the lock
+is **always** released (also if the pre-flight throws), `run` is never called,
+no item, snapshot or pending state is touched, the progress modal does not open,
+and a plain dialog (single OK) says why: "No connection / Connect to the
+internet and try again. Nothing was sent." (or the `unreachable` / `auth`
+equivalents). When the start came from the export warning, OK brings the warning
+back, so "Export anyway" is still there.
+
+### Result states
+
+One pure function decides how a run ended (`classifyRun`, `backup-results.ts`),
+for both scopes and the single-point backup:
+
+| Situation | Outcome | Title |
+|---|---|---|
+| every pending item was sent | `completed` | Backup complete (the only success title) |
+| at least one sent, at least one failed for its own reason | `incomplete` | Backup incomplete |
+| no network mid-run, at least one sent | `interrupted` | Backup interrupted |
+| no network, nothing sent | `error` (reason `offline`) | No connection (same text as the pre-flight) |
+| the person cancelled | `cancelled` | Backup cancelled |
+| nothing sent for another reason (all items failed, token) | `error` | The backup could not be completed + the predominant reason |
+
+The first network error (`isConnectionError`: no network at all) stops the
+remaining items at once; they count as not attempted, not as failures. A
+timeout is **not** a lost connection: on a slow link one large photo can time
+out while the next point still goes through, so it stays a failure of its own
+item. "0 sent, N not sent" therefore never appears under a complete or
+incomplete title (tested as an invariant). The body shows only the counts and,
+for an incomplete run, the reason most items share; the item-by-item list (name,
+reason in plain words, then the technical text) is under "Show details".
+
+**Naming the failed item.** A point is named exactly as the project's point
+list names it ("Ponto 2": `formatPointName`, `core/points/point-label.ts`, used
+by both), with its coordinates (four decimals) only under "Show details" to tell
+points apart. `getPointDisplayLabel` (collector code plus number) no longer has a
+`?` placeholder: the owner's own points have no collector code (it is only
+assigned when a collaborator exports), and that is what used to print "?-2". The
+other items carry their own name (species, classification, protocol, project);
+one without a name gets a fallback by kind ("Unnamed species", ...). Because
+`core/` has no translations, a `BackupItem`/`BackupFailure` carries a `kind` and,
+for points, `{ number, lat, lon }`; `backup-labels.ts` words them with `t()`.
+Neither a uuid, an internal id nor a `?` is ever shown.
 
 Raw errors never reach the person as the reason: `backup-errors.ts` maps
 timeouts, offline, authorization, quota, missing folder, Drive 5xx and
-missing media to translated reasons (`driveBackup.reason.*`); the technical
-text stays in the log and in a collapsed "Show details" view. After OK, the
+missing media to translated reasons (`driveBackup.reason.*`). After OK, the
 screen reloads and offers to discard media that no longer exists on the device
 (the earlier flow, now started from `onDismissed`). The per-point cloud button
-uses the same lock and modal.
+uses the same lock, pre-flight and modal.
 
 ## Export warning
 
@@ -602,8 +658,8 @@ pure). A collaborator, a plain local project, or an owner without a Drive link
 export straight away. The dialog (`ExportWarningDialog`) offers **Export
 anyway** (outline) and **Back up** (solid); closing it cancels. **Back up**
 runs the project-data backup and the export continues by itself only when it
-ends `completed`. With no connection (`utils/connectivity.ts`, NetInfo)
-**Back up** is disabled with a note and **Export anyway** stays available. The
+ends `completed`. With no connection (`core/net/connectivity.ts`, NetInfo)
+**Back up** is disabled with a note and **Export anyway** stays available; if the connection is lost only after tapping it, the pre-flight dialog's OK returns to this warning. The
 package holds no points, so only the `project` scope is checked.
 
 ## Restoring the owner's own project on another device

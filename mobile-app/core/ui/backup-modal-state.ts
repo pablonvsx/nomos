@@ -44,7 +44,8 @@ export function reduceBackupModal(
 }
 
 export function deriveBackupModalView(session: BackupSessionState, ui: BackupModalUiState): BackupModalView {
-  if (session.phase === "idle") return { kind: "hidden" };
+  // While the pre-flight runs (phase "checking") there is nothing to show: no modal until it passes.
+  if (session.phase === "idle" || session.phase === "checking") return { kind: "hidden" };
   if (session.phase === "finished") return { kind: "finished", result: session.result };
   if (session.cancelRequested) return { kind: "cancelling" };
   const progress = session.total > 0 ? Math.min(1, session.current / session.total) : null;

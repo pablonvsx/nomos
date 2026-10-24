@@ -1132,10 +1132,6 @@
         "title": "Backup complete",
         "message": "{{sent}} item(s) sent successfully."
       },
-      "completedWithPending": {
-        "title": "Backup complete with pending items",
-        "message": "{{sent}} sent, {{notSent}} not sent. The items that were not sent remain pending."
-      },
       "cancelled": {
         "title": "Backup cancelled",
         "message": "{{sent}} sent before cancelling. {{notSent}} remain pending."
@@ -1145,6 +1141,14 @@
       },
       "completedNothing": {
         "message": "Nothing needed to be sent. The backup record was updated."
+      },
+      "incomplete": {
+        "title": "Backup incomplete",
+        "message": "{{sent}} sent, {{notSent}} not sent. The items that were not sent remain pending."
+      },
+      "interrupted": {
+        "title": "Backup interrupted",
+        "message": "The connection was lost. {{sent}} sent, {{notSent}} pending."
       }
     },
     "reason": {
@@ -1178,6 +1182,29 @@
       "offline": "No connection: the backup cannot be made right now.",
       "exportAnyway": "Export anyway",
       "backup": "Back up"
+    },
+    "preflight": {
+      "offline": {
+        "title": "No connection",
+        "message": "Connect to the internet and try again. Nothing was sent."
+      },
+      "unreachable": {
+        "title": "Could not reach Google Drive",
+        "message": "Check your connection and try again. Nothing was sent."
+      },
+      "auth": {
+        "title": "Google account unavailable",
+        "message": "Reconnect the project owner's account and try again. Nothing was sent."
+      }
+    },
+    "item": {
+      "unnamed": {
+        "point": "Unnamed point",
+        "species": "Unnamed species",
+        "classification": "Unnamed classification",
+        "protocol": "Unnamed protocol",
+        "manifest": "Unnamed project"
+      }
     }
   },
   "driveRestore": {
