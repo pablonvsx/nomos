@@ -1,4 +1,5 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { MODAL_SHAPE_STYLE } from "@/constants/shape";
 import { ModalActions } from "@/components/ui/ModalActions";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
@@ -140,7 +141,7 @@ export default function VegetationClassificationPicker({
     <Dialog
       visible={visible}
       onDismiss={onClose}
-      style={styles.dialog}
+      style={[MODAL_SHAPE_STYLE, styles.dialog]}
     >
       <Dialog.Title style={MODAL_TITLE_STYLE}>{t("vegetationClassification.selectClassification")}</Dialog.Title>
 

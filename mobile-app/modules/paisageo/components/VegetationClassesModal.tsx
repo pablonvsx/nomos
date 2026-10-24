@@ -17,7 +17,7 @@ import {
   ActivityIndicator,
 } from "react-native-paper";
 import { VegetationClass, VegetationClassification } from "@/types/database";
-import { BUTTON_RADIUS } from "@/constants/shape";
+import { BUTTON_RADIUS, MODAL_SHAPE_STYLE } from "@/constants/shape";
 import { ModalActions } from "@/components/ui/ModalActions";
 import {
   createVegetationClassification,
@@ -278,7 +278,7 @@ export default function VegetationClassesModal({
     <Dialog
       visible={visible}
       onDismiss={onClose}
-      style={styles.dialog}
+      style={[MODAL_SHAPE_STYLE, styles.dialog]}
     >
       <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
         {t("vegetationClassification.manageClasses")}

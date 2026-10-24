@@ -32,7 +32,7 @@ import SurveySelect from "@/components/survey/SurveySelect";
 import PhotoInput from "@/components/media/PhotoInput";
 import NotesListInput from "./NotesListInput";
 import AudioNotesInput from "@/components/media/AudioNotesInput";
-import { SEGMENTED_BUTTONS_SHAPE_THEME } from "@/constants/shape";
+import { SEGMENTED_BUTTONS_SHAPE_THEME, MODAL_SHAPE_STYLE } from "@/constants/shape";
 
 interface FieldRendererProps {
   field: any;
@@ -140,7 +140,7 @@ function CardinalPointDialog({
 }) {
   return (
     <Portal>
-      <Dialog visible={visible} onDismiss={onDismiss} style={{ maxHeight: "70%" }}>
+      <Dialog visible={visible} onDismiss={onDismiss} style={[MODAL_SHAPE_STYLE, { maxHeight: "70%" }]}>
         <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {t("survey.selectCardinalPoint")}
         </Dialog.Title>

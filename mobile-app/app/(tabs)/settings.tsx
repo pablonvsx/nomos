@@ -1,4 +1,5 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { MODAL_SHAPE_STYLE } from "@/constants/shape";
 import { ModalActions } from "@/components/ui/ModalActions";
 import React, { useCallback, useState } from "react";
 import { View, StyleSheet, ScrollView, Linking } from "react-native";
@@ -261,6 +262,7 @@ export default function SettingsScreen() {
       {/* Language Selection Dialog */}
       <Portal>
         <Dialog
+          style={MODAL_SHAPE_STYLE}
           visible={languageDialogVisible}
           onDismiss={() => setLanguageDialogVisible(false)}
         >

@@ -58,7 +58,7 @@ import { ProjectSpeciesCatalog } from "@/types/database";
 import type { SpeciesLinkSearchResult } from "@/core/species-catalog/specieslink";
 import { LocationPickerModal } from "@/components/survey/InsertLocationModal";
 import { APIKeyManager } from "@/core/species-catalog/api-key-manager";
-import { BUTTON_RADIUS, SEGMENTED_BUTTONS_SHAPE_THEME } from "@/constants/shape";
+import { BUTTON_RADIUS, SEGMENTED_BUTTONS_SHAPE_THEME, MODAL_SHAPE_STYLE } from "@/constants/shape";
 import * as DocumentPicker from "expo-document-picker";
 import { File, Paths } from "expo-file-system/next";
 import * as Sharing from "expo-sharing";
@@ -1334,7 +1334,7 @@ function SpeciesManagementModal({
 
         {/* Edit Species Modal */}
         <Portal>
-          <Dialog visible={editModalVisible} onDismiss={handleCloseEditModal}>
+          <Dialog style={MODAL_SHAPE_STYLE} visible={editModalVisible} onDismiss={handleCloseEditModal}>
             <Dialog.Title style={MODAL_TITLE_STYLE}>{t("species.editSpecies")}</Dialog.Title>
             <Dialog.Content>
               <TextInput
@@ -1425,7 +1425,7 @@ function SpeciesManagementModal({
 
         {/* Delete Confirmation Dialog */}
         <Portal>
-          <Dialog visible={deleteConfirmVisible} onDismiss={() => setDeleteConfirmVisible(false)}>
+          <Dialog style={MODAL_SHAPE_STYLE} visible={deleteConfirmVisible} onDismiss={() => setDeleteConfirmVisible(false)}>
             <Dialog.Title style={MODAL_TITLE_STYLE}>{t("species.confirmDelete")}</Dialog.Title>
             <Dialog.Content>
               <Text variant="bodyMedium">{t("species.deleteMessage")}</Text>
@@ -1446,7 +1446,7 @@ function SpeciesManagementModal({
 
         {/* Reset Catalog Confirmation Dialog */}
         <Portal>
-          <Dialog visible={resetCatalogConfirmVisible} onDismiss={() => setResetCatalogConfirmVisible(false)}>
+          <Dialog style={MODAL_SHAPE_STYLE} visible={resetCatalogConfirmVisible} onDismiss={() => setResetCatalogConfirmVisible(false)}>
             <Dialog.Title style={MODAL_TITLE_STYLE}>{t("species.resetCatalogTitle")}</Dialog.Title>
             <Dialog.Content>
               <Text variant="bodyMedium">

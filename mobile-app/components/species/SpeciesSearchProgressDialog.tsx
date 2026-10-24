@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { MODAL_SHAPE_STYLE } from "@/constants/shape";
 import { View, StyleSheet, Animated } from "react-native";
 import { Dialog, Portal, Text, ProgressBar, Icon, useTheme } from "react-native-paper";
 import { useI18n } from "@/contexts/i18n-context";
@@ -93,7 +94,7 @@ export default function SpeciesSearchProgressDialog({
 
   return (
     <Portal>
-      <Dialog visible={visible} onDismiss={() => {}} dismissable={false}>
+      <Dialog style={MODAL_SHAPE_STYLE} visible={visible} onDismiss={() => {}} dismissable={false}>
         <View
           style={[
             styles.header,

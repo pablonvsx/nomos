@@ -1,4 +1,5 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { MODAL_SHAPE_STYLE } from "@/constants/shape";
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import {
   View,
@@ -154,7 +155,7 @@ export default function VegetationClassificationsManagementModal({
       <Dialog
         visible={visible}
         onDismiss={onClose}
-        style={styles.dialog}
+        style={[MODAL_SHAPE_STYLE, styles.dialog]}
       >
         <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {t("vegetationClassification.manageClassifications")}

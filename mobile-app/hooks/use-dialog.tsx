@@ -13,7 +13,7 @@ import { Portal, Dialog, Button, Text, useTheme } from "react-native-paper";
 import { useI18n } from "@/contexts/i18n-context";
 import { dialogReducer, initialDialogState, pressDialogButton } from "@/core/ui/dialog-state";
 import { orderStackedButtons, type DialogButtonRole } from "@/core/ui/dialog-layout";
-import { BUTTON_RADIUS } from "@/constants/shape";
+import { BUTTON_RADIUS, MODAL_SHAPE_STYLE } from "@/constants/shape";
 import { ModalActions } from "@/components/ui/ModalActions";
 
 interface DialogButton {
@@ -160,7 +160,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
         <Dialog
           visible={visible}
           onDismiss={options?.dismissable !== false ? hideDialog : undefined}
-          style={{ backgroundColor: theme.colors.surface }}
+          style={[MODAL_SHAPE_STYLE, { backgroundColor: theme.colors.surface }]}
         >
           {options?.title && (
             <Dialog.Title

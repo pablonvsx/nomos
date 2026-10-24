@@ -64,7 +64,7 @@ import {
   SharedModuleCatalogEntry,
 } from "@/modules/registry";
 import { NATIVE_PROTOCOLS_CATALOG } from "@/constants/native-protocols-catalog";
-import { BUTTON_RADIUS, SEGMENTED_BUTTONS_SHAPE_THEME } from "@/constants/shape";
+import { BUTTON_RADIUS, SEGMENTED_BUTTONS_SHAPE_THEME, MODAL_SHAPE_STYLE } from "@/constants/shape";
 
 export default function ProtocolBuilderScreen() {
   const theme = useTheme();
@@ -717,7 +717,7 @@ const TypeSelectionDialog = memo(function TypeSelectionDialog({
       <Dialog
         visible={visible}
         onDismiss={onDismiss}
-        style={{ maxHeight: "70%" }}
+        style={[MODAL_SHAPE_STYLE, { maxHeight: "70%" }]}
       >
         <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {t("protocol.selectFieldType")}
@@ -812,7 +812,7 @@ function ModuleSelectionDialog({
 
   return (
     <Portal>
-      <Dialog visible={visible} onDismiss={onDismiss} style={{ maxHeight: "80%" }}>
+      <Dialog visible={visible} onDismiss={onDismiss} style={[MODAL_SHAPE_STYLE, { maxHeight: "80%" }]}>
         <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {t("protocol.selectScientificModule")}
         </Dialog.Title>
@@ -927,7 +927,7 @@ const UnitSelectionDialog = memo(function UnitSelectionDialog({
 
   return (
     <Portal>
-      <Dialog visible={visible} onDismiss={onDismiss} style={{ maxHeight: "70%" }}>
+      <Dialog visible={visible} onDismiss={onDismiss} style={[MODAL_SHAPE_STYLE, { maxHeight: "70%" }]}>
         <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {t("protocol.selectUnit")}
         </Dialog.Title>
@@ -963,7 +963,7 @@ const OptionsManagerDialog = memo(function OptionsManagerDialog({
   const { scrollViewRef, handleFocus } = useScrollToInput();
   return (
     <Portal>
-      <Dialog visible={visible} onDismiss={onDismiss} style={{ maxHeight: "80%" }}>
+      <Dialog visible={visible} onDismiss={onDismiss} style={[MODAL_SHAPE_STYLE, { maxHeight: "80%" }]}>
         <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {t("protocol.manageOptions")}
         </Dialog.Title>
@@ -1061,7 +1061,7 @@ const ItemFieldsManagerDialog = memo(function ItemFieldsManagerDialog({
   return (
     <>
       <Portal>
-        <Dialog visible={visible} onDismiss={onDismiss} style={{ maxHeight: "80%" }}>
+        <Dialog visible={visible} onDismiss={onDismiss} style={[MODAL_SHAPE_STYLE, { maxHeight: "80%" }]}>
           <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
             {t("protocol.manageItemFields")}
           </Dialog.Title>
@@ -1150,7 +1150,7 @@ const FieldValidationAlert = memo(function FieldValidationAlert({
       <Dialog
         visible={!!message}
         onDismiss={onDismiss}
-        style={{ backgroundColor: theme.colors.surface }}
+        style={[MODAL_SHAPE_STYLE, { backgroundColor: theme.colors.surface }]}
       >
         <Dialog.Title
           numberOfLines={1}
@@ -1333,7 +1333,7 @@ function FieldFormDialog({
       <Dialog
         visible={visible}
         onDismiss={onDismiss}
-        style={{ maxHeight: FIELD_DIALOG_MAX_HEIGHT }}
+        style={[MODAL_SHAPE_STYLE, { maxHeight: FIELD_DIALOG_MAX_HEIGHT }]}
       >
         <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {isEdit ? t("protocol.editField") : t("protocol.newField")}

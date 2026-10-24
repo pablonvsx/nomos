@@ -1,4 +1,5 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { MODAL_SHAPE_STYLE } from "@/constants/shape";
 import React, { useEffect, useState } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 import {
@@ -188,7 +189,7 @@ export const RestoreProjectsModal: React.FC<RestoreProjectsModalProps> = ({
         </View>
       </Modal>
 
-      <Dialog visible={selected !== null} onDismiss={() => (isRestoring ? null : setSelected(null))}>
+      <Dialog style={MODAL_SHAPE_STYLE} visible={selected !== null} onDismiss={() => (isRestoring ? null : setSelected(null))}>
         <Dialog.Title style={MODAL_TITLE_STYLE}>{selected?.projectName}</Dialog.Title>
         <Dialog.Content>
           <Text variant="bodyMedium" style={{ textAlign: "justify" }}>
