@@ -5,7 +5,7 @@ import { useLocalSearchParams, useFocusEffect, useRouter, Stack } from "expo-rou
 import { useAlertDialog } from "@/hooks/use-dialog";
 import { useI18n } from "@/contexts/i18n-context";
 import { useBottomContentPadding } from "@/hooks/use-bottom-content-padding";
-import { getRejectedPointsByProject } from "@/db/queries/points";
+import { getRejectedPointsByProject, returnPointToPending } from "@/db/queries/points";
 import { deletePointPermanently } from "@/core/points/delete-point-media";
 import { BUTTON_RADIUS } from "@/constants/shape";
 import { useMapData } from "@/contexts/map-data-context";
@@ -73,6 +73,22 @@ export default function ProjectRejectedScreen() {
     );
   };
 
+  // A point rejected by mistake goes back to the approval queue (no confirmation: it can be rejected again).
+  const handleReturnToQueue = async (point: Point) => {
+    setBusyId(point.id);
+    try {
+      const ok = await returnPointToPending(point.id);
+      if (!ok) throw new Error("returnPointToPending failed");
+      setPoints((prev) => prev.filter((p) => p.id !== point.id));
+      alert(t("common.success"), t("pointApproval.returnedToQueue"));
+    } catch (error) {
+      console.error("Error returning point to the approval queue:", error);
+      alert(t("common.error"), t("pointApproval.errorReturning"));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   // Read-only details (no edit actions): see what was rejected and why.
   const openPointDetails = (point: Point) => {
     router.push(`/survey-point-details/${point.id}?projectId=${id}` as any);
@@ -99,6 +115,16 @@ export default function ProjectRejectedScreen() {
           style={[styles.viewButton, { borderRadius: BUTTON_RADIUS }]}
         >
           {t("pointApproval.viewPointData")}
+        </Button>
+        <Button
+          mode="outlined"
+          icon="undo"
+          onPress={() => handleReturnToQueue(item)}
+          loading={busyId === item.id}
+          disabled={busyId !== null}
+          style={[styles.returnButton, { borderRadius: BUTTON_RADIUS }]}
+        >
+          {t("pointApproval.returnToQueue")}
         </Button>
         <Button
           mode="outlined"
@@ -145,5 +171,6 @@ const styles = StyleSheet.create({
   listContent: { padding: 16 },
   card: { marginBottom: 8 },
   viewButton: { marginTop: 12 },
+  returnButton: { marginTop: 8 },
   deleteButton: { marginTop: 8 },
 });

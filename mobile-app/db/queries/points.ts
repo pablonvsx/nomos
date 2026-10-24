@@ -228,6 +228,15 @@ export async function updatePointApprovalStatus(
   });
 }
 
+/**
+ * Sends a rejected point back to the approval queue: it becomes 'pending'
+ * again and its rejection reason is cleared. For a point rejected by mistake;
+ * nothing else about the point changes.
+ */
+export async function returnPointToPending(pointId: number): Promise<boolean> {
+  return updatePoint(pointId, { approval_status: "pending", rejection_reason: null });
+}
+
 export async function updatePoint(
   pointId: number,
   updates: UpdatePointInput,

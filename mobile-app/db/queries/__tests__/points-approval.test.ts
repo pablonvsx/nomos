@@ -132,6 +132,7 @@ import {
   getPointsWithRawModulesByProject,
   getRejectedPointsByProject,
   updatePointApprovalStatus,
+  returnPointToPending,
 } from "../points";
 
 function seedPoint(overrides: Partial<FakePointRow>): FakePointRow {
@@ -223,6 +224,37 @@ describe("updatePointApprovalStatus", () => {
 
     expect(point.approval_status).toBe("rejected");
     expect(point.rejection_reason).toBe("duplicate location");
+  });
+});
+
+describe("returnPointToPending (a point rejected by mistake)", () => {
+  it("sets the point back to pending and clears the rejection reason", async () => {
+    const point = seedPoint({ id: 1, approval_status: "rejected", rejection_reason: "wrong photo" });
+
+    const ok = await returnPointToPending(1);
+
+    expect(ok).toBe(true);
+    expect(point.approval_status).toBe("pending");
+    expect(point.rejection_reason).toBeNull();
+  });
+
+  it("moves the point from the rejected list to the approval queue, and keeps it out of the visible list", async () => {
+    seedPoint({ id: 1, approval_status: "rejected", rejection_reason: "x" });
+    seedPoint({ id: 2, approval_status: "rejected", rejection_reason: "y" });
+
+    await returnPointToPending(1);
+
+    expect((await getRejectedPointsByProject(1)).map((p) => p.id)).toEqual([2]);
+    expect((await getPendingPointsByProject(1)).map((p) => p.id)).toEqual([1]);
+    expect((await getPointsByProject(1)).map((p) => p.id)).toEqual([]);
+  });
+
+  it("leaves every other field of the point alone", async () => {
+    const point = seedPoint({ id: 1, approval_status: "rejected", rejection_reason: "x", generated_name: "Keep" });
+
+    await returnPointToPending(1);
+
+    expect(point.generated_name).toBe("Keep");
   });
 });
 

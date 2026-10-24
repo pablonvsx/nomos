@@ -272,7 +272,10 @@ Two screens, both pure local SQL — no Drive read of any kind:
   decision, not a success.
 - `app/(projects)/project-rejected/[id].tsx` — lists
   `approval_status = 'rejected'`; tapping a card opens the point's details
-  read-only. It has a permanent-delete action
+  read-only. **Return to queue** (`returnPointToPending`) sets the point back
+  to `'pending'` and clears its rejection reason, for a point rejected by
+  mistake; it needs no confirmation because it can be rejected again. It
+  also has a permanent-delete action
   (`core/points/delete-point-media.ts`). Deleting a point — here and from
   the regular point screen — removes every media file it references:
   the photo/audio columns and the module media of custom protocols,
