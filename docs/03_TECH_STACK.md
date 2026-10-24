@@ -1,6 +1,6 @@
 # 03. Tech stack
 
-Real dependencies extracted from `mobile-app/package.json`. Exact versions per the file (`package.json` is at app version `1.0.0`).
+Real dependencies extracted from `mobile-app/package.json`. Exact versions per the file (`package.json` is at app version `1.1.0`).
 
 ## Framework and core
 
