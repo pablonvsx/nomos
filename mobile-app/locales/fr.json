@@ -400,7 +400,7 @@
   "about": {
     "title": "À Propos du Projet",
     "subtitle": "Inventaires Environnementaux",
-    "description": "Nomos est une application pour les inventaires environnementaux. Sa conception est née dans le cadre d'une recherche de master visant à numériser et opérationnaliser une méthodologie de collecte de données sur le terrain pour la cartographie des paysages. Dans cette première version, l'application met en œuvre le Protocole Paisageo — une approche structurée pour l'enregistrement systématique des informations environnementales sur le terrain — et permet également la création de protocoles personnalisés, permettant d'adapter la collecte à d'autres méthodologies et finalités de recherche.",
+    "description": "Nomos est une application pour les inventaires environnementaux. Sa conception est née dans le cadre d'une recherche de master visant à numériser et opérationnaliser une méthodologie de collecte de données sur le terrain pour la cartographie des paysages. Dans la version actuelle, l'application met en œuvre le Protocole Paisageo, une approche structurée pour l'enregistrement systématique des informations environnementales sur le terrain. Elle permet également la création de protocoles personnalisés, permettant d'adapter la collecte à d'autres méthodologies et finalités de recherche.",
     "credits": "Crédits Académiques",
     "author": "Auteur",
     "authorName": "Pablo Guilherme de Melo Neves",

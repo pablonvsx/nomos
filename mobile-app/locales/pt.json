@@ -400,7 +400,7 @@
   "about": {
     "title": "Sobre o Projeto",
     "subtitle": "Inventários Ambientais",
-    "description": "O Nomos é um aplicativo para inventários ambientais. Sua concepção surgiu no contexto de uma pesquisa de mestrado onde se buscava digitalizar e operacionalizar uma metodologia de coleta de dados em campo para a cartografia de paisagens. Nesta primeira versão, o app implementa o Protocolo Paisageo — uma abordagem estruturada para o registro sistemático de informações ambientais em campo — e também permite a criação de protocolos personalizados, possibilitando adaptar a coleta a outras metodologias e finalidades de pesquisa.",
+    "description": "O Nomos é um aplicativo para inventários ambientais. Sua concepção surgiu no contexto de uma pesquisa de mestrado onde se buscava digitalizar e operacionalizar uma metodologia de coleta de dados em campo para a cartografia de paisagens. Na versão atual, o app implementa o Protocolo Paisageo, uma abordagem estruturada para o registro sistemático de informações ambientais em campo. Também permite a criação de protocolos personalizados, possibilitando adaptar a coleta a outras metodologias e finalidades de pesquisa.",
     "credits": "Créditos Acadêmicos",
     "author": "Autor",
     "authorName": "Pablo Guilherme de Melo Neves",
