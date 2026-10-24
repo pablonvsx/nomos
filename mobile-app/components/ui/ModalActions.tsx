@@ -93,7 +93,8 @@ export function ModalActions({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignSelf: "stretch", paddingVertical: 4 },
+  // No space above (the content already ends with its own padding); 8dp below, as before.
+  row: { flexDirection: "row", alignSelf: "stretch", paddingTop: 0, paddingBottom: 8 },
   column: { flex: 1, alignItems: "center", paddingHorizontal: 8 },
   button: { minWidth: 120, maxWidth: "100%" },
   content: { minHeight: MIN_HEIGHT },
