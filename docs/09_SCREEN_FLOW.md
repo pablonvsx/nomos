@@ -80,7 +80,25 @@ flowchart TD
     PointDetails["survey-point-details/[id].tsx"] -->|"collaborator: export single point"| CCode
     Details -->|"owner: import points package, duplicates found"| Dup["PointDuplicatesModal<br/>(components/project-sharing/)"]
     Details -->|"owner: backup blocked by media missing on the device"| Discard["Confirm: Descartar mídias não encontradas<br/>(discardMissingMedia, then backup retried)"]
+    Details -->|"owner: Backup button of a card row (project data or points), or the per-point cloud"| Backup["BackupModal<br/>(components/drive-sync/, mounted in app/_layout.tsx)"]
+    Details -->|"owner: export configuration package, project not up to date"| ExportWarn["ExportWarningDialog<br/>Exportar mesmo assim / Fazer backup"]
+    ExportWarn -->|"Fazer backup"| Backup
+    Backup -->|"ended 'completed' + OK: export resumes"| Details
 ```
+
+The backup is on demand: the project screen has an owner-only "Drive backup"
+card (`DriveBackupCard`) with one row per scope (project data, points), each
+showing its status ("Up to date with Drive (date)" / "N item(s) pending" /
+"could not be verified") and a button that is disabled only when the scope is
+verifiably up to date. `BackupModal` is mounted once at the app root and
+driven by the global backup session, so it keeps the person until the end
+whatever screen started it: Back and a tap outside ask whether to cancel, and
+a finished backup closes only with OK. Its states: `running` → (`confirmingCancel`
+→ `cancelling`) → `finished` with the outcome `completed`,
+`completedWithPending`, `cancelled` or `error`. The export warning appears only
+for the owner of a Drive-linked project whose project data is pending or
+unverifiable; closing it cancels, and **Export anyway** is always available
+(see "Export warning" in [12_BACKUP_COLLABORATION.md](12_BACKUP_COLLABORATION.md)).
 
 Which of these actions a project shows depends on its `collaboration_role`
 (`getProjectActionVisibility`, see the "Role-based actions" section of

@@ -1097,7 +1097,6 @@
     "activatedSuccess": "Backup no Drive ativado com sucesso.",
     "errorActivating": "Não foi possível ativar o backup no Drive.",
     "backupAction": "Fazer Backup",
-    "backupPointAction": "Fazer backup deste ponto",
     "discardMissingMediaTitle": "Mídias não encontradas",
     "discardMissingMediaMessage": "{{count}} arquivo(s) de foto ou áudio de {{points}} ponto(s) não existem mais neste aparelho e impedem o backup. Descartar essas mídias removerá apenas as referências a elas nesses pontos e o backup será tentado de novo. Essa ação não pode ser desfeita.",
     "discardMissingMediaConfirm": "Descartar mídias não encontradas",

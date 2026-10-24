@@ -79,7 +79,14 @@ core/
 │   ├── drive-api-client.ts         raw Drive REST v3 calls (no SDK)
 │   ├── project-drive-service.ts    activateDriveBackup, getManifest/updateManifest, listOwnNomosProjectFolders
 │   ├── backup-service.ts           backupPoint, backupAllPendingPoints
-│   ├── catalog-sync-service.ts     best-effort catalog/classification sync after activation
+│   ├── backup-session.ts           the one backup in flight (global state, single-flight lock)
+│   ├── backup-runners.ts           runPointsBackup / runProjectDataBackup / runSinglePointBackup
+│   ├── project-data-backup.ts      sends the pending project data to Drive
+│   ├── change-detection.ts         pure fingerprints, snapshot diff and status
+│   ├── backup-items.ts             pure builders of the backup items
+│   ├── backup-collectors.ts        reads the current state (SQLite + file system) into items
+│   ├── backup-status-service.ts    backup status per project and scope
+│   ├── backup-errors.ts            raw errors -> friendly reasons
 │   ├── restore-service.ts          restoreOwnProjectFromDrive (always full, all-or-nothing)
 │   ├── restore-errors.ts           MediaRestoreError (dependency-free, usable with instanceof)
 │   └── restore-error-messages.ts   describeRestoreError (pure, testable error→i18n-key mapping)
@@ -89,6 +96,7 @@ core/
 │   ├── import-points.ts            import a points package, duplicate detection
 │   ├── module-media.ts             finds/rewrites custom-protocol media inside module data (top level and repeatable groups); shared by zip, backup, restore, discard, delete and media export
 │   ├── action-visibility.ts        getProjectActionVisibility: the role → action table (single source of truth for the screens)
+│   ├── export-gate.ts              decideExportGate: when exporting the package warns the owner about the Drive backup
 │   ├── refresh-after-import.ts     clears the map cache and refetches right after an import
 │   └── package-errors.ts           InvalidPackageError, UnsupportedPackageVersionError (shared by both packages)
 ├── local-identity/
@@ -196,7 +204,8 @@ db/
     ├── projects.ts
     ├── protocol.ts               "official" protocols (today only paisageo, seeded in initialize.ts)
     ├── custom-protocols.ts       CRUD for the Personalized protocol
-    └── vegetation-classifications.ts   per-project vegetation classes (already generic, no paisageo/ subfolder)
+    ├── vegetation-classifications.ts   per-project vegetation classes (already generic, no paisageo/ subfolder)
+    └── backup-snapshot.ts          local Drive-backup snapshot (what was last sent, per project and scope)
 ```
 
 ## `components/`
@@ -205,14 +214,14 @@ Reusable UI components, not specific to a protocol (protocol-specific ones live 
 
 ```
 components/
-├── ui/            IconSymbol.tsx (+.ios.tsx), CardHeaderIconButton.tsx, InfoBubble.tsx, ScrollJumpButtons.tsx
+├── ui/            ModalActions.tsx (split modal footer), IconSymbol.tsx (+.ios.tsx), CardHeaderIconButton.tsx, InfoBubble.tsx, ScrollJumpButtons.tsx
 ├── media/          PhotoInput.tsx, AudioNotesInput.tsx
 ├── species/        SpeciesManagementModal.tsx, SpeciesSearchProgressDialog.tsx,
 │                   FamilyGenusCollapsibleTree.tsx, SpeciesResultCard.tsx
 ├── survey/          InsertLocationModal.tsx, SpeciesInput.tsx, SurveySelect.tsx
 ├── map/            MapLegend.tsx, LayerMenu.tsx, map-overlay-styles.ts — map overlays (see 09_SCREEN_FLOW.md)
 ├── settings/        SpeciesLinkSettingsModal.tsx
-├── drive-sync/      RestoreProjectsModal.tsx — see 12_BACKUP_COLLABORATION.md
+├── drive-sync/      RestoreProjectsModal.tsx, BackupModal.tsx (global backup modal), DriveBackupCard.tsx, ExportWarningDialog.tsx — see 12_BACKUP_COLLABORATION.md
 ├── google-account/  GoogleConnectionModal.tsx — single shared connection modal
 ├── local-identity/  CollectorCodeModal.tsx — single shared collector-code modal
 ├── project-sharing/ PointDuplicatesModal.tsx — Substituir/Descartar on points-package import
@@ -236,6 +245,8 @@ hooks/
 ├── use-app-bootstrap.ts        calls initDatabase() on app start
 ├── use-protocol-translations.ts translateField/translateProtocol (LocalizedString → string)
 ├── use-dialog.tsx                dialog/modal helper, exposes DialogProvider (app/_layout.tsx)
+├── use-backup-session.ts        subscribes to the global backup session (core/drive-sync/backup-session.ts)
+├── use-backup-status.ts         the Drive backup status of a project scope (pending / up to date / unverifiable)
 ├── use-location-permission.ts   requests/checks GPS permission (expo-location)
 ├── use-scroll-to-input.ts       scrolls the form to the focused field (keyboard)
 ├── use-stable-text-input.ts     avoids re-injecting `value` into a focused TextInput (Android flicker bug)
@@ -250,7 +261,7 @@ hooks/
 ## `types/`, `utils/`, `constants/`, `locales/`, `assets/`
 
 - **`types/database.ts`**: domain interfaces (Point, Project, Species, Protocol, CustomProtocol, CustomSection, CustomFieldConfig, etc.) used by `db/` and the UI. **`types/index.ts`** is a barrel re-exporting `database.ts`.
-- **`utils/`**: `i18n.ts` (`locales/*.json` loading + language persistence), `azimuth.ts` (azimuth conversion/formatting), `date-time-input.ts` (date/time digit validation and formatting, used by `FieldRenderer.tsx`), `app-version.ts` (formats the installed version, "v1.1.0"), `open-external-url.ts` (opens an external link without throwing; used by the Resources tab and the About screen), `citation.ts` (author formatting for the "How to cite" reference on the Resources screen).
+- **`utils/`**: `i18n.ts` (`locales/*.json` loading + language persistence), `azimuth.ts` (azimuth conversion/formatting), `date-time-input.ts` (date/time digit validation and formatting, used by `FieldRenderer.tsx`), `app-version.ts` (formats the installed version, "v1.1.0"), `connectivity.ts` (`isOnline()` via NetInfo), `open-external-url.ts` (opens an external link without throwing; used by the Resources tab and the About screen), `citation.ts` (author formatting for the "How to cite" reference on the Resources screen).
 - **`constants/theme.ts`**: palette and typography (Material Design 3, RN Paper). **`constants/shape.ts`**: shared rounded-rectangle button-shape tokens. **`constants/links.ts`**: `PROJECT_PAGE_URL`, the single definition of the project page URL (GitHub Pages) opened from the Resources tab, plus `ZENODO_DOI` / `ZENODO_DOI_URL`, the DOI opened from the Resources screen. **`constants/app-version.ts`**: `APP_VERSION_LABEL`, read from `package.json` through `app.config.js` and expo-constants, the single source of the app version. **`constants/native-protocols-catalog.ts`**: `NATIVE_PROTOCOLS_CATALOG`, per-module descriptive text shown in the module picker of `app/(projects)/protocol/builder.tsx` — today only has the `paisageo` entry; purely presentational, doesn't affect `ProtocolRegistry`.
 - **`locales/{pt,en,es,fr}.json`**: static UI strings (not protocol strings — see [08_I18N.md](08_I18N.md)).
 - **`assets/protocols/paisageo/`**: `paisageo_protocol.json` and `vegetation_classes.json`, legacy static protocol JSON (referenced by the `protocols` table in the database, see [05_DATA_MODEL.md](05_DATA_MODEL.md)); `assets/images/`: icons and logos.

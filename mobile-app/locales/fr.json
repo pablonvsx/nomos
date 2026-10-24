@@ -1097,7 +1097,6 @@
     "activatedSuccess": "Sauvegarde sur Drive activée avec succès.",
     "errorActivating": "Impossible d'activer la sauvegarde sur Drive.",
     "backupAction": "Sauvegarder",
-    "backupPointAction": "Sauvegarder ce point",
     "discardMissingMediaTitle": "Médias introuvables",
     "discardMissingMediaMessage": "{{count}} fichier(s) photo ou audio de {{points}} point(s) n'existent plus sur cet appareil et bloquent la sauvegarde. Les écarter supprime uniquement les références à ces fichiers dans ces points, puis la sauvegarde sera retentée. Cette action est irréversible.",
     "discardMissingMediaConfirm": "Écarter les médias introuvables",

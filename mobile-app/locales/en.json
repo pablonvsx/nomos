@@ -1097,7 +1097,6 @@
     "activatedSuccess": "Drive backup activated successfully.",
     "errorActivating": "Could not activate Drive backup.",
     "backupAction": "Back Up",
-    "backupPointAction": "Back up this point",
     "discardMissingMediaTitle": "Media not found",
     "discardMissingMediaMessage": "{{count}} photo or audio file(s) from {{points}} point(s) no longer exist on this device and block the backup. Discarding them removes only the references to them in those points, and the backup will be tried again. This cannot be undone.",
     "discardMissingMediaConfirm": "Discard missing media",

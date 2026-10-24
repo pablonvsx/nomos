@@ -145,8 +145,8 @@ table, not something the helper enforces.
 
 **The services enforce the role too, not only the screens.** Besides the
 checks that already lived in the backup (`backup-service.ts`), the
-activation (`project-drive-service.ts`), the catalog sync
-(`catalog-sync-service.ts`) and re-applying a configuration package
+activation (`project-drive-service.ts`), the project-data backup
+(`project-data-backup.ts`) and re-applying a configuration package
 (`project-config-package.ts`), the remaining entry points now refuse a
 wrong role themselves, with a typed `ProjectRoleNotAllowedError` (carries
 the `action` and the `role`) thrown by `assertProjectActionAllowed`. That
@@ -354,21 +354,26 @@ initial state, then creates the whole Drive folder tree in one pass and
 finally calls `setProjectAsOwner`.
 
 **2. Ongoing backup of the owner's points** — `backupPoint`/
-`backupAllPendingPoints` (`core/drive-sync/backup-service.ts`), driven
-by `drive_synced_at IS NULL`. Eligible points are those with
+`backupAllPendingPoints` (`core/drive-sync/backup-service.ts`), run only on
+demand through the backup session (see "On-demand backup" below). What is
+pending is decided by change detection against the local snapshot, **not** by
+`drive_synced_at`: a point is pending when it is new or when anything it would
+send changed since it was last sent. Eligible points are those with
 `approval_status` `NULL` (the owner's own field work, collected directly)
 or `'approved'` — the same set as `VISIBLE_POINT_CONDITION` —
-(`getBackupEligiblePointsByProject`, `isBackupEligibleStatus`); `'pending'`
+(`getBackupCandidatePointsByProject`, `isBackupEligibleStatus`); `'pending'`
 and `'rejected'` points never are. `backupPoint` enforces the same rule on
-its own (the owner-only check was already there), and the per-point cloud
-icon on the list follows it. `backupAllPendingPoints(projectId,
-onProgress?)` calls `onProgress({ current, total })` (1-based, fixed
-`total`) before each point; the screen shows "Uploading point N of M".
-A failure in one point never stops the batch: besides the failures
-`backupPoint` returns, an **unexpected exception** thrown while backing up
-a point (a database error, say) is now caught and recorded as that point's
-entry in `BackupSummary.failed`, and the loop continues — previously it
-aborted the whole batch and lost the report of the points already done.
+its own (the owner-only check was already there).
+`backupAllPendingPoints(projectId, onProgress?, options?)` works on the list it
+is given (`options.points`, captured when the run started), calls
+`onProgress({ current, total })` (1-based, fixed `total`) before each point and
+`options.onPointDone` after each one, and stops between points (and between a
+point's uploads) when `options.shouldCancel()` turns true. A cancelled point is
+neither sent nor failed: it stays pending. A failure in one point never stops
+the batch: besides the failures `backupPoint` returns, an **unexpected
+exception** thrown while backing up a point (a database error, say) is caught
+and recorded as that point's entry in `BackupSummary.failed`, and the loop
+continues.
 Media is part of the collection, so a point is **all-or-nothing**:
 
 - The point's data and **all** of its media must reach Drive: point-level
@@ -394,7 +399,8 @@ Media is part of the collection, so a point is **all-or-nothing**:
   updated in place. Inside a folder created **in this same call** there is
   nothing to find, so subfolders and files are created directly — which is
   also what keeps a first backup cheap. The per-point backup action is
-  disabled once `drive_synced_at` is set (`project-details/[id].tsx`).
+  disabled only while the point is up to date: it is enabled again when the
+  point changed after its backup (`project-details/[id].tsx`).
 - `point.json` is written **last**. A failure of any folder or media leaves
   the point without `point.json` and without `drive_synced_at`; the folders
   already created stay, and the next attempt reuses them.
@@ -489,33 +495,110 @@ or change `format_version`. This read-modify-write discipline is what
 keeps two independent writers (activation, and the catalog sync below)
 from ever clobbering each other's fields.
 
-## Keeping the catalog in sync after activation
+## On-demand backup, scopes and change detection
 
-`activateDriveBackup` only uploads the species catalog and vegetation
-classifications **once**, at activation time. Anything added or changed
-afterward needs its own push, handled by
-`core/drive-sync/catalog-sync-service.ts` — a best-effort, additive-only
-sweep (never overwrites an existing Drive file, never throws, no-ops
-silently for a non-owner project) with three entry points:
-`syncSpeciesCatalogToDrive`, `syncVegetationClassesToDrive`, and
-`syncActiveVegetationClassificationToDrive`. The last one confirms the
-target classification's own file actually exists on Drive
-(`findChildByName`, uploading it on the spot if the local row is still
-available) **before** pointing the manifest at it — closing a gap where
-an independent, earlier best-effort push could have silently failed,
-leaving the manifest referencing a uuid with nothing behind it.
+**Nothing is sent to Drive unless the person asks.** The former silent sync
+(`catalog-sync-service.ts`, called after every species or classification save
+in 10 places) is gone: saving locally never touches the network, which also
+means fewer Google API calls. A guard test
+(`core/drive-sync/__tests__/no-automatic-drive-writes.test.ts`) fails if a
+screen, component, module or hook imports the Drive client, or if anything but
+`google-auth-service.ts` calls `getTokens`. The only Drive writes are:
+activating the backup, and the two backups below, started from the project
+screen.
 
-This module is wired into **10** real call sites, not the 7 originally
-estimated while planning the feature — worth stating explicitly since an
-earlier count undershot it:
+**Two scopes, one mechanism.** Both use the same single-flight lock, the same
+modal and send only what is pending:
 
-| File | Call sites |
-|---|---|
-| `components/species/SpeciesManagementModal.tsx` | 6 — manual add, catalog-file import, GBIF single/bulk, SpeciesLink single/bulk |
-| `components/survey/SpeciesInput.tsx` | 1 — a species typed directly on a point also joins the project catalog |
-| `modules/paisageo/components/VegetationClassesModal.tsx` | 1 — a brand-new custom classification |
-| `app/(projects)/project-details/[id].tsx` | 1 — the "Standard" classification chip |
-| `modules/paisageo/components/VegetationClassificationPicker.tsx` | 1 — selecting an existing custom classification as active |
+| Scope | Items (snapshot key) | Sent by |
+|---|---|---|
+| `points` | one per eligible point (`point:<id>`): its data, its modules' data and the identity of its media | `runPointsBackup` → `backupAllPendingPoints` |
+| `project` | `protocol` (custom protocols only), `vegclass:<uuid>`, `species:<uuid>`, `manifest` | `runProjectDataBackup` → `backupProjectData` |
+
+`backupProjectData` sends the items in that order, so the manifest goes last
+and is **held back** when any classification failed to upload (the manifest is
+never pointed at a file that is not on Drive). Files are listed once per
+folder per run and updated in place by name, never duplicated; the manifest is
+only written through `updateManifest`, keeping its identity guards. Editing an
+existing species or classification now propagates (the old sync only ever
+added missing files).
+
+**Change detection** (`core/drive-sync/change-detection.ts`, pure). Each item
+has a fingerprint (a 53-bit hash of canonical JSON, cheap and synchronous;
+not a security hash). The collectors (`backup-collectors.ts`,
+`backup-items.ts`) build the items from SQLite and the file system, locally and
+offline. Two rules matter: `points.updated_at` and `drive_synced_at` are **not**
+part of a point's fingerprint (the backup itself rewrites both, which would
+flip every point back to pending), and media is identified by path, size and
+modification time (`File.info()`), never by reading the bytes.
+
+The **snapshot** is local to the device and never uploaded: tables
+`drive_backup_items (project_id, scope, item_key, fingerprint, synced_at)` and
+`drive_backup_scope (project_id, scope, last_backup_at)`, both with
+`ON DELETE CASCADE` on the project (see the data model). The fingerprint of an
+item is written **as each item succeeds**, using the fingerprint captured when
+the run started; so a cancelled or partial backup leaves exactly the unsent
+items pending, and a point edited during the run stays pending. Items that
+disappeared locally (deleted, or no longer eligible) count as a change; the
+backup only drops them from the snapshot and **does not delete anything on
+Drive**, so the Drive copy remains a safety net against accidental deletion.
+Activating the backup records the project data as sent, and a restore from
+Drive records both scopes as up to date (`seedBackupSnapshots`).
+
+**Status** (`backup-status-service.ts`, `useBackupStatus(projectId, scope,
+enabled)`): `never` (no backup of the scope ever ran, work pending), `pending`,
+`upToDate` (with the last backup time) or `unverifiable`. Unverifiable means an
+error reading the project or the snapshot, or an up-to-date project whose
+connected Google account is not the owner's (the backup could not run); it is
+never reported as a false "up to date". It is computed in small async steps
+when the screen gains focus and when a backup ends, so opening the screen does
+not block. The project screen shows an owner-only card
+(`DriveBackupCard`) with one row per scope: the status text ("Up to date with
+Drive (date)" or "N item(s) pending") and a button that is enabled unless the
+scope is verifiably up to date.
+
+## The backup session and modal
+
+State lives in a module store, not in a screen
+(`core/drive-sync/backup-session.ts`, read through `hooks/use-backup-session.ts`),
+so it survives navigation. `startBackup({ scope, projectId, run, onFinished,
+onDismissed })` returns `already-running` when a backup of **any** scope or
+project is running or its result has not been dismissed yet; a plain module
+variable guards re-entry, so two taps in the same frame cannot both start.
+`BackupModal` (mounted once in `app/_layout.tsx`) renders the session and holds
+the person until the end:
+
+- `running`: stage and "N of M", a progress bar, "Keep the app open until it
+  finishes" and **Cancel**. Android Back and a tap outside open the cancel
+  confirmation instead of closing.
+- `confirmingCancel` → `cancelling` → result `cancelled`: the run stops between
+  items; what was sent stays sent, the rest stays pending.
+- `finished`: stays until **OK** (single action, `ModalActions`). Outcomes:
+  `completed` ("Backup complete" only when nothing failed and nothing was left),
+  `completedWithPending` (sent, not sent and a readable reason each),
+  `cancelled` and `error`. The view rules are the pure reducer
+  `core/ui/backup-modal-state.ts`.
+
+Raw errors never reach the person as the reason: `backup-errors.ts` maps
+timeouts, offline, authorization, quota, missing folder, Drive 5xx and
+missing media to translated reasons (`driveBackup.reason.*`); the technical
+text stays in the log and in a collapsed "Show details" view. After OK, the
+screen reloads and offers to discard media that no longer exists on the device
+(the earlier flow, now started from `onDismissed`). The per-point cloud button
+uses the same lock and modal.
+
+## Export warning
+
+Exporting the configuration package (the project data) asks the owner of a
+Drive-linked project first, when the project data is not up to date or could
+not be checked (`decideExportGate`, `core/project-sharing/export-gate.ts`,
+pure). A collaborator, a plain local project, or an owner without a Drive link
+export straight away. The dialog (`ExportWarningDialog`) offers **Export
+anyway** (outline) and **Back up** (solid); closing it cancels. **Back up**
+runs the project-data backup and the export continues by itself only when it
+ends `completed`. With no connection (`utils/connectivity.ts`, NetInfo)
+**Back up** is disabled with a note and **Export anyway** stays available. The
+package holds no points, so only the `project` scope is checked.
 
 ## Restoring the owner's own project on another device
 
@@ -574,7 +657,7 @@ without it would be re-uploaded without it by the next backup:
   downloaded, then rethrows. The person sees
   `driveRestore.errorMediaDownload` ("nothing was restored, try again")
   and can simply retry.
-- Restored points get the Drive file's timestamp as `drive_synced_at`
+- Restored points get the Drive file's timestamp as `drive_synced_at`, and both backup scopes start up to date
   (`createPoint` persists it), so they are not offered for backup again.
 - `RestoreProjectsModal` asks for a single confirmation (Cancel /
   Restore); it no longer offers two modes. While restoring, the button
@@ -666,6 +749,15 @@ React Native's Android OkHttp client runs with connect/read/write timeouts of
   interactive `signIn()` has its own, longer `GOOGLE_SIGN_IN_TIMEOUT_MS`
   (120 s) because the person picks an account and may type a password.
 
+**One token call at a time.** The Google Sign-In library admits one
+`getTokens()` at a time; a second call while the first is pending overwrites
+its promise (the "PGMN-2: previous promise did not settle" warning). Every
+Drive request asks for a token, and the old silent syncs ran alongside a
+backup, so calls overlapped. `getDriveAccessToken` now shares the call in
+flight between all callers, tied to the native promise (not to a caller's
+timeout), so a call that outlived its timeout is joined rather than stacked; a
+call pending for twice the timeout is treated as lost and a new one may start.
+
 A timeout is an ordinary failure for the flows that already handle failures:
 `backupPoint` fails the point without writing its JSON or setting
 `drive_synced_at`, and flags `BackupResult.timedOut` (also carried in each
@@ -688,9 +780,9 @@ so a failing operation can never leave a screen blocked.
 
 `FAB.Group` has no per-action loading or disabled state, so while an
 operation runs the FAB offers no actions (and folds away); the banner shows
-what is happening. Covered: `project-details/[id].tsx` (backup, single-point
-backup, retry after discarding media, activation, points import, every
-export, classification), `projects.tsx` (configuration-package import,
+what is happening. Covered: `project-details/[id].tsx` (activation, points
+import, every export, classification; the backups no longer use this banner:
+they run in the global backup session and modal above), `projects.tsx` (configuration-package import,
 protocol import/export), the details screen (send to owner, approve/reject)
 and `RestoreProjectsModal` (its own spinner).
 
@@ -753,10 +845,11 @@ merged into one message rather than alerted one after another.
   same 4 characters — there is no shared registry to check against in
   this single-owner model, and none is planned; it only matters as a
   display label alongside a point's own (unique) id.
-- **Catalog sync is additive only.** `catalog-sync-service.ts` never
-  updates or deletes a Drive file for a species/classification that
-  already exists there — editing a classification's content or removing
-  a species locally after it was pushed never propagates.
+- **Deletions are not mirrored on Drive.** Deleting a point, a species or a
+  classification locally counts as a pending change, but the backup only drops
+  it from the snapshot; its Drive file stays (and a restore can bring it back).
+  This is deliberate: the backup remains a safety net against accidental
+  deletion.
 - **No edit history.** "Substituir" on a duplicate point overwrites the
   local row in place; there is no audit trail of who changed what or
   when, beyond `drive_synced_at` and `updated_at`.
@@ -819,12 +912,9 @@ merged into one message rather than alerted one after another.
   rules (review mode, close-then-show ordering, exclusive runner, dialog
   reducer, backup progress) are unit-tested; the stacking of dialogs over
   modals, the 300 ms wait, the banners and the review flow are not.
-- **Editing a point after its backup does not resend the change.** Nothing
-  clears `drive_synced_at` when a point is edited, so an edited point stays
-  "synced", its per-point backup action stays disabled and the Drive copy
-  keeps the old data. This includes **Substituir** on a duplicate, which
-  keeps the previous `drive_synced_at`. Re-sending would require clearing
-  `drive_synced_at` on edit.
+- **Editing a point after its backup resends it, on the next backup.** The
+  change shows up through the snapshot (the per-point button is enabled again),
+  not through `drive_synced_at`, which only records the last successful send.
 - **Restored points are always `'approved'`.** The owner's own points
   (`approval_status` `NULL`) come back from Drive as `'approved'` with
   `drive_synced_at` set; both are visible and already backed up, so nothing
