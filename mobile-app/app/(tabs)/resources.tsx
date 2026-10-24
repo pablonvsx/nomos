@@ -31,7 +31,7 @@ export default function ResourcesScreen() {
       <View style={styles.content}>
         <View style={styles.headerContainer}>
           <MaterialCommunityIcons
-            name="headset"
+            name="book-open-variant"
             size={64}
             color={paperTheme.colors.primary}
           />
