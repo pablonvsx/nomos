@@ -560,6 +560,7 @@
     "importPoints": "Importar Puntos Recibidos",
     "pointsImported": "{{count}} punto(s) importado(s), en espera de revisión.",
     "errorImportingPointsPackage": "No se pudo importar el paquete de puntos. Verifique si el archivo es válido.",
+    "importPointsNotZip": "El archivo seleccionado no es un paquete de puntos (.zip). Elija el archivo .zip enviado por el colaborador.",
     "pointsImportOwnerEmailWarning": "El correo del dueño registrado en este paquete es diferente de la cuenta conectada en este dispositivo. Revise el origen antes de aprobar los datos importados."
   },
   "mapView": {

@@ -22,3 +22,16 @@ export class InvalidPackageError extends Error {
     this.name = "InvalidPackageError";
   }
 }
+
+/**
+ * Thrown when the picked file is not a .zip at all (a .json, an image, ...).
+ * Checked on the file's first bytes BEFORE the native unzip is called: handed
+ * a file that is not a zip, some native zip libraries crash the whole app
+ * instead of rejecting a promise.
+ */
+export class NotAZipFileError extends Error {
+  constructor() {
+    super("O arquivo selecionado não é um pacote .zip.");
+    this.name = "NotAZipFileError";
+  }
+}

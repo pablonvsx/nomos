@@ -89,6 +89,7 @@ import {
   importPointsPackage,
   ProjectMismatchError,
 } from "@/core/project-sharing/import-points";
+import { NotAZipFileError } from "@/core/project-sharing/package-errors";
 import { CollectorCodeModal } from "@/components/local-identity/CollectorCodeModal";
 import { PointDuplicatesModal } from "@/components/project-sharing/PointDuplicatesModal";
 import { GoogleConnectionModal } from "@/components/google-account/GoogleConnectionModal";
@@ -821,6 +822,8 @@ function UnifiedProjectDetailsScreen() {
         console.error("Error importing points package:", error);
         if (error instanceof ProjectMismatchError) {
           alert(t("common.error"), error.message);
+        } else if (error instanceof NotAZipFileError) {
+          alert(t("common.error"), t("projectView.importPointsNotZip"));
         } else {
           alert(t("common.error"), t("projectView.errorImportingPointsPackage"));
         }

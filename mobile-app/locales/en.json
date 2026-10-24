@@ -563,6 +563,7 @@
     "importPoints": "Import Received Points",
     "pointsImported": "{{count}} point(s) imported, awaiting review.",
     "errorImportingPointsPackage": "Could not import the points package. Check whether the file is valid.",
+    "importPointsNotZip": "The selected file is not a points package (.zip). Choose the .zip file sent by the collaborator.",
     "pointsImportOwnerEmailWarning": "The owner email recorded in this package differs from the account connected on this device. Review the source before approving the imported data."
   },
   "mapView": {

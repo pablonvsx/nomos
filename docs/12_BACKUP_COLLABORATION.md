@@ -207,7 +207,14 @@ never rewrites points already exported.
 
 ## Owner-side: importing points and resolving duplicates
 
-`importPointsPackage` (`core/project-sharing/import-points.ts`)
+`importPointsPackage` (`core/project-sharing/import-points.ts`) first
+checks that the picked file really is a zip: the file picker accepts any
+file, and some native unzip libraries crash the whole app (not a rejected
+promise) when handed something else, which is what a `.json` did. The copied
+file's first four bytes must be a zip signature (`hasZipSignature`,
+`zip-signature.ts`; only the header is read, not the whole package); otherwise
+it throws `NotAZipFileError` before the native unzip is ever called, deletes
+the copy, and the screen says the file is not a points package. It then
 validates `project_uuid` and protocol first — either mismatch rejects
 the **entire** package, nothing is inserted
 (`ProjectMismatchError`). For every point that passes, it checks

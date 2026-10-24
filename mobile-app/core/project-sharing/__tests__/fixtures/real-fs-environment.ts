@@ -58,6 +58,19 @@ export class RealFile {
     return fs.readFileSync(toFsPath(this.uri), "utf8");
   }
 
+  /** Like the SDK's FileHandle: reads only the first bytes. */
+  open() {
+    const fd = fs.openSync(toFsPath(this.uri), "r");
+    return {
+      readBytes: (length: number) => {
+        const buffer = Buffer.alloc(length);
+        const read = fs.readSync(fd, buffer, 0, length, 0);
+        return new Uint8Array(buffer.subarray(0, read));
+      },
+      close: () => fs.closeSync(fd),
+    };
+  }
+
   create(): void {
     if (!this.exists) fs.writeFileSync(toFsPath(this.uri), "");
   }

@@ -4,6 +4,8 @@ import {
   FakePaths,
   zipMock,
   unzipMock,
+  readFakeZip,
+  writeFakeZip,
   resetFakeFs,
   resetFakeDb,
   seedOwnerProject,
@@ -127,7 +129,7 @@ import {
   ProjectMismatchError,
   type PendingDuplicate,
 } from "../import-points";
-import { UnsupportedPackageVersionError, InvalidPackageError } from "../package-errors";
+import { UnsupportedPackageVersionError, InvalidPackageError, NotAZipFileError } from "../package-errors";
 
 function pickZip(zipUri: string) {
   getDocumentAsyncMock.mockResolvedValue({
@@ -249,12 +251,12 @@ describe("importPointsPackage — identity checks", () => {
 
     // Tamper with the packaged points.json to carry an unsupported version.
     const zipEntry = fsState.get(zipUri)!;
-    const parsedZip = JSON.parse(zipEntry.content!);
+    const parsedZip = readFakeZip(zipEntry.content!);
     const pointsJsonKey = Object.keys(parsedZip.entries).find((k) => k.endsWith("/points.json"))!;
-    const pkg = JSON.parse(parsedZip.entries[pointsJsonKey].content);
+    const pkg = JSON.parse(parsedZip.entries[pointsJsonKey].content!);
     pkg.format_version = 2;
     parsedZip.entries[pointsJsonKey].content = JSON.stringify(pkg);
-    zipEntry.content = JSON.stringify(parsedZip);
+    zipEntry.content = writeFakeZip(parsedZip);
 
     pickZip(zipUri);
 
@@ -360,6 +362,30 @@ describe("importPointsPackage — unzip safety", () => {
 
     await expect(importPointsPackage(project.id)).rejects.toThrow();
     expect(unzipMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["points.json", '{"format_version":1,"project_uuid":"x","points":[]}'],
+    ["notes.txt", "just some text"],
+    ["photo.jpg", "\u00ff\u00d8\u00ff\u00e0 jpeg bytes"],
+  ])("rejects %s with a clear error before calling the native unzip (a JSON used to close the app)", async (name, content) => {
+    const project = seedOwnerProject();
+    getDocumentAsyncMock.mockResolvedValue({ canceled: false, assets: [{ uri: `file:///picked/${name}` }] });
+    fsState.set(`file:///picked/${name}`, { isDir: false, content });
+
+    await expect(importPointsPackage(project.id)).rejects.toBeInstanceOf(NotAZipFileError);
+    expect(unzipMock).not.toHaveBeenCalled();
+  });
+
+  it("does not leave the rejected file behind in the cache", async () => {
+    const project = seedOwnerProject();
+    getDocumentAsyncMock.mockResolvedValue({ canceled: false, assets: [{ uri: "file:///picked/points.json" }] });
+    fsState.set("file:///picked/points.json", { isDir: false, content: "{}" });
+
+    await expect(importPointsPackage(project.id)).rejects.toThrow();
+
+    const leftovers = [...fsState.keys()].filter((key) => key.startsWith("file:///cache/import_points_"));
+    expect(leftovers).toEqual([]);
   });
 
   it("returns null when the picker is canceled", async () => {

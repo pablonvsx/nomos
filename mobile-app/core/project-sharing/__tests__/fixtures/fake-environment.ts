@@ -54,6 +54,15 @@ export class FakeFile {
     return fsState.get(this.uri)?.content ?? "";
   }
 
+  /** Like the SDK's FileHandle: reads the first bytes of the content (one char = one byte here). */
+  open() {
+    const content = fsState.get(this.uri)?.content ?? "";
+    return {
+      readBytes: (length: number) => Uint8Array.from(content.slice(0, length), (ch) => ch.charCodeAt(0) & 0xff),
+      close: () => undefined,
+    };
+  }
+
   async create(): Promise<void> {
     if (!fsState.has(this.uri)) fsState.set(this.uri, { isDir: false, content: "" });
   }
@@ -116,6 +125,19 @@ export const FakePaths = {
   document: new FakeDirectory("file:///document"),
 };
 
+/** "PK" + 0x03 0x04: what a real .zip starts with. */
+export const FAKE_ZIP_SIGNATURE = "PK\u0003\u0004";
+
+/** The JSON behind a fake archive (what the fake zip/unzip serialize), without its signature. */
+export function readFakeZip(content: string): { base: string; entries: Record<string, FakeFsEntry> } {
+  return JSON.parse(content.slice(FAKE_ZIP_SIGNATURE.length));
+}
+
+/** Writes a fake archive's JSON back with its signature, so it still looks like a zip. */
+export function writeFakeZip(archive: { base: string; entries: Record<string, FakeFsEntry> }): string {
+  return FAKE_ZIP_SIGNATURE + JSON.stringify(archive);
+}
+
 /** Fake react-native-zip-archive: serializes the fake fs subtree as JSON. */
 export const zipMock = jest.fn(async (sourcePath: string, targetPath: string) => {
   const sourceUri = `file://${sourcePath}`;
@@ -124,9 +146,10 @@ export const zipMock = jest.fn(async (sourcePath: string, targetPath: string) =>
   for (const [key, value] of fsState.entries()) {
     if (key === sourceUri || key.startsWith(`${sourceUri}/`)) snapshot[key] = value;
   }
+  // The fake archive starts with the real zip signature, like any actual .zip does.
   fsState.set(targetUri, {
     isDir: false,
-    content: JSON.stringify({ base: sourceUri, entries: snapshot }),
+    content: FAKE_ZIP_SIGNATURE + JSON.stringify({ base: sourceUri, entries: snapshot }),
   });
   return targetUri;
 });
@@ -138,7 +161,7 @@ export const unzipMock = jest.fn(async (sourcePath: string, targetPath: string) 
   if (!zipEntry?.content) {
     throw new Error("Fake unzip: source zip not found or empty");
   }
-  const { base, entries } = JSON.parse(zipEntry.content) as {
+  const { base, entries } = JSON.parse(zipEntry.content.slice(FAKE_ZIP_SIGNATURE.length)) as {
     base: string;
     entries: Record<string, FakeFsEntry>;
   };

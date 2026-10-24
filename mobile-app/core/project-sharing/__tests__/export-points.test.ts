@@ -9,6 +9,7 @@ import {
   seedCollaboratorProject,
   seedPoint,
   fsState,
+  readFakeZip,
   projects,
   points,
 } from "./fixtures/fake-environment";
@@ -78,7 +79,7 @@ import {
 function readPackageFromSharedZip(): PointsPackage {
   const zipUri = shareAsyncMock.mock.calls[0][0] as string;
   const zipEntry = fsState.get(zipUri);
-  const { entries } = JSON.parse(zipEntry!.content!) as {
+  const { entries } = readFakeZip(zipEntry!.content!) as {
     entries: Record<string, { content?: string }>;
   };
   const pointsJsonEntry = Object.entries(entries).find(([key]) => key.endsWith("/points.json"));

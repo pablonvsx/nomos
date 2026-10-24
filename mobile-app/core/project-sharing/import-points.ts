@@ -1,11 +1,13 @@
 import * as DocumentPicker from "expo-document-picker";
 import { Directory, File, Paths } from "expo-file-system";
 import { unzip } from "react-native-zip-archive";
+import { hasZipSignature, ZIP_SIGNATURE_LENGTH } from "@/core/project-sharing/zip-signature";
 import { ensureProjectUuid, getProjectById } from "@/db/queries/projects";
 import { createPoint, getPointByProjectAndUuid, updatePoint } from "@/db/queries/points";
 import { getConnectedGoogleAccountEmail } from "@/core/local-identity/connected-account";
 import {
   InvalidPackageError,
+  NotAZipFileError,
   UnsupportedPackageVersionError,
 } from "@/core/project-sharing/package-errors";
 import { assertProjectActionAllowed } from "@/core/project-sharing/action-visibility";
@@ -179,6 +181,16 @@ async function restoreModuleMedia(
   return { modules: restored, missing };
 }
 
+/** The first `length` bytes of a file, without reading the rest (a points package can be large). */
+function readFileStart(file: File, length: number): Uint8Array {
+  const handle = file.open();
+  try {
+    return handle.readBytes(length);
+  } finally {
+    handle.close();
+  }
+}
+
 export async function importPointsPackage(
   targetProjectId: number,
 ): Promise<ImportPointsResult | null> {
@@ -204,11 +216,20 @@ export async function importPointsPackage(
   const pickedFile = new File(picked.assets[0].uri);
   await pickedFile.copy(cacheZip);
 
-  // Verify the copied file exists and has non-zero size BEFORE calling any
-  // native unzip function - some native zip libraries crash uncatchably
-  // (not a rejected JS promise) on a bad/empty source.
-  if (!cacheZip.exists || cacheZip.size === 0) {
-    throw new Error("O arquivo selecionado está vazio ou não pôde ser lido.");
+  // Verify the copied file exists, has non-zero size and really IS a zip
+  // BEFORE calling any native unzip function - some native zip libraries crash
+  // uncatchably (not a rejected JS promise) on a bad/empty source. The picker
+  // accepts any file, and a .json handed to the native unzip closed the app.
+  try {
+    if (!cacheZip.exists || cacheZip.size === 0) {
+      throw new Error("O arquivo selecionado está vazio ou não pôde ser lido.");
+    }
+    if (!hasZipSignature(readFileStart(cacheZip, ZIP_SIGNATURE_LENGTH))) {
+      throw new NotAZipFileError();
+    }
+  } catch (error) {
+    if (cacheZip.exists) await cacheZip.delete();
+    throw error;
   }
 
   // Create the extraction destination explicitly and idempotently, also
