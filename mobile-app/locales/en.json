@@ -32,6 +32,7 @@
     "import": "Import",
     "active": "Active",
     "info": "Information",
+    "warning": "Warning",
     "featureInDevelopment": "Feature under development",
     "somethingWentWrong": "Something went wrong",
     "unexpectedError": "An unexpected error occurred. Please try again.",

@@ -32,6 +32,7 @@
     "import": "Importar",
     "active": "Activo",
     "info": "Información",
+    "warning": "Atención",
     "featureInDevelopment": "Funcionalidad en desarrollo",
     "somethingWentWrong": "Algo salió mal",
     "unexpectedError": "Ocurrió un error inesperado. Por favor, inténtalo de nuevo.",

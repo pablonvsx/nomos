@@ -1,3 +1,4 @@
+import { formatPointName } from '@/core/points/point-label';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { View, StyleSheet, ActivityIndicator, InteractionManager, Platform } from 'react-native';
 import MapView, { Marker, MapType, Geojson, Region } from 'react-native-maps';
@@ -262,7 +263,7 @@ function ViewMapScreen() {
         <Marker
           key={`p-${p.id}`}
           coordinate={{ latitude: p.lat, longitude: p.lon }}
-          title={p.generated_name || `${t('common.point')} ${p.point_number}`}
+          title={p.generated_name || formatPointName(t('surveyView.point'), p)}
           pinColor={isHigh ? '#00C853' : '#FFD700'}
           tracksViewChanges={false} // Critical performance: prevents unnecessary re-renders
         />
@@ -278,7 +279,7 @@ function ViewMapScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ title: project?.name || t('mapView.title'), headerShown: true }} />
       
-      {isOffline && <Banner visible icon="wifi-off">{t('common.offline')}</Banner>}
+      {isOffline && <Banner visible icon="wifi-off">{t('mapView.offlineMsg')}</Banner>}
 
       {shouldBlockMapRender ? (
         <View

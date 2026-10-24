@@ -449,7 +449,7 @@ function UnifiedProjectDetailsScreen() {
         const geojson = safeJsonParse(content) as { type?: string } | null;
 
         if (!geojson?.type || geojson.type !== "FeatureCollection") {
-          alert(t("common.error"), t("common.invalidGeoJSON"));
+          alert(t("common.error"), t("projectView.invalidGeoJSON"));
           return;
         }
 

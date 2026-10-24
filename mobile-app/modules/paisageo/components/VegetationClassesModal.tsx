@@ -98,7 +98,7 @@ export default function VegetationClassesModal({
 
   const handleSaveClassEdit = useCallback(() => {
     if (!editingClassName.trim()) {
-      alert(t("common.alert"), t("vegetationClassification.classNameRequired"));
+      alert(t("common.warning"), t("vegetationClassification.classNameRequired"));
       return;
     }
 
@@ -132,12 +132,12 @@ export default function VegetationClassesModal({
 
   const handleSaveClassification = useCallback(async () => {
     if (!classificationName.trim()) {
-      alert(t("common.alert"), t("vegetationClassification.classificationNameRequired"));
+      alert(t("common.warning"), t("vegetationClassification.classificationNameRequired"));
       return;
     }
 
     if (classes.length === 0) {
-      alert(t("common.alert"), t("vegetationClassification.mustHaveAtLeastOneClass"));
+      alert(t("common.warning"), t("vegetationClassification.mustHaveAtLeastOneClass"));
       return;
     }
 
