@@ -9,39 +9,14 @@ import {
   Button,
 } from "react-native-paper";
 import { Stack } from "expo-router";
-import * as Clipboard from "expo-clipboard";
 import { useI18n } from "../contexts/i18n-context";
 import { BUTTON_RADIUS } from "@/constants/shape";
 import { useBottomContentPadding } from "@/hooks/use-bottom-content-padding";
-import { useAlertDialog } from "@/hooks/use-dialog";
-import { ZENODO_DOI, ZENODO_DOI_URL } from "@/constants/links";
-import { CITATION_YEAR, formatAuthorAbnt } from "@/utils/citation";
-import { openExternalUrl } from "@/utils/open-external-url";
 
 export default function AboutScreen() {
   const paperTheme = usePaperTheme();
   const bottomPadding = useBottomContentPadding();
   const { t } = useI18n();
-  const { alert } = useAlertDialog();
-
-  const citation = t("about.citeReference", {
-    author: formatAuthorAbnt(t("about.authorName")),
-    year: String(CITATION_YEAR),
-    doi: ZENODO_DOI,
-  });
-
-  // Opened only on tap: the app is offline-first, nothing depends on this link.
-  const openDoi = async () => {
-    const opened = await openExternalUrl(ZENODO_DOI_URL, (url) => Linking.openURL(url));
-    if (!opened) {
-      alert(t("common.error"), t("about.openDoiError"));
-    }
-  };
-
-  const copyCitation = async () => {
-    await Clipboard.setStringAsync(citation);
-    alert(t("common.success"), t("about.copied"));
-  };
 
   const openLicenseLink = () => {
     Linking.openURL("https://www.gnu.org/licenses/gpl-3.0.html");
@@ -270,55 +245,7 @@ export default function AboutScreen() {
         </Button>
       </View>
 
-      {/* 6. HOW TO CITE SECTION */}
-      <View style={styles.section}>
-        <Text
-          variant="titleMedium"
-          style={[styles.sectionTitle, { color: paperTheme.colors.primary }]}
-        >
-          {t("about.cite")}
-        </Text>
-        <Divider style={styles.divider} />
-
-        <List.Item
-          title={t("about.citeDesc")}
-          description={
-            <Text
-              selectable
-              variant="bodyMedium"
-              style={{ color: paperTheme.colors.onSurfaceVariant }}
-            >
-              {citation}
-            </Text>
-          }
-          left={(props) => <List.Icon {...props} icon="format-quote-close" />}
-          titleStyle={styles.listItemTitle}
-          titleNumberOfLines={0}
-          descriptionNumberOfLines={0}
-        />
-        <View style={styles.citeButtons}>
-          <Button
-            mode="outlined"
-            compact
-            onPress={openDoi}
-            icon="open-in-new"
-            style={{ borderRadius: BUTTON_RADIUS }}
-          >
-            {t("about.openDoi")}
-          </Button>
-          <Button
-            mode="outlined"
-            compact
-            onPress={copyCitation}
-            icon="content-copy"
-            style={{ borderRadius: BUTTON_RADIUS }}
-          >
-            {t("about.copyReference")}
-          </Button>
-        </View>
-      </View>
-
-      {/* 7. INSTITUTIONAL CREDITS FOOTER */}
+      {/* 6. INSTITUTIONAL CREDITS FOOTER */}
       <View style={styles.footerSection}>
         <Text
           variant="titleMedium"
@@ -492,13 +419,6 @@ const styles = StyleSheet.create({
   },
   listItemDescription: {
     textAlign: "justify",
-  },
-  citeButtons: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 8,
   },
   licenseButton: {
     alignSelf: "center",

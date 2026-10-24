@@ -1,7 +1,7 @@
 // mobile-app/utils/citation.ts
 //
-// Pure helpers for the "How to cite" reference on the About screen. The
-// reference text itself lives in the locale files (about.citeReference) and is
+// Pure helpers for the "How to cite" reference on the Resources screen. The
+// reference text itself lives in the locale files (resources.citeReference) and is
 // filled in with these values, so wording stays translatable and the author,
 // version and DOI each have a single source.
 

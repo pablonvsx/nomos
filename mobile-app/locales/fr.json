@@ -388,13 +388,19 @@
   },
   "resources": {
     "title": "Ressources",
-    "intro": "Les tutoriels, les guides d'utilisation, le téléchargement de la dernière version et les actualités de Nomos sont disponibles sur le site du projet.",
-    "openSite": "Ouvrir le site de Nomos",
-    "openSiteA11y": "Ouvrir le site de Nomos dans le navigateur",
-    "requiresInternet": "Nécessite une connexion internet",
+    "intro": "Les tutoriels, les guides d'utilisation, le téléchargement de la dernière version et les actualités de Nomos sont disponibles sur la page de Nomos.",
+    "openSite": "Ouvrir la page de Nomos",
+    "openSiteA11y": "Ouvrir la page de Nomos dans le navigateur",
     "installedVersion": "Version installée : {{version}}",
     "openErrorTitle": "Lien indisponible",
-    "openError": "Impossible d'ouvrir le site de Nomos. Vérifiez qu'un navigateur est installé sur l'appareil et réessayez."
+    "openError": "Impossible d'ouvrir la page de Nomos. Vérifiez qu'un navigateur est installé sur l'appareil et réessayez.",
+    "cite": "Comment citer",
+    "citeDesc": "Si vous utilisez Nomos dans des travaux académiques, citez-le selon la référence ci-dessous.",
+    "citeReference": "{{author}}. Nomos : application pour les inventaires environnementaux. Recife : Université fédérale de Pernambuco, {{year}}. DOI : {{doi}}.",
+    "openDoi": "Ouvrir le DOI",
+    "copyReference": "Copier la référence",
+    "copied": "Référence copiée dans le presse-papiers.",
+    "openDoiError": "Impossible d'ouvrir le DOI. Vérifiez qu'un navigateur est installé sur l'appareil et réessayez."
   },
   "about": {
     "title": "À Propos du Projet",
@@ -422,13 +428,6 @@
     "licenseName": "GNU GPL v3.0",
     "licenseDesc": "Ce projet est open source sous licence GNU GPL v3.0 (copyleft). Vous pouvez utiliser, étudier, modifier et redistribuer le logiciel, y compris commercialement, à condition que les travaux dérivés soient distribués sous la même licence avec le code source disponible.",
     "viewLicense": "Voir la Licence Complète",
-    "cite": "Comment citer",
-    "citeDesc": "Si vous utilisez Nomos dans des travaux académiques, citez-le selon la référence ci-dessous.",
-    "citeReference": "{{author}}. Nomos : application pour les inventaires environnementaux. Recife : Université fédérale de Pernambuco, {{year}}. DOI : {{doi}}.",
-    "openDoi": "Ouvrir le DOI",
-    "copyReference": "Copier la référence",
-    "copied": "Référence copiée dans le presse-papiers.",
-    "openDoiError": "Impossible d'ouvrir le DOI. Vérifiez qu'un navigateur est installé sur l'appareil et réessayez.",
     "institutionalCredits": "Soutien Institutionnel",
     "institutionalCreditsDesc": "Nomos bénéficie du soutien institutionnel et scientifique d'entités liées à la recherche, au financement et à la production académique."
   },

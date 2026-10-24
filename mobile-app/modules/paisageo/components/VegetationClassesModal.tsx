@@ -219,8 +219,8 @@ export default function VegetationClassesModal({
         dialog: {
           backgroundColor: theme.colors.surface,
           marginHorizontal: 32,
-          maxHeight: "68%",
-          minHeight: "45%",
+          maxHeight: "80%",
+          minHeight: "53%",
         },
         content: {
           paddingHorizontal: 24,
@@ -235,13 +235,20 @@ export default function VegetationClassesModal({
           fontWeight: "bold",
         },
         classCard: {
-          marginVertical: 6,
+          marginVertical: 3,
           backgroundColor: theme.colors.surfaceVariant,
         },
         classCardContent: {
           flexDirection: "row",
           justifyContent: "space-between",
           alignItems: "center",
+          paddingVertical: 4,
+        },
+        // 32dp visual target (was the 40dp default); hitSlop keeps the touch area comfortable.
+        classIconButton: {
+          margin: 0,
+          width: 32,
+          height: 32,
         },
         classInfo: {
           flex: 1,
@@ -365,6 +372,8 @@ export default function VegetationClassesModal({
                           <IconButton
                             icon="pencil"
                             size={20}
+                            style={styles.classIconButton}
+                            hitSlop={4}
                             onPress={() => handleEditClass(item)}
                             disabled={saving}
                           />
@@ -372,6 +381,8 @@ export default function VegetationClassesModal({
                             icon="delete"
                             size={20}
                             iconColor={theme.colors.error}
+                            style={styles.classIconButton}
+                            hitSlop={4}
                             onPress={() => handleDeleteClass(item.id)}
                             disabled={saving}
                           />

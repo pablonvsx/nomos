@@ -387,13 +387,19 @@
   },
   "resources": {
     "title": "Recursos",
-    "intro": "Los tutoriales, las guías de uso, la descarga de la versión más reciente y las novedades de Nomos están disponibles en el sitio del proyecto.",
-    "openSite": "Abrir sitio de Nomos",
-    "openSiteA11y": "Abrir el sitio de Nomos en el navegador",
-    "requiresInternet": "Requiere conexión a internet",
+    "intro": "Los tutoriales, las guías de uso, la descarga de la versión más reciente y las novedades de Nomos están disponibles en la página de Nomos.",
+    "openSite": "Abrir página de Nomos",
+    "openSiteA11y": "Abrir la página de Nomos en el navegador",
     "installedVersion": "Versión instalada: {{version}}",
     "openErrorTitle": "Enlace no disponible",
-    "openError": "No se pudo abrir el sitio de Nomos. Verifique que haya un navegador instalado en el dispositivo e inténtelo de nuevo."
+    "openError": "No se pudo abrir la página de Nomos. Verifique que haya un navegador instalado en el dispositivo e inténtelo de nuevo.",
+    "cite": "Cómo citar",
+    "citeDesc": "Si utiliza Nomos en trabajos académicos, cítelo según la referencia a continuación.",
+    "citeReference": "{{author}}. Nomos: aplicación para inventarios ambientales. Recife: Universidad Federal de Pernambuco, {{year}}. DOI: {{doi}}.",
+    "openDoi": "Abrir DOI",
+    "copyReference": "Copiar referencia",
+    "copied": "Referencia copiada al portapapeles.",
+    "openDoiError": "No se pudo abrir el DOI. Verifique que haya un navegador instalado en el dispositivo e inténtelo de nuevo."
   },
   "about": {
     "title": "Acerca del Proyecto",
@@ -421,13 +427,6 @@
     "licenseName": "GNU GPL v3.0",
     "licenseDesc": "Este proyecto es de código abierto bajo la licencia GNU GPL v3.0 (copyleft). Se permite usar, estudiar, modificar y redistribuir el software, incluso comercialmente, siempre que los trabajos derivados se distribuyan bajo la misma licencia y con el código fuente disponible.",
     "viewLicense": "Ver Licencia Completa",
-    "cite": "Cómo citar",
-    "citeDesc": "Si utiliza Nomos en trabajos académicos, cítelo según la referencia a continuación.",
-    "citeReference": "{{author}}. Nomos: aplicación para inventarios ambientales. Recife: Universidad Federal de Pernambuco, {{year}}. DOI: {{doi}}.",
-    "openDoi": "Abrir DOI",
-    "copyReference": "Copiar referencia",
-    "copied": "Referencia copiada al portapapeles.",
-    "openDoiError": "No se pudo abrir el DOI. Verifique que haya un navegador instalado en el dispositivo e inténtelo de nuevo.",
     "institutionalCredits": "Apoyo Institucional",
     "institutionalCreditsDesc": "Nomos cuenta con el apoyo institucional y científico de entidades vinculadas a la investigación, al financiamiento y a la producción académica."
   },

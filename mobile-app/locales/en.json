@@ -388,13 +388,19 @@
   },
   "resources": {
     "title": "Resources",
-    "intro": "Tutorials, usage guides, the latest version download and Nomos news are available on the project website.",
-    "openSite": "Open Nomos website",
-    "openSiteA11y": "Open the Nomos website in the browser",
-    "requiresInternet": "Requires an internet connection",
+    "intro": "Tutorials, usage guides, the latest version download and Nomos news are available on the Nomos page.",
+    "openSite": "Open Nomos page",
+    "openSiteA11y": "Open the Nomos page in the browser",
     "installedVersion": "Installed version: {{version}}",
     "openErrorTitle": "Link unavailable",
-    "openError": "The Nomos website could not be opened. Check that a web browser is installed on this device and try again."
+    "openError": "The Nomos page could not be opened. Check that a web browser is installed on this device and try again.",
+    "cite": "How to cite",
+    "citeDesc": "If you use Nomos in academic work, please cite it as shown below.",
+    "citeReference": "{{author}}. Nomos: an app for environmental inventories. Recife: Federal University of Pernambuco, {{year}}. DOI: {{doi}}.",
+    "openDoi": "Open DOI",
+    "copyReference": "Copy reference",
+    "copied": "Reference copied to the clipboard.",
+    "openDoiError": "The DOI could not be opened. Check that a web browser is installed on this device and try again."
   },
   "about": {
     "title": "About the Project",
@@ -422,13 +428,6 @@
     "licenseName": "GNU GPL v3.0",
     "licenseDesc": "This project is open source under the GNU GPL v3.0 license (copyleft). You may use, study, modify, and redistribute the software, including commercially, provided derivative works are distributed under the same license with source code available.",
     "viewLicense": "View Full License",
-    "cite": "How to cite",
-    "citeDesc": "If you use Nomos in academic work, please cite it as shown below.",
-    "citeReference": "{{author}}. Nomos: an app for environmental inventories. Recife: Federal University of Pernambuco, {{year}}. DOI: {{doi}}.",
-    "openDoi": "Open DOI",
-    "copyReference": "Copy reference",
-    "copied": "Reference copied to the clipboard.",
-    "openDoiError": "The DOI could not be opened. Check that a web browser is installed on this device and try again.",
     "institutionalCredits": "Institutional Support",
     "institutionalCreditsDesc": "Nomos is supported by institutional and scientific entities linked to research, funding, and academic production."
   },

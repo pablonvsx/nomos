@@ -19,12 +19,11 @@ const locales = Object.fromEntries(
 
 const CITE_KEYS = ["cite", "citeDesc", "citeReference", "openDoi", "copyReference", "copied", "openDoiError"];
 
-/** The texts this feature owns: the whole Resources namespace, the About intro and the citation. */
+/** The texts this feature owns: the whole Resources namespace (citation included) and the About intro. */
 function ownedTexts(locale: Locale): [string, string][] {
   return [
     ...Object.entries(locale.resources).map(([k, v]) => [`resources.${k}`, v] as [string, string]),
     ["about.description", locale.about.description],
-    ...CITE_KEYS.map((k) => [`about.${k}`, locale.about[k]] as [string, string]),
   ];
 }
 
@@ -36,12 +35,19 @@ describe("resources and citation locale keys", () => {
     }
   });
 
-  it("defines the citation keys in every language", () => {
+  it("defines the citation keys under resources, and none are left on the About screen", () => {
     for (const lang of LANGUAGES) {
       for (const key of CITE_KEYS) {
-        expect(typeof locales[lang].about[key]).toBe("string");
-        expect(locales[lang].about[key].length).toBeGreaterThan(0);
+        expect(typeof locales[lang].resources[key]).toBe("string");
+        expect(locales[lang].resources[key].length).toBeGreaterThan(0);
+        expect(locales[lang].about[key]).toBeUndefined();
       }
+    }
+  });
+
+  it("no longer carries the internet requirement line", () => {
+    for (const lang of LANGUAGES) {
+      expect(locales[lang].resources.requiresInternet).toBeUndefined();
     }
   });
 
@@ -60,7 +66,7 @@ describe("resources and citation locale keys", () => {
 
   it("keeps every citation reference filled by the same placeholders", () => {
     for (const lang of LANGUAGES) {
-      const placeholders = locales[lang].about.citeReference.match(/\{\{\w+\}\}/g)?.sort();
+      const placeholders = locales[lang].resources.citeReference.match(/\{\{\w+\}\}/g)?.sort();
       expect(placeholders).toEqual(["{{author}}", "{{doi}}", "{{year}}"]);
     }
   });

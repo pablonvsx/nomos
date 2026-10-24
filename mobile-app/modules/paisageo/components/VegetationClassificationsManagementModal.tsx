@@ -110,8 +110,8 @@ export default function VegetationClassificationsManagementModal({
         dialog: {
           backgroundColor: theme.colors.surface,
           marginHorizontal: 16,
-          maxHeight: "80%",
-          minHeight: "55%",
+          maxHeight: "92%",
+          minHeight: "65%",
         },
         content: {
           paddingHorizontal: 24,
@@ -128,14 +128,14 @@ export default function VegetationClassificationsManagementModal({
           color: theme.colors.onSurfaceVariant,
         },
         classificationCard: {
-          marginVertical: 6,
+          marginVertical: 3,
           backgroundColor: theme.colors.surfaceVariant,
         },
         classificationCardContent: {
           flexDirection: "row",
           justifyContent: "space-between",
           alignItems: "center",
-          paddingVertical: 8,
+          paddingVertical: 2,
           paddingHorizontal: 12,
         },
         classificationInfo: {
@@ -143,6 +143,12 @@ export default function VegetationClassificationsManagementModal({
         },
         cardActions: {
           flexDirection: "row",
+        },
+        // 32dp visual target (was the 40dp default); hitSlop keeps the touch area comfortable.
+        cardIconButton: {
+          margin: 0,
+          width: 32,
+          height: 32,
         },
       }),
     [theme]
@@ -192,12 +198,16 @@ export default function VegetationClassificationsManagementModal({
                           <IconButton
                             icon="pencil"
                             size={20}
+                            style={styles.cardIconButton}
+                            hitSlop={4}
                             onPress={() => handleEdit(item)}
                             iconColor={theme.colors.primary}
                           />
                           <IconButton
                             icon="delete"
                             size={20}
+                            style={styles.cardIconButton}
+                            hitSlop={4}
                             onPress={() => handleDelete(item)}
                             iconColor={theme.colors.error}
                           />
