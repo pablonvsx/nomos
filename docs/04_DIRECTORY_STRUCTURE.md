@@ -28,7 +28,7 @@ Screens via Expo Router v6 (file-based routing), organized into groups:
 app/
 ├── _layout.tsx                 root layout: provider stack + database bootstrap
 ├── about.tsx
-├── (tabs)/                     _layout.tsx, index.tsx (home), help.tsx, settings.tsx
+├── (tabs)/                     _layout.tsx, index.tsx (home), resources.tsx, settings.tsx
 ├── (projects)/
 │   ├── projects.tsx            project list; also "Restaurar Meus Projetos do Drive" (owner-only)
 │   ├── project/new.tsx         create project
