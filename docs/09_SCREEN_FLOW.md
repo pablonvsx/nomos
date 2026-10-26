@@ -135,3 +135,21 @@ This is what lets PAISAGEO's 3 modules (with rich UI: `KuchlerMatrix`, `SoilProf
 ## Map overlays (`view-map.tsx`)
 
 `app/(projects)/view-map.tsx` mounts two floating overlays on top of `react-native-maps`, both in `components/map/` (not protocol-specific): `LayerMenu.tsx` (an expandable menu to switch `MapType` — standard/satellite/hybrid/terrain, excluding terrain on iOS) and `MapLegend.tsx` (a legend with layers, route, and point count). They share styles via `map-overlay-styles.ts`.
+
+## Modal and dialog layout
+
+Every modal and dialog takes its vertical rhythm from one file, `constants/modal-layout.ts` (dp):
+
+| Token | Value | Meaning |
+|---|---|---|
+| `MODAL_PADDING_H` | 24 | left/right padding of header and content |
+| `MODAL_PADDING_TOP` | 24 | space above the title |
+| `MODAL_TITLE_GAP` | 16 | between the title and the body |
+| `MODAL_FOOTER_GAP_ABOVE` / `_BELOW` | 24 / 24 | between the content and the buttons, and between the buttons and the bottom edge |
+| `MODAL_BUTTON_HEIGHT` | 48 | outer height of every footer button |
+| `MODAL_STACKED_GAP` | 12 | between buttons in the stacked footer |
+
+**`ModalActions` owns the vertical space of the footer.** Whatever sits above it ends with no bottom padding of its own (`ModalBody` instead of Paper's `Dialog.Content`, `MODAL_SCROLL_AREA_STYLE` on `Dialog.ScrollArea`, a padded content container placed *above* a full-width footer), so the gaps never add up and the buttons sit centered in the footer band (24 above, 24 below). The outlined and the solid button have the same outer height: both draw a 1dp border (the solid one transparent), so the outline cannot make a button taller. `ModalActionsStacked` is the same footer for three or more actions (one full-width button per row, 12 apart). Buttons that live inside the content, such as one pair per list row, use `ModalActions` with `inline`.
+
+Dialogs have no frame lines: Paper's `Dialog.ScrollArea` borders and the `Divider` under the title of the custom modals were removed; dividers *inside* the content (between list items) stay. `core/ui/__tests__/modal-footer-guard.test.ts` fails if a screen goes back to `Dialog.Actions`, to a `Dialog.Content` above a `ModalActions`, or to a `Dialog.ScrollArea` with frame lines.
+

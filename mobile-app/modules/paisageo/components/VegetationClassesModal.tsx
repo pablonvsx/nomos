@@ -1,4 +1,6 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { MODAL_PADDING_H, MODAL_SCROLL_AREA_STYLE } from "@/constants/modal-layout";
+import { ModalTitle } from "@/components/ui/ModalBody";
 import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
@@ -211,9 +213,12 @@ export default function VegetationClassesModal({
           maxHeight: "80%",
           minHeight: "53%",
         },
+        // No frame lines and no vertical padding: the title's margin and the ModalActions footer
+        // own the space above and below the scrolling list.
         content: {
-          paddingHorizontal: 24,
-          paddingVertical: 16,
+          ...MODAL_SCROLL_AREA_STYLE,
+          paddingHorizontal: MODAL_PADDING_H,
+          paddingVertical: 0,
         },
         input: {
           marginBottom: 12,
@@ -276,9 +281,9 @@ export default function VegetationClassesModal({
       onDismiss={onClose}
       style={[MODAL_SHAPE_STYLE, styles.dialog]}
     >
-      <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
+      <ModalTitle style={MODAL_TITLE_STYLE} numberOfLines={1}>
         {t("vegetationClassification.manageClasses")}
-      </Dialog.Title>
+      </ModalTitle>
 
       <Dialog.ScrollArea style={styles.content}>
         <ScrollView showsVerticalScrollIndicator={false}>

@@ -1,4 +1,6 @@
+import { MODAL_FOOTER_GAP_BELOW, MODAL_PADDING_H, MODAL_PADDING_TOP, MODAL_TITLE_GAP } from '@/constants/modal-layout';
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { ModalBody, ModalTitle } from "@/components/ui/ModalBody";
 import { MODAL_SHAPE_STYLE, MODAL_RADIUS } from "@/constants/shape";
 import React, { useState, useEffect } from 'react';
 import {
@@ -161,8 +163,6 @@ export const SpeciesLinkSettingsModal: React.FC<SpeciesLinkSettingsModalProps> =
           <IconButton icon="close" onPress={onDismiss} />
         </View>
 
-        <Divider />
-
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
@@ -315,17 +315,17 @@ export const SpeciesLinkSettingsModal: React.FC<SpeciesLinkSettingsModalProps> =
         onDismiss={() => setRemoveConfirmVisible(false)}
         style={[MODAL_SHAPE_STYLE, { backgroundColor: theme.colors.surface }]}
       >
-        <Dialog.Title style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>
+        <ModalTitle style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>
           {t('species.confirmRemoval')}
-        </Dialog.Title>
-        <Dialog.Content>
+        </ModalTitle>
+        <ModalBody>
           <Text
             variant="bodyMedium"
             style={{ color: theme.colors.onSurfaceVariant }}
           >
             {t('species.confirmRemovalMessage')}
           </Text>
-        </Dialog.Content>
+        </ModalBody>
         <ModalActions
           cancelLabel={t('common.cancel')}
           onCancel={() => setRemoveConfirmVisible(false)}
@@ -340,17 +340,17 @@ export const SpeciesLinkSettingsModal: React.FC<SpeciesLinkSettingsModalProps> =
         onDismiss={() => setInfoDialog(null)}
         style={[MODAL_SHAPE_STYLE, { backgroundColor: theme.colors.surface }]}
       >
-        <Dialog.Title style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>
+        <ModalTitle style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>
           {infoDialog?.title}
-        </Dialog.Title>
-        <Dialog.Content>
+        </ModalTitle>
+        <ModalBody>
           <Text
             variant="bodyMedium"
             style={{ color: theme.colors.onSurfaceVariant }}
           >
             {infoDialog?.message}
           </Text>
-        </Dialog.Content>
+        </ModalBody>
         <ModalActions confirmLabel="OK" onConfirm={() => setInfoDialog(null)} />
       </Dialog>
     </Portal>
@@ -367,8 +367,10 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 16,
-    paddingRight: 4,
+    // The close button is 52dp tall, so 12 above puts the title 24 from the top, as in the dialogs.
+    paddingTop: MODAL_PADDING_TOP - 12,
+    paddingLeft: MODAL_PADDING_H,
+    paddingRight: MODAL_PADDING_H - 12,
   },
   headerTitle: {
     flex: 1,
@@ -378,8 +380,10 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
   },
   contentContainer: {
-    padding: 16,
-    paddingTop: 20,
+    paddingHorizontal: MODAL_PADDING_H,
+    paddingTop: MODAL_TITLE_GAP,
+    // No footer here: the form closes the modal with the footer's own bottom gap.
+    paddingBottom: MODAL_FOOTER_GAP_BELOW,
   },
   description: {
     marginBottom: 20,
@@ -421,7 +425,6 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 4,
   },
   buttonHalf: {
     flex: 1,

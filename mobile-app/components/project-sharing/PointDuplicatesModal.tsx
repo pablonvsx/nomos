@@ -1,4 +1,5 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { MODAL_FOOTER_GAP_BELOW, MODAL_PADDING_H, MODAL_PADDING_TOP, MODAL_TITLE_GAP } from "@/constants/modal-layout";
 import { MODAL_RADIUS } from "@/constants/shape";
 import React, { useRef, useState } from "react";
 import { View, ScrollView, StyleSheet } from "react-native";
@@ -72,8 +73,6 @@ export const PointDuplicatesModal: React.FC<PointDuplicatesModalProps> = ({
           <IconButton icon="close" onPress={onDismiss} />
         </View>
 
-        <Divider />
-
         <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
           {duplicates.map((duplicate) => (
             <View key={duplicate.incoming.point_uuid} style={styles.row}>
@@ -88,7 +87,7 @@ export const PointDuplicatesModal: React.FC<PointDuplicatesModalProps> = ({
                 onConfirm={() => resolve(duplicate, "replace")}
                 confirmDisabled={busyUuid !== null}
                 loading={busyUuid === duplicate.incoming.point_uuid}
-                style={styles.buttonRow}
+                inline
               />
               <Divider style={styles.rowDivider} />
             </View>
@@ -109,8 +108,10 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingLeft: 16,
-    paddingRight: 4,
+    // The close button is 52dp tall, so 12 above puts the title 24 from the top, as in the dialogs.
+    paddingTop: MODAL_PADDING_TOP - 12,
+    paddingLeft: MODAL_PADDING_H,
+    paddingRight: MODAL_PADDING_H - 12,
   },
   headerTitle: {
     flex: 1,
@@ -120,14 +121,13 @@ const styles = StyleSheet.create({
     maxHeight: "80%",
   },
   contentContainer: {
-    padding: 16,
-    paddingTop: 20,
+    paddingHorizontal: MODAL_PADDING_H,
+    paddingTop: MODAL_TITLE_GAP,
+    // No footer here: the list closes the modal with the footer's own bottom gap.
+    paddingBottom: MODAL_FOOTER_GAP_BELOW,
   },
   row: {
     marginBottom: 12,
-  },
-  buttonRow: {
-    marginTop: 4,
   },
   rowDivider: {
     marginTop: 12,

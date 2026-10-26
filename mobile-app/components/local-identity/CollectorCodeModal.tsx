@@ -1,11 +1,11 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { MODAL_PADDING_H, MODAL_PADDING_TOP, MODAL_TITLE_GAP } from "@/constants/modal-layout";
 import { MODAL_RADIUS } from "@/constants/shape";
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import {
   TextInput,
   Text,
-  Divider,
   useTheme,
   IconButton,
   Portal,
@@ -70,8 +70,6 @@ export const CollectorCodeModal: React.FC<CollectorCodeModalProps> = ({
           <IconButton icon="close" onPress={onDismiss} />
         </View>
 
-        <Divider />
-
         <View style={styles.content}>
           <Text
             variant="bodyMedium"
@@ -90,16 +88,16 @@ export const CollectorCodeModal: React.FC<CollectorCodeModalProps> = ({
             editable={!saving}
           />
           {error && <HelperText type="error">{error}</HelperText>}
-
-          <ModalActions
-            confirmLabel={t("collectorCode.save")}
-            onConfirm={handleSave}
-            loading={saving}
-            confirmDisabled={!code.trim()}
-            confirmIcon="content-save-outline"
-            style={styles.saveButton}
-          />
         </View>
+
+        {/* The footer owns the space around its button, and sits outside the padded content. */}
+        <ModalActions
+          confirmLabel={t("collectorCode.save")}
+          onConfirm={handleSave}
+          loading={saving}
+          confirmDisabled={!code.trim()}
+          confirmIcon="content-save-outline"
+        />
       </Modal>
     </Portal>
   );
@@ -114,23 +112,22 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingLeft: 16,
-    paddingRight: 4,
+    // The close button is 52dp tall, so 12 above puts the title 24 from the top, as in the dialogs.
+    paddingTop: MODAL_PADDING_TOP - 12,
+    paddingLeft: MODAL_PADDING_H,
+    paddingRight: MODAL_PADDING_H - 12,
   },
   headerTitle: {
     flex: 1,
     ...MODAL_TITLE_STYLE,
   },
   content: {
-    padding: 16,
-    paddingTop: 20,
+    paddingHorizontal: MODAL_PADDING_H,
+    paddingTop: MODAL_TITLE_GAP,
   },
   description: {
-    marginBottom: 20,
+    marginBottom: 16,
     lineHeight: 22,
     textAlign: "justify",
-  },
-  saveButton: {
-    marginTop: 8,
   },
 });

@@ -1,4 +1,6 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { MODAL_PADDING_H, MODAL_SCROLL_AREA_STYLE } from "@/constants/modal-layout";
+import { ModalTitle } from "@/components/ui/ModalBody";
 import { MODAL_SHAPE_STYLE } from "@/constants/shape";
 import { ModalActions } from "@/components/ui/ModalActions";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
@@ -96,9 +98,12 @@ export default function VegetationClassificationPicker({
         dialog: {
           backgroundColor: theme.colors.surface,
         },
+        // No frame lines and no vertical padding: the title's margin and the ModalActions footer
+        // own the space above and below the scrolling list.
         content: {
-          paddingHorizontal: 24,
-          paddingVertical: 16,
+          ...MODAL_SCROLL_AREA_STYLE,
+          paddingHorizontal: MODAL_PADDING_H,
+          paddingVertical: 0,
         },
         loadingContainer: {
           justifyContent: "center",
@@ -130,7 +135,7 @@ export default function VegetationClassificationPicker({
       onDismiss={onClose}
       style={[MODAL_SHAPE_STYLE, styles.dialog]}
     >
-      <Dialog.Title style={MODAL_TITLE_STYLE}>{t("vegetationClassification.selectClassification")}</Dialog.Title>
+      <ModalTitle style={MODAL_TITLE_STYLE}>{t("vegetationClassification.selectClassification")}</ModalTitle>
 
       <Dialog.ScrollArea style={styles.content}>
         {loading ? (

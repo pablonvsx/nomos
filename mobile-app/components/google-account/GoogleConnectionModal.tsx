@@ -1,8 +1,9 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { MODAL_PADDING_H, MODAL_PADDING_TOP, MODAL_TITLE_GAP } from "@/constants/modal-layout";
 import { MODAL_RADIUS } from "@/constants/shape";
 import React, { useEffect } from "react";
 import { View, StyleSheet } from "react-native";
-import { Text, Divider, useTheme, IconButton, Portal, Modal, HelperText } from "react-native-paper";
+import { Text, useTheme, IconButton, Portal, Modal, HelperText } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useGoogleAccount } from "@/hooks/use-google-account";
 import { useI18n } from "@/contexts/i18n-context";
@@ -84,8 +85,6 @@ export const GoogleConnectionModal: React.FC<GoogleConnectionModalProps> = ({
           <IconButton icon="close" onPress={onDismiss} disabled={isConnecting} />
         </View>
 
-        <Divider />
-
         <View style={styles.content}>
           {account ? (
             <>
@@ -117,13 +116,6 @@ export const GoogleConnectionModal: React.FC<GoogleConnectionModalProps> = ({
                   {makeEmailBreakable(account.email)}
                 </Text>
               </View>
-              <ModalActions
-                confirmLabel={t("googleAccount.disconnect")}
-                onConfirm={handleDisconnect}
-                loading={isConnecting}
-                destructive
-                style={styles.actionButton}
-              />
             </>
           ) : (
             <>
@@ -133,13 +125,6 @@ export const GoogleConnectionModal: React.FC<GoogleConnectionModalProps> = ({
               >
                 {t("googleAccount.connectExplanation")}
               </Text>
-              <ModalActions
-                confirmLabel={t("googleAccount.connect")}
-                onConfirm={handleConnect}
-                loading={isConnecting}
-                confirmIcon="google"
-                style={styles.actionButton}
-              />
             </>
           )}
           {error && (
@@ -152,6 +137,23 @@ export const GoogleConnectionModal: React.FC<GoogleConnectionModalProps> = ({
             </HelperText>
           )}
         </View>
+
+        {/* The footer owns the space around its button, and sits outside the padded content. */}
+        {account ? (
+          <ModalActions
+            confirmLabel={t("googleAccount.disconnect")}
+            onConfirm={handleDisconnect}
+            loading={isConnecting}
+            destructive
+          />
+        ) : (
+          <ModalActions
+            confirmLabel={t("googleAccount.connect")}
+            onConfirm={handleConnect}
+            loading={isConnecting}
+            confirmIcon="google"
+          />
+        )}
       </Modal>
     </Portal>
   );
@@ -166,16 +168,18 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingLeft: 16,
-    paddingRight: 4,
+    // The close button is 52dp tall, so 12 above puts the title 24 from the top, as in the dialogs.
+    paddingTop: MODAL_PADDING_TOP - 12,
+    paddingLeft: MODAL_PADDING_H,
+    paddingRight: MODAL_PADDING_H - 12,
   },
   headerTitle: {
     flex: 1,
     ...MODAL_TITLE_STYLE,
   },
   content: {
-    padding: 16,
-    paddingTop: 20,
+    paddingHorizontal: MODAL_PADDING_H,
+    paddingTop: MODAL_TITLE_GAP,
   },
   connectedLabel: {
     marginBottom: 8,
@@ -189,18 +193,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    marginBottom: 20,
+    marginBottom: 0,
   },
   emailText: {
     flexShrink: 1,
     fontWeight: "600",
   },
   description: {
-    marginBottom: 20,
+    marginBottom: 0,
     lineHeight: 22,
     textAlign: "justify",
-  },
-  actionButton: {
-    marginTop: 0,
   },
 });

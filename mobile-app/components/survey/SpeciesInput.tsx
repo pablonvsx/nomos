@@ -4,6 +4,7 @@
  * Provides autocomplete suggestions from project's existing species database
  */
 
+import { MODAL_PADDING_H, MODAL_TITLE_GAP } from "@/constants/modal-layout";
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import { ModalActions } from "@/components/ui/ModalActions";
 import React, { useState, useEffect, useRef } from "react";
@@ -670,8 +671,6 @@ export default function SpeciesInput({
               <IconButton icon="close" onPress={() => setShowAllSpeciesModal(false)} />
             </View>
 
-            <Divider />
-
             <FlatList
               data={sortedSpecies}
               renderItem={({ item }) => (
@@ -874,8 +873,6 @@ export default function SpeciesInput({
             />
           </View>
 
-          <Divider />
-
           <FlatList
             data={speciesList}
             renderItem={renderRegisteredSpeciesItem}
@@ -917,8 +914,6 @@ export default function SpeciesInput({
               }}
             />
           </View>
-
-          <Divider />
 
           {catalogLoading ? (
             <View style={styles.loadingContainer}>
@@ -1004,19 +999,20 @@ export default function SpeciesInput({
               </ScrollView>
 
               {selectedCatalogSpecies && (
-                <View style={[styles.modalFooter, { borderTopColor: theme.colors.outline, paddingBottom: bottomPadding }]}>
-                  <TextInput
-                    mode="outlined"
-                    label={t("species.abundance")}
-                    value={catalogAbundanceInput}
-                    onChangeText={setCatalogAbundanceInput}
-                    placeholder={t("common.optional")}
-                    keyboardType="number-pad"
-                    style={{ marginBottom: 12 }}
-                    outlineColor={theme.colors.outline}
-                    activeOutlineColor={theme.colors.primary}
-                    right={<TextInput.Affix text={t("surveyView.individuals")} />}
-                  />
+                <View style={[styles.modalFooter, { paddingBottom: bottomPadding }]}>
+                  <View style={styles.modalFooterField}>
+                    <TextInput
+                      mode="outlined"
+                      label={t("species.abundance")}
+                      value={catalogAbundanceInput}
+                      onChangeText={setCatalogAbundanceInput}
+                      placeholder={t("common.optional")}
+                      keyboardType="number-pad"
+                      outlineColor={theme.colors.outline}
+                      activeOutlineColor={theme.colors.primary}
+                      right={<TextInput.Affix text={t("surveyView.individuals")} />}
+                    />
+                  </View>
 
                   <ModalActions
                     cancelLabel={t("common.cancel")}
@@ -1169,9 +1165,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
   },
+  // No frame line above it; the ModalActions inside owns the space around its buttons.
   modalFooter: {
-    borderTopWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: MODAL_TITLE_GAP,
+  },
+  modalFooterField: {
+    paddingHorizontal: MODAL_PADDING_H,
   },
 });

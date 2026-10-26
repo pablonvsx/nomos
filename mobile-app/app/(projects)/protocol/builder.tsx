@@ -4,6 +4,8 @@
  * Form builder interface similar to Google Forms
  */
 
+import { MODAL_SCROLL_AREA_STYLE } from "@/constants/modal-layout";
+import { ModalBody, ModalTitle } from "@/components/ui/ModalBody";
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import { ModalActions } from "@/components/ui/ModalActions";
 import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
@@ -719,10 +721,10 @@ const TypeSelectionDialog = memo(function TypeSelectionDialog({
         onDismiss={onDismiss}
         style={[MODAL_SHAPE_STYLE, { maxHeight: "70%" }]}
       >
-        <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
+        <ModalTitle style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {t("protocol.selectFieldType")}
-        </Dialog.Title>
-        <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
+        </ModalTitle>
+        <Dialog.ScrollArea style={[{ paddingHorizontal: 0 }, MODAL_SCROLL_AREA_STYLE]}>
           <ScrollView contentContainerStyle={{ paddingVertical: 8 }}>
             {fieldTypes.map((type: FieldTypeOption) => {
               const isSelected = selectedType === type.value;
@@ -813,10 +815,10 @@ function ModuleSelectionDialog({
   return (
     <Portal>
       <Dialog visible={visible} onDismiss={onDismiss} style={[MODAL_SHAPE_STYLE, { maxHeight: "80%" }]}>
-        <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
+        <ModalTitle style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {t("protocol.selectScientificModule")}
-        </Dialog.Title>
-        <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
+        </ModalTitle>
+        <Dialog.ScrollArea style={[{ paddingHorizontal: 0 }, MODAL_SCROLL_AREA_STYLE]}>
           <ScrollView contentContainerStyle={{ paddingVertical: 8 }}>
             {modules.length === 0 ? (
               <Text
@@ -928,10 +930,10 @@ const UnitSelectionDialog = memo(function UnitSelectionDialog({
   return (
     <Portal>
       <Dialog visible={visible} onDismiss={onDismiss} style={[MODAL_SHAPE_STYLE, { maxHeight: "70%" }]}>
-        <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
+        <ModalTitle style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {t("protocol.selectUnit")}
-        </Dialog.Title>
-        <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
+        </ModalTitle>
+        <Dialog.ScrollArea style={[{ paddingHorizontal: 0 }, MODAL_SCROLL_AREA_STYLE]}>
           <ScrollView contentContainerStyle={{ paddingVertical: 8 }}>
             {renderItem(t("protocol.noUnit"), !isCustom && !selectedUnit, () => onSelectUnit(undefined), "none")}
             {CURATED_UNITS.map((u) =>
@@ -964,10 +966,10 @@ const OptionsManagerDialog = memo(function OptionsManagerDialog({
   return (
     <Portal>
       <Dialog visible={visible} onDismiss={onDismiss} style={[MODAL_SHAPE_STYLE, { maxHeight: "80%" }]}>
-        <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
+        <ModalTitle style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {t("protocol.manageOptions")}
-        </Dialog.Title>
-        <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
+        </ModalTitle>
+        <Dialog.ScrollArea style={[{ paddingHorizontal: 0 }, MODAL_SCROLL_AREA_STYLE]}>
           <ScrollView
             ref={scrollViewRef}
             contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 8 }}
@@ -1062,10 +1064,10 @@ const ItemFieldsManagerDialog = memo(function ItemFieldsManagerDialog({
     <>
       <Portal>
         <Dialog visible={visible} onDismiss={onDismiss} style={[MODAL_SHAPE_STYLE, { maxHeight: "80%" }]}>
-          <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
+          <ModalTitle style={MODAL_TITLE_STYLE} numberOfLines={1}>
             {t("protocol.manageItemFields")}
-          </Dialog.Title>
-          <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
+          </ModalTitle>
+          <Dialog.ScrollArea style={[{ paddingHorizontal: 0 }, MODAL_SCROLL_AREA_STYLE]}>
             <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 8 }}>
               {itemFields.map((field: CustomFieldConfig, index: number) => {
                 const fieldType = itemFieldTypes.find((ft: FieldTypeOption) => ft.value === field.type);
@@ -1152,20 +1154,20 @@ const FieldValidationAlert = memo(function FieldValidationAlert({
         onDismiss={onDismiss}
         style={[MODAL_SHAPE_STYLE, { backgroundColor: theme.colors.surface }]}
       >
-        <Dialog.Title
+        <ModalTitle
           numberOfLines={1}
           style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface, textAlign: "justify" }]}
         >
           {t("common.error")}
-        </Dialog.Title>
-        <Dialog.Content>
+        </ModalTitle>
+        <ModalBody>
           <Text
             variant="bodyMedium"
             style={{ color: theme.colors.onSurfaceVariant, textAlign: "justify" }}
           >
             {message}
           </Text>
-        </Dialog.Content>
+        </ModalBody>
         <ModalActions confirmLabel="OK" onConfirm={onDismiss} />
       </Dialog>
     </Portal>
@@ -1335,10 +1337,10 @@ function FieldFormDialog({
         onDismiss={onDismiss}
         style={[MODAL_SHAPE_STYLE, { maxHeight: FIELD_DIALOG_MAX_HEIGHT }]}
       >
-        <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
+        <ModalTitle style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {isEdit ? t("protocol.editField") : t("protocol.newField")}
-        </Dialog.Title>
-        <Dialog.ScrollArea>
+        </ModalTitle>
+        <Dialog.ScrollArea style={MODAL_SCROLL_AREA_STYLE}>
           <ScrollView
             ref={scrollViewRef}
             contentContainerStyle={{ paddingHorizontal: 24 }}

@@ -1,4 +1,6 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { MODAL_SCROLL_AREA_STYLE } from "@/constants/modal-layout";
+import { ModalTitle } from "@/components/ui/ModalBody";
 import { ModalActions } from "@/components/ui/ModalActions";
 import React, { useState, useMemo } from "react";
 import { View, Pressable, ScrollView } from "react-native";
@@ -141,10 +143,10 @@ function CardinalPointDialog({
   return (
     <Portal>
       <Dialog visible={visible} onDismiss={onDismiss} style={[MODAL_SHAPE_STYLE, { maxHeight: "70%" }]}>
-        <Dialog.Title style={MODAL_TITLE_STYLE} numberOfLines={1}>
+        <ModalTitle style={MODAL_TITLE_STYLE} numberOfLines={1}>
           {t("survey.selectCardinalPoint")}
-        </Dialog.Title>
-        <Dialog.ScrollArea style={{ paddingHorizontal: 0 }}>
+        </ModalTitle>
+        <Dialog.ScrollArea style={[{ paddingHorizontal: 0 }, MODAL_SCROLL_AREA_STYLE]}>
           <ScrollView contentContainerStyle={{ paddingVertical: 8 }}>
             {CARDINAL_POINTS.map((cardinal) => {
               const isSelected = cardinal === selectedCardinal;
