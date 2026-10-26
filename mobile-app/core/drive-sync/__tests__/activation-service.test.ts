@@ -90,6 +90,7 @@ function context(cancelAfterReports = Infinity): BackupContext & { reports: numb
       ctx.reports += 1;
       ctx.stages.push(stage.key);
     },
+    activity: () => {},
     isCancelled: () => ctx.reports > cancelAfterReports,
   };
   return ctx;

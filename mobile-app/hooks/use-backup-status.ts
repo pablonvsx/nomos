@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import { computeBackupStatus } from "@/core/drive-sync/backup-status-service";
 import type { BackupScope, BackupStatus } from "@/core/drive-sync/change-detection";
-import { useBackupSession } from "@/hooks/use-backup-session";
+import { useBackupPhase } from "@/hooks/use-backup-session";
 
 /**
  * The backup status of one scope of a project (see backup-status-service.ts).
@@ -12,7 +12,7 @@ import { useBackupSession } from "@/hooks/use-backup-session";
  */
 export function useBackupStatus(projectId: number | undefined, scope: BackupScope, enabled: boolean) {
   const [status, setStatus] = useState<BackupStatus | null>(null);
-  const session = useBackupSession();
+  const phase = useBackupPhase();
   const latestRequest = useRef(0);
 
   const refresh = useCallback(async () => {
@@ -33,8 +33,8 @@ export function useBackupStatus(projectId: number | undefined, scope: BackupScop
 
   // A backup ending (result shown, then dismissed) changes what is pending.
   useEffect(() => {
-    if (session.phase !== "running") refresh();
-  }, [session.phase, refresh]);
+    if (phase !== "running") refresh();
+  }, [phase, refresh]);
 
   return { status, refresh };
 }

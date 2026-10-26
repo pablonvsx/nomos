@@ -630,14 +630,57 @@ frame cannot both start. `BackupModal` (mounted once in `app/_layout.tsx`)
 renders the session and holds the person until the end:
 
 - `checking`: the pre-flight is running. The lock is held, nothing is shown.
-- `running`: stage and "N of M", a progress bar, "Keep the app open until it
-  finishes" and **Cancel**. Android Back and a tap outside open the cancel
-  confirmation instead of closing.
+- `running`: stage and "N of M", a progress bar, the activity log (below),
+  "Keep the app open until it finishes" and **Cancel**. Android Back and a tap
+  outside open the cancel confirmation instead of closing.
 - `confirmingCancel` → `cancelling` → result `cancelled`: the run stops between
   items; what was sent stays sent, the rest stays pending.
 - `finished`: stays until **OK** (single action: `ModalActions` places a lone
   button in the right column). The view rules are the pure reducer
   `core/ui/backup-modal-state.ts`.
+
+### Progress bar and activity log
+
+One modal serves every backup: the points backup, the project-details backup
+(`runProjectDataBackup`), the single-point button and the activation all go
+through `launchBackup` and the same global `BackupModal`, so there is no second
+progress dialog to keep in step. Its footer is the shared `ModalActions`
+(rounded rectangular buttons, the standard spacing above and below).
+
+**The bar follows the item in progress, not the ones already done.** Runners
+report `context.report(stage, k, N)` with `k` the 1-based position of the item now
+going up, so the first of 4 shows 25 % while it uploads instead of 0 %.
+`core/ui/progress.ts`:
+
+- `getProgressFraction({ current, total }, finished)` is `null` (indeterminate)
+  before the first item starts or while the total is unknown, `k / N` during the
+  run, `1` at the end, and never divides by zero (`total` 0). A failed item or a
+  cancel is not an input, so neither makes the bar jump.
+- `advanceProgress` keeps the position from going backwards within one run
+  (the session applies it on every report); a different total is a new list and
+  is taken as it comes.
+
+**The log** (`core/ui/activity-log.ts`, `components/drive-sync/BackupActivityLog.tsx`)
+is a short list of typed events: `item-start`, an optional `media` ("photo 2 of
+5"; the counts are per kind, over the point's own and its modules' media),
+`item-done` and `item-failed`. A cancelled item logs only its start. Items are
+named by `failureName`, the function the failure list uses, so a point is
+"Ponto 2" and a species its own name in both places, never an id. The runners
+emit through `context.activity`; `backupAllPendingPoints` takes an `onEvent`
+option and `backupPoint` an `onMedia` option, `backupProjectData` emits for each
+item it sends. `appendActivity` keeps the newest 50 events and `visibleActivity`
+returns the last 5 for the screen. The component has small type, one line per
+event and a **fixed height** of 5 lines, newest at the bottom, so the dialog
+never changes size while it fills; it is a polite live region
+(`accessibilityLiveRegion="polite"`). Texts are `driveBackup.log.*` in the four
+languages.
+
+**Update rate.** The session state is current at once, but subscribers are told
+about progress and log changes at most every 100 ms
+(`PROGRESS_NOTIFY_INTERVAL_MS`); a change of phase (start, cancel request, result)
+is announced immediately. Screens that only need to know whether a backup runs
+read `useBackupPhase()`, a string, so the project screen does not re-render on
+every report; only `BackupModal` reads the full state.
 
 ### Pre-flight: a backup that cannot reach Drive never starts
 
@@ -1027,8 +1070,13 @@ merged into one message rather than alerted one after another.
   `ensureFolder`, files updated by name).
 - **No real-device validation of the dialog and progress flows.** The pure
   rules (review mode, close-then-show ordering, exclusive runner, dialog
-  reducer, backup progress) are unit-tested; the stacking of dialogs over
-  modals, the 300 ms wait, the banners and the review flow are not.
+  reducer, backup progress, the activity log and its events) are unit-tested;
+  the stacking of dialogs over modals, the 300 ms wait, the banners and the
+  review flow are not. Also only checkable on a device: that the log keeps its
+  fixed height and clips old lines, the space around Cancel, a screen reader
+  announcing new log lines, and a bar that moves on a slow point (the bar
+  advances per item, so one slow point with many photos stays on the same
+  position while only the log changes).
 - **Editing a point after its backup resends it, on the next backup.** The
   change shows up through the snapshot (the per-point button is enabled again),
   not through `drive_synced_at`, which only records the last successful send.

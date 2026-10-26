@@ -17,7 +17,13 @@ import {
 } from "@/db/queries/points";
 import { getProjectById } from "@/db/queries/projects";
 import type { Point } from "@/types/database";
-import { getModuleMediaFields, loadMediaLabelIndex, mapModuleMediaUris } from "@/core/project-sharing/module-media";
+import {
+  getModuleMediaFields,
+  listModuleMediaUris,
+  loadMediaLabelIndex,
+  mapModuleMediaUris,
+} from "@/core/project-sharing/module-media";
+import type { ActivityEvent } from "@/core/ui/activity-log";
 import { parseAudioNotes, parsePhotoUris } from "@/db/mappers/json-utils";
 import type { PointPackageAudioNote, PointPackageEntry } from "@/core/project-sharing/export-points";
 import { isNetworkTimeoutError } from "@/core/net/network-timeout";
@@ -103,10 +109,17 @@ function mimeTypeForUri(uri: string): string {
  * group_<title>/item_NN/). Pass the same `cache` for every point of a batch so
  * approved/ is listed once and known folders are not looked up again.
  */
+/** "Photo 2 of 5" while a point's media goes up; the counts are per kind, over the point's own and its modules' media. */
+export interface BackupMediaProgress {
+  mediaKind: "photo" | "audio";
+  index: number;
+  total: number;
+}
+
 export async function backupPoint(
   pointId: string,
   cache: DriveFolderCache = createDriveFolderCache(),
-  options: { shouldCancel?: () => boolean } = {},
+  options: { shouldCancel?: () => boolean; onMedia?: (progress: BackupMediaProgress) => void } = {},
 ): Promise<BackupResult> {
   const isCancelled = () => options.shouldCancel?.() === true;
   const cancelledResult: BackupResult = { success: false, cancelled: true, error: "Cancelado." };
@@ -204,10 +217,29 @@ export async function backupPoint(
   const photoPaths: string[] = [];
   const audioEntries: PointPackageAudioNote[] = [];
 
+  const moduleMediaFields = await getModuleMediaFields(project.protocol_id, project.protocol_source);
   const photoUris = parsePhotoUris(point.photos);
+  const audioNotes = parseAudioNotes(point.audio_notes);
+
+  // For "photo 2 of 5": how many files of each kind this point sends, module media included.
+  const totals = { photo: photoUris.length, audio: audioNotes.length };
+  const seen = { photo: 0, audio: 0 };
+  if (options.onMedia) {
+    for (const mod of modules) {
+      const fieldsOfModule = moduleMediaFields.filter((f) => f.moduleId === mod.module_id);
+      if (fieldsOfModule.length === 0) continue;
+      for (const listed of await listModuleMediaUris(mod.data_json, fieldsOfModule)) totals[listed.kind] += 1;
+    }
+  }
+  const announce = (mediaKind: "photo" | "audio"): void => {
+    seen[mediaKind] += 1;
+    options.onMedia?.({ mediaKind, index: seen[mediaKind], total: totals[mediaKind] });
+  };
+
   for (let i = 0; i < photoUris.length; i++) {
     if (isCancelled()) return cancelledResult;
     const relativePath = inMedia(paths.pointPhoto(photoUris[i], i));
+    announce("photo");
     if (!new File(photoUris[i]).exists) {
       mediaProblems.push(`Foto ${i + 1} não encontrada no dispositivo.`);
       missingMediaCount += 1;
@@ -221,11 +253,11 @@ export async function backupPoint(
     }
   }
 
-  const audioNotes = parseAudioNotes(point.audio_notes);
   for (let i = 0; i < audioNotes.length; i++) {
     if (isCancelled()) return cancelledResult;
     const note = audioNotes[i];
     const relativePath = inMedia(paths.pointAudio(note.uri, i));
+    announce("audio");
     if (!new File(note.uri).exists) {
       mediaProblems.push(`Áudio ${i + 1} não encontrado no dispositivo.`);
       missingMediaCount += 1;
@@ -243,7 +275,6 @@ export async function backupPoint(
   // module data_json: upload those files too and write markers carrying the
   // exact Drive-relative path in place of this device's paths, so a restore
   // follows them literally.
-  const moduleMediaFields = await getModuleMediaFields(project.protocol_id, project.protocol_source);
   const modulesRecord: Record<string, string> = {};
   let schemaVersion = "1.0";
   for (const mod of modules) {
@@ -254,6 +285,7 @@ export async function backupPoint(
         : await mapModuleMediaUris(mod.data_json, fieldsOfModule, async (uri, location) => {
             if (isCancelled()) return null;
             const relativePath = inMedia(paths.moduleMedia(location, uri));
+            announce(location.kind);
             if (!new File(uri).exists) {
               mediaProblems.push(`Mídia do módulo ${mod.module_id} não encontrada no dispositivo.`);
               missingMediaCount += 1;
@@ -369,6 +401,8 @@ export interface BackupAllOptions {
    * and stay pending. Defaults to every eligible point of the project.
    */
   points?: Point[];
+  /** What is happening, for the activity log: a point starting, its media, its end. */
+  onEvent?: (event: ActivityEvent) => void;
   /** Called after each point finished, successfully or not. */
   onPointDone?: (point: Point, result: BackupResult) => void | Promise<void>;
 }
@@ -396,12 +430,17 @@ export async function backupAllPendingPoints(
     }
     onProgress?.({ current: index + 1, total: points.length });
     attempted += 1;
+    const item = { kind: "point" as const, label: "", point: { number: point.point_number, lat: point.lat, lon: point.lon } };
+    options.onEvent?.({ type: "item-start", item });
 
     // An unexpected throw (e.g. a DB error) counts as this point failing,
     // not as the whole batch aborting with the earlier points' work unreported.
     let result: BackupResult;
     try {
-      result = await backupPoint(point.id.toString(), cache, { shouldCancel });
+      result = await backupPoint(point.id.toString(), cache, {
+        shouldCancel,
+        onMedia: options.onEvent ? (media) => options.onEvent?.({ type: "media", item, ...media }) : undefined,
+      });
     } catch (error) {
       result = {
         success: false,
@@ -417,6 +456,8 @@ export async function backupAllPendingPoints(
       attempted -= 1;
       break;
     }
+
+    options.onEvent?.({ type: result.success ? "item-done" : "item-failed", item });
 
     if (result.success) {
       backedUp += 1;

@@ -7,6 +7,7 @@
 
 import { predominantReason } from "@/core/drive-sync/backup-results";
 import type { BackupResult, BackupSessionScope, BackupSessionState } from "@/core/drive-sync/backup-session";
+import { getProgressFraction } from "@/core/ui/progress";
 
 export type BackupModalView =
   | { kind: "hidden" }
@@ -49,7 +50,7 @@ export function deriveBackupModalView(session: BackupSessionState, ui: BackupMod
   if (session.phase === "idle" || session.phase === "checking") return { kind: "hidden" };
   if (session.phase === "finished") return { kind: "finished", result: session.result };
   if (session.cancelRequested) return { kind: "cancelling" };
-  const progress = session.total > 0 ? Math.min(1, session.current / session.total) : null;
+  const progress = getProgressFraction(session);
   return ui.confirmingCancel ? { kind: "confirmingCancel", progress } : { kind: "running", progress };
 }
 

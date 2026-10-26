@@ -1121,6 +1121,13 @@
       "manifest": "Mise à jour du manifeste du projet...",
       "activationFolders": "Création des dossiers sur Drive..."
     },
+    "log": {
+      "start": "Envoi de {{name}}...",
+      "photo": "{{name}} : photo {{current}} sur {{total}}",
+      "audio": "{{name}} : audio {{current}} sur {{total}}",
+      "done": "{{name}} envoyé",
+      "failed": "{{name}} : envoi impossible"
+    },
     "result": {
       "completed": {
         "title": "Sauvegarde terminée",

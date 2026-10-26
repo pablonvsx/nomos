@@ -151,7 +151,9 @@ export async function backupProjectData(params: {
       key: item.group ? STAGE_KEY[item.group] : "driveBackup.stage.preparing",
       params: { current: String(position), total: String(groupTotals.get(group) ?? 1) },
     };
-    context.report(stage, index, pending.length);
+    // Reported by the position of the item now going up (1 of N), not by how many are done.
+    context.report(stage, index + 1, pending.length);
+    context.activity({ type: "item-start", item });
     attempted += 1;
 
     try {
@@ -165,6 +167,7 @@ export async function backupProjectData(params: {
       );
       if (item.group === "classifications") classificationProblem = true;
       groupDone.set(group, position);
+      context.activity({ type: "item-failed", item });
       if (isConnectionError(error)) {
         connectionLost = true;
         break;
@@ -174,6 +177,7 @@ export async function backupProjectData(params: {
 
     groupDone.set(group, position);
     sent += 1;
+    context.activity({ type: "item-done", item });
     try {
       await onItemDone(item);
     } catch (error) {

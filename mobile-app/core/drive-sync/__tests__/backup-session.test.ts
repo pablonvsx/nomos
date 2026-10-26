@@ -88,6 +88,101 @@ describe("progress and cancellation", () => {
   });
 });
 
+describe("progress position, activity log and notification rate", () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  const stage = { key: "driveBackup.stage.points" };
+  const item = { kind: "point" as const, label: "", point: { number: 1, lat: 0, lon: 0 } };
+
+  async function withRun(body: (context: Parameters<Parameters<typeof startBackup>[0]["run"]>[0]) => void) {
+    const gate = deferred<BackupResult>();
+    const started = startBackup({
+      scope: "points",
+      projectId: 1,
+      run: async (context) => {
+        body(context);
+        return gate.promise;
+      },
+    });
+    return {
+      finish: async () => {
+        gate.resolve(completed);
+        if (started.status === "started") await started.done;
+      },
+    };
+  }
+
+  it("the position never goes backwards within a run", async () => {
+    const run = await withRun((context) => {
+      context.report(stage, 1, 4);
+      context.report(stage, 3, 4);
+      context.report(stage, 2, 4);
+    });
+    expect(getBackupSession()).toMatchObject({ phase: "running", current: 3, total: 4 });
+    await run.finish();
+  });
+
+  it("keeps the log bounded to 50 events, newest last", async () => {
+    const run = await withRun((context) => {
+      for (let i = 1; i <= 60; i++) context.activity({ type: "item-start", item: { ...item, point: { number: i, lat: 0, lon: 0 } } });
+    });
+    const session = getBackupSession();
+    if (session.phase !== "running") throw new Error("expected running");
+    expect(session.log).toHaveLength(50);
+    expect((session.log[49].item.point as { number: number }).number).toBe(60);
+    await run.finish();
+  });
+
+  it("coalesces many reports into few notifications, and the state is already current when read", async () => {
+    let context!: Parameters<Parameters<typeof startBackup>[0]["run"]>[0];
+    const gate = deferred<BackupResult>();
+    startBackup({
+      scope: "points",
+      projectId: 1,
+      run: (c) => {
+        context = c;
+        return gate.promise;
+      },
+    });
+    jest.advanceTimersByTime(500);
+    let notifications = 0;
+    subscribeBackupSession(() => notifications++);
+
+    for (let i = 1; i <= 100; i++) context.report(stage, i, 100);
+
+    expect(getBackupSession()).toMatchObject({ current: 100, total: 100 }); // read at once, not delayed
+    expect(notifications).toBe(1); // the first went out, the other 99 wait
+    jest.advanceTimersByTime(100);
+    expect(notifications).toBe(2); // one more carries the final state
+    jest.advanceTimersByTime(1000);
+    expect(notifications).toBe(2);
+    gate.resolve(completed);
+  });
+
+  it("a change of phase is never delayed: the result is announced at once", async () => {
+    let context!: Parameters<Parameters<typeof startBackup>[0]["run"]>[0];
+    const gate = deferred<BackupResult>();
+    const started = startBackup({
+      scope: "points",
+      projectId: 1,
+      run: (c) => {
+        context = c;
+        return gate.promise;
+      },
+    });
+    jest.advanceTimersByTime(500);
+    const phases: string[] = [];
+    subscribeBackupSession(() => phases.push(getBackupSession().phase));
+    context.report(stage, 1, 2); // throttled-class update right after: waits
+    requestBackupCancel(); // a phase-class change: goes out now
+    expect(phases).toContain("running");
+    gate.resolve(completed);
+    if (started.status === "started") await started.done;
+    expect(phases[phases.length - 1]).toBe("finished");
+  });
+});
+
 describe("results and errors", () => {
   it("turns a thrown error into an 'error' outcome with a friendly reason, never the raw text as the reason", async () => {
     const started = startBackup({

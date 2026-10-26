@@ -1121,6 +1121,13 @@
       "manifest": "Atualizando o manifesto do projeto...",
       "activationFolders": "Criando as pastas no Drive..."
     },
+    "log": {
+      "start": "Enviando {{name}}...",
+      "photo": "{{name}}: foto {{current}} de {{total}}",
+      "audio": "{{name}}: áudio {{current}} de {{total}}",
+      "done": "{{name}} enviado",
+      "failed": "{{name}}: não foi possível enviar"
+    },
     "result": {
       "completed": {
         "title": "Backup concluído",

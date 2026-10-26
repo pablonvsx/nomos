@@ -41,7 +41,7 @@ import { runPointsBackup, runProjectDataBackup } from "../backup-runners";
 import { pointItemKey } from "../backup-items";
 import type { BackupContext } from "../backup-session";
 
-const ctx: BackupContext = { report: jest.fn(), isCancelled: () => false };
+const ctx: BackupContext = { report: jest.fn(), activity: jest.fn(), isCancelled: () => false };
 const point = (id: number) => ({ id, point_number: id });
 const pItem = (id: number, fp: string) => ({ key: pointItemKey(id), kind: "point" as const, label: "", fingerprint: fp });
 
@@ -52,6 +52,26 @@ beforeEach(() => {
   jest.spyOn(console, "error").mockImplementation(() => {});
 });
 afterEach(() => jest.restoreAllMocks());
+
+describe("runPointsBackup: progress and log wiring", () => {
+  it("reports the point now going up (1 of N), hands the log callback to the service, and forwards the context's activity", async () => {
+    collectPointItems.mockResolvedValue({ items: [pItem(1, "a"), pItem(2, "b")], points: [point(1), point(2)] });
+    const report = jest.fn();
+    const activity = jest.fn();
+    const context: BackupContext = { report, activity, isCancelled: () => false };
+    backupAllPendingPoints.mockImplementation(async (_id: number, onProgress: (p: { current: number; total: number }) => void, options: { onEvent: (e: unknown) => void }) => {
+      onProgress({ current: 1, total: 2 });
+      options.onEvent({ type: "item-start" });
+      onProgress({ current: 2, total: 2 });
+      return { backedUp: 0, failed: [], cancelled: false, connectionLost: false, notAttempted: 0 };
+    });
+
+    await runPointsBackup(1, context);
+
+    expect(report.mock.calls.map(([, current, total]) => [current, total])).toEqual([[1, 2], [2, 2]]);
+    expect(activity).toHaveBeenCalledWith({ type: "item-start" });
+  });
+});
 
 describe("runPointsBackup", () => {
   it("sends only new or edited points and records each success with the fingerprint captured at the start", async () => {

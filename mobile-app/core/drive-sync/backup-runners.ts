@@ -74,12 +74,13 @@ export async function runPointsBackup(projectId: number, context: BackupContext)
     ({ current, total }) =>
       context.report(
         { key: "driveBackup.stage.points", params: { current: String(current), total: String(total) } },
-        current - 1,
+        current,
         total,
       ),
     {
       points: pointsToSend,
       shouldCancel: context.isCancelled,
+      onEvent: context.activity,
       onPointDone: async (point, result) => {
         if (!result.success) return;
         const key = pointItemKey(point.id);
@@ -136,8 +137,18 @@ export async function runSinglePointBackup(
   context.report({ key: "driveBackup.stage.singlePoint" }, 0, 1);
   const found = await getPoint(pointId);
   const owner = found?.point;
+  const subject = {
+    kind: "point" as const,
+    label: "",
+    point: owner ? { number: owner.point_number, lat: owner.lat, lon: owner.lon } : undefined,
+  };
+  context.activity({ type: "item-start", item: subject });
   const captured = owner ? await collectPointItems(owner.project_id) : null;
-  const result = await backupPoint(pointId.toString(), undefined, { shouldCancel: context.isCancelled });
+  const result = await backupPoint(pointId.toString(), undefined, {
+    shouldCancel: context.isCancelled,
+    onMedia: (media) => context.activity({ type: "media", item: subject, ...media }),
+  });
+  if (!result.cancelled) context.activity({ type: result.success ? "item-done" : "item-failed", item: subject });
   if (result.success && owner && captured) {
     const item = captured.items.find((i) => i.key === pointItemKey(pointId));
     if (item) {

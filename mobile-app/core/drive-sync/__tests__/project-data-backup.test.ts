@@ -57,6 +57,7 @@ function context(cancelAfterReports = Infinity): BackupContext & { reports: numb
     report: () => {
       ctx.reports += 1;
     },
+    activity: () => {},
     isCancelled: () => ctx.reports > cancelAfterReports,
   };
   return ctx;
@@ -72,6 +73,59 @@ afterEach(() => jest.restoreAllMocks());
 
 const run = (pending: BackupItem[], payloads: Map<string, unknown>, ctx: BackupContext, done: (i: BackupItem) => Promise<void> = async () => {}) =>
   backupProjectData({ driveFolderId: ROOT_ID, pending, payloads, context: ctx, onItemDone: done });
+
+/** A context that records every report and every activity event, in order. */
+function recordingContext(): BackupContext & { reported: Array<[number, number]>; events: string[] } {
+  const ctx = {
+    reported: [] as Array<[number, number]>,
+    events: [] as string[],
+    report: (_stage: unknown, current: number, total: number) => void ctx.reported.push([current, total]),
+    activity: (event: { type: string; item: { kind: string; label: string } }) =>
+      void ctx.events.push(`${event.type}:${event.item.kind}:${event.item.label}`),
+    isCancelled: () => false,
+  };
+  return ctx;
+}
+
+describe("backupProjectData: progress by the item in progress, and the activity log", () => {
+  it("reports the position of the item going up (1 of N, then 2 of N ...), never the count already done", async () => {
+    const { items, payloads } = buildProjectDataItems(pkg());
+    const ctx = recordingContext();
+
+    await run(items, payloads, ctx);
+
+    expect(ctx.reported).toEqual([[1, 4], [2, 4], [3, 4], [4, 4]]);
+  });
+
+  it("logs start then done for each item, in sending order, naming each by its own label", async () => {
+    const { items, payloads } = buildProjectDataItems(pkg());
+    const ctx = recordingContext();
+
+    await run(items, payloads, ctx);
+
+    expect(ctx.events.map((e) => e.split(":").slice(0, 2).join(":"))).toEqual([
+      "item-start:classification", "item-done:classification",
+      "item-start:species", "item-done:species",
+      "item-start:species", "item-done:species",
+      "item-start:manifest", "item-done:manifest",
+    ]);
+    expect(ctx.events).toContain("item-start:species:Aspidosperma");
+  });
+
+  it("logs item-failed (and no item-done) for the item that failed, then keeps going with the next", async () => {
+    const { items, payloads } = buildProjectDataItems(pkg());
+    drive.failWhen((op, name) => op === "uploadJsonFile" && name === "s1.json");
+    const ctx = recordingContext();
+
+    await run(items, payloads, ctx);
+
+    expect(ctx.events).toContain("item-failed:species:Aspidosperma");
+    expect(ctx.events).not.toContain("item-done:species:Aspidosperma");
+    expect(ctx.events.filter((e) => e.startsWith("item-start:species"))).toHaveLength(2);
+    // The failure did not move the bar: the next item is simply the next position.
+    expect(ctx.reported.map(([current]) => current)).toEqual([1, 2, 3, 4]);
+  });
+});
 
 describe("backupProjectData", () => {
   it("sends every pending item, reports each as done, and updates the manifest last", async () => {

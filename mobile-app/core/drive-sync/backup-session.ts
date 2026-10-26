@@ -8,6 +8,8 @@
 import { describeBackupError, type BackupReasonKey } from "@/core/drive-sync/backup-errors";
 import type { PreflightFailure } from "@/core/drive-sync/backup-preflight";
 import type { BackupItemKind } from "@/core/drive-sync/change-detection";
+import { appendActivity, type ActivityEvent } from "@/core/ui/activity-log";
+import { advanceProgress } from "@/core/ui/progress";
 
 export type BackupScope = "points" | "project";
 
@@ -65,15 +67,21 @@ export type BackupSessionState =
       scope: BackupSessionScope;
       projectId: number;
       stage: BackupStage | null;
+      /** 1-based position of the item in progress (0 before the first one starts), out of `total`. */
       current: number;
       total: number;
+      /** What is happening, newest last; bounded (see ACTIVITY_LOG_LIMIT). */
+      log: ActivityEvent[];
       cancelRequested: boolean;
     }
   | { phase: "finished"; scope: BackupSessionScope; projectId: number; result: BackupResult };
 
 /** What a backup runner receives: report progress and learn whether the person asked to cancel. */
 export interface BackupContext {
+  /** `current` is the 1-based position of the item now in progress (0 = none yet). */
   report(stage: BackupStage, current: number, total: number): void;
+  /** One line for the activity log under the bar. */
+  activity(event: ActivityEvent): void;
   isCancelled(): boolean;
 }
 
@@ -97,9 +105,36 @@ let state: BackupSessionState = { phase: "idle" };
 let onDismissed: ((result: BackupResult) => void) | undefined;
 const listeners = new Set<Listener>();
 
+/**
+ * Progress and log updates reach the subscribers at most this often: a backup of
+ * many small items would otherwise re-render the screens on every item.
+ */
+export const PROGRESS_NOTIFY_INTERVAL_MS = 100;
+
+let lastNotifiedAt = 0;
+let pendingNotify: ReturnType<typeof setTimeout> | null = null;
+
+function notify(): void {
+  if (pendingNotify !== null) {
+    clearTimeout(pendingNotify);
+    pendingNotify = null;
+  }
+  lastNotifiedAt = Date.now();
+  for (const listener of [...listeners]) listener();
+}
+
+/** A change of phase (or a cancel request): tell everyone right away. */
 function setState(next: BackupSessionState): void {
   state = next;
-  for (const listener of [...listeners]) listener();
+  notify();
+}
+
+/** Progress or log only: the state is current at once, the subscribers hear about it at most every interval. */
+function setStateThrottled(next: BackupSessionState): void {
+  state = next;
+  const wait = PROGRESS_NOTIFY_INTERVAL_MS - (Date.now() - lastNotifiedAt);
+  if (wait <= 0) notify();
+  else if (pendingNotify === null) pendingNotify = setTimeout(notify, wait);
 }
 
 export function getBackupSession(): BackupSessionState {
@@ -161,12 +196,17 @@ export async function startBackupWithPreflight(
 function begin(options: StartBackupOptions): StartBackupStatus {
   const { scope, projectId } = options;
   onDismissed = options.onDismissed;
-  setState({ phase: "running", scope, projectId, stage: null, current: 0, total: 0, cancelRequested: false });
+  setState({ phase: "running", scope, projectId, stage: null, current: 0, total: 0, log: [], cancelRequested: false });
 
   const context: BackupContext = {
     report(stage, current, total) {
       if (state.phase !== "running") return;
-      setState({ ...state, stage, current, total });
+      // Within one run the bar never goes backwards.
+      setStateThrottled({ ...state, stage, ...advanceProgress({ current: state.current, total: state.total }, { current, total }) });
+    },
+    activity(event) {
+      if (state.phase !== "running") return;
+      setStateThrottled({ ...state, log: appendActivity(state.log, event) });
     },
     isCancelled() {
       return state.phase === "running" && state.cancelRequested;
@@ -216,6 +256,9 @@ export function dismissBackupResult(): void {
 
 /** Test hook: back to a clean idle store. */
 export function resetBackupSessionForTests(): void {
+  if (pendingNotify !== null) clearTimeout(pendingNotify);
+  pendingNotify = null;
+  lastNotifiedAt = 0;
   state = { phase: "idle" };
   onDismissed = undefined;
   listeners.clear();

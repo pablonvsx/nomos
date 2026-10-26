@@ -8,6 +8,7 @@ const running = (overrides: Partial<Extract<BackupSessionState, { phase: "runnin
   stage: null,
   current: 1,
   total: 4,
+  log: [],
   cancelRequested: false,
   ...overrides,
 });

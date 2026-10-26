@@ -1118,3 +1118,105 @@ describe("failed points are identified by their number, not by a placeholder", (
     expect(JSON.stringify(summary.failed)).not.toContain("?");
   });
 });
+
+describe("backupAllPendingPoints: the activity events", () => {
+  const typesOf = (events: Array<{ type: string }>) => events.map((e) => e.type);
+
+  it("per point: item-start, its media in order, then item-done", async () => {
+    fsState.set("file:///capture/p1.jpg", { isDir: false, content: "a" });
+    fsState.set("file:///capture/p2.jpg", { isDir: false, content: "b" });
+    fsState.set("file:///capture/a1.m4a", { isDir: false, content: "c" });
+    const project = seedProject();
+    seedPoint(project.id, {
+      photos: JSON.stringify([
+        { uri: "file:///capture/p1.jpg", timestamp: 1 },
+        { uri: "file:///capture/p2.jpg", timestamp: 2 },
+      ]),
+      audio_notes: JSON.stringify([{ uri: "file:///capture/a1.m4a", duration: 2, timestamp: 3 }]),
+    });
+    const events: Array<Record<string, unknown> & { type: string }> = [];
+
+    await backupAllPendingPoints(project.id, undefined, { onEvent: (e) => events.push(e as never) });
+
+    expect(typesOf(events)).toEqual(["item-start", "media", "media", "media", "item-done"]);
+    expect(events.slice(1, 4).map((e) => [e.mediaKind, e.index, e.total])).toEqual([
+      ["photo", 1, 2],
+      ["photo", 2, 2],
+      ["audio", 1, 1],
+    ]);
+    expect(events[0]).toMatchObject({ item: { kind: "point", point: { number: 1 } } });
+  });
+
+  it("counts a custom protocol's module media in the same 'photo N of M'", async () => {
+    fsState.set("file:///capture/own.jpg", { isDir: false, content: "a" });
+    fsState.set("file:///capture/m-photo.jpg", { isDir: false, content: "b" });
+    fsState.set("file:///capture/m-note.m4a", { isDir: false, content: "c" });
+    const project = seedProject({ protocol_id: "7", protocol_source: "custom" });
+    seedPoint(project.id, {
+      photos: JSON.stringify([{ uri: "file:///capture/own.jpg", timestamp: 1 }]),
+      rawModules: [
+        {
+          module_id: "section_1",
+          schema_version: "1.0",
+          data_json: JSON.stringify({
+            fotos: JSON.stringify([{ uri: "file:///capture/m-photo.jpg", timestamp: 1 }]),
+            gravacoes: JSON.stringify([{ uri: "file:///capture/m-note.m4a", duration: 3, timestamp: 2 }]),
+          }),
+        },
+      ],
+    });
+    const events: Array<Record<string, unknown> & { type: string }> = [];
+
+    await backupAllPendingPoints(project.id, undefined, { onEvent: (e) => events.push(e as never) });
+
+    expect(events.filter((e) => e.type === "media").map((e) => [e.mediaKind, e.index, e.total])).toEqual([
+      ["photo", 1, 2],
+      ["photo", 2, 2],
+      ["audio", 1, 1],
+    ]);
+  });
+
+  it("a failed point logs item-failed (never item-done) and the batch goes on with the next one", async () => {
+    const project = seedProject();
+    seedPoint(project.id);
+    const second = seedPoint(project.id);
+    seedPoint(project.id);
+    failJsonFor(second.id, new Error("Drive API error (500): boom"));
+    const events: Array<{ type: string; item: { point: { number: number } } }> = [];
+
+    await backupAllPendingPoints(project.id, undefined, { onEvent: (e) => events.push(e as never) });
+
+    expect(events.map((e) => `${e.type}:${e.item.point.number}`)).toEqual([
+      "item-start:1", "item-done:1",
+      "item-start:2", "item-failed:2",
+      "item-start:3", "item-done:3",
+    ]);
+  });
+
+  it("a point interrupted by a cancel logs its start but neither done nor failed", async () => {
+    fsState.set("file:///capture/photo1.jpg", { isDir: false, content: "a" });
+    fsState.set("file:///capture/photo2.jpg", { isDir: false, content: "b" });
+    const project = seedProject();
+    seedPoint(project.id, {
+      photos: JSON.stringify([
+        { uri: "file:///capture/photo1.jpg", timestamp: 1 },
+        { uri: "file:///capture/photo2.jpg", timestamp: 2 },
+      ]),
+    });
+    const events: Array<{ type: string }> = [];
+
+    await backupAllPendingPoints(project.id, undefined, {
+      shouldCancel: () => uploadBinaryFileMock.mock.calls.length >= 1,
+      onEvent: (e) => events.push(e),
+    });
+
+    expect(typesOf(events)).toEqual(["item-start", "media"]);
+  });
+
+  it("emits nothing for an empty batch", async () => {
+    const project = seedProject();
+    const events: unknown[] = [];
+    await backupAllPendingPoints(project.id, undefined, { onEvent: (e) => events.push(e) });
+    expect(events).toEqual([]);
+  });
+});

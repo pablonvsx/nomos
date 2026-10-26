@@ -1121,6 +1121,13 @@
       "manifest": "Updating the project manifest...",
       "activationFolders": "Creating the folders on Drive..."
     },
+    "log": {
+      "start": "Sending {{name}}...",
+      "photo": "{{name}}: photo {{current}} of {{total}}",
+      "audio": "{{name}}: audio {{current}} of {{total}}",
+      "done": "{{name}} sent",
+      "failed": "{{name}}: could not be sent"
+    },
     "result": {
       "completed": {
         "title": "Backup complete",

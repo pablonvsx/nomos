@@ -1,6 +1,7 @@
 import React, { useEffect, useReducer, useState } from "react";
 import { Modal, ScrollView, StyleSheet, View } from "react-native";
 import { ActivityIndicator, ProgressBar, Text, TouchableRipple, useTheme } from "react-native-paper";
+import { BackupActivityLog } from "@/components/drive-sync/BackupActivityLog";
 import { ModalActions } from "@/components/ui/ModalActions";
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import { MODAL_FOOTER_GAP_BELOW, MODAL_PADDING_H, MODAL_PADDING_TOP, MODAL_TITLE_GAP } from "@/constants/modal-layout";
@@ -71,6 +72,7 @@ export function BackupModal() {
                   color={theme.colors.primary}
                   style={styles.bar}
                 />
+                <BackupActivityLog log={session.phase === "running" ? session.log : []} />
                 <Text variant="bodySmall" style={[styles.hint, { color: theme.colors.onSurfaceVariant }]}>
                   {t("driveBackup.keepAppOpen")}
                 </Text>

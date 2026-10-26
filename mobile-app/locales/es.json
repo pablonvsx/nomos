@@ -1118,6 +1118,13 @@
       "manifest": "Actualizando el manifiesto del proyecto...",
       "activationFolders": "Creando las carpetas en Drive..."
     },
+    "log": {
+      "start": "Enviando {{name}}...",
+      "photo": "{{name}}: foto {{current}} de {{total}}",
+      "audio": "{{name}}: audio {{current}} de {{total}}",
+      "done": "{{name}} enviado",
+      "failed": "{{name}}: no se pudo enviar"
+    },
     "result": {
       "completed": {
         "title": "Copia de seguridad completada",
