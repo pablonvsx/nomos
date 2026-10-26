@@ -4,7 +4,7 @@ const noopExporter: ExporterFactory = () => ({
   async exportGeoJSON() {},
   async exportCSV() {},
   async extractMedia() {
-    return { photos: [], audioNotes: [], notes: [] };
+    return { media: [], notes: [] };
   },
 });
 

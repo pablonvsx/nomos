@@ -51,38 +51,43 @@ doesn't match the currently connected account.
 |---|---|---|
 | Built by | `core/project-sharing/project-config-package.ts` (`buildProjectConfigPackage`) | `core/project-sharing/export-points.ts` (`buildAndSharePointsPackage`) |
 | Applied by | same file, `applyProjectConfigPackage` | `core/project-sharing/import-points.ts` (`importPointsPackage`) |
-| Format | single `.json` | `.zip` (`points.json` + `media/<point_uuid>/...`, plus `media/<point_uuid>/modules/...` for custom-protocol module media) |
+| Format | single `.json` | `.zip` (`points.json` + `media/<point_uuid>/...`, in the shared media layout) |
 | Always produces | a local project with `collaboration_role = 'collaborator'` | new/duplicate points inside an existing local project |
 | Carries | `project_uuid`, `protocol_id`/`protocol_source` (+ the custom protocol's schema, if any), the full species catalog, every vegetation classification, `active_vegetation_classification`, `owner_email` | `project_uuid`, `protocol_id`/`protocol_source`, `collector_code`, `owner_email`, one entry per point |
 
-**Media in the points package.** Photos and audio notes of a point travel
-in two places, because they live in two places locally:
+**Media in the points package.** Every media file of a point, wherever it
+lives locally (the `points.photos` / `points.audio_notes` columns, or the
+`photo_input` / `audio_notes_input` fields stored inside each module's
+`data_json`), goes under `media/<point_uuid>/` in the **shared media layout**
+(`core/media-layout`, see "One media layout" below):
 
-- Point-level media (`points.photos` / `points.audio_notes`) goes to
-  `media/<point_uuid>/photo_N.<ext>` and `audio_note_N.<ext>`;
-  `points.json` lists only the file names.
-- Custom-protocol media (`photo_input` / `audio_notes_input` fields, which
-  are stored inside each module's `data_json`) goes to
-  `media/<point_uuid>/modules/<file>`, and every URI in the exported
-  `data_json` is replaced by a `package-media:modules/<file>` marker, so no
-  device path ever leaves the sender. This covers both top-level fields
-  (`<moduleId>_<n>.<ext>`) and the media sub-fields of every item of a
-  `repeatable_group` (`<moduleId>_<groupId>_<itemIndex>_<fieldKey>_<n>.<ext>`;
-  `<n>` is a running counter per point, so names never collide). A group
-  value is a JSON array of item objects under the group id, and a media
-  sub-field of an item holds JSON text exactly like a top-level one; the
-  item itself is never removed, only its media references are rewritten.
-  Groups are walked one level deep (the builder does not allow a group
-  inside a group). The field list comes from the custom protocol's schema
+- `photos/photo_N.<ext>` and `audio/audio_N.<ext>` for the point's own media;
+  `points.json` lists these paths relative to `media/<point_uuid>/`
+  (`photos/photo_1.jpg`), and `audio_notes[].filename` carries the same kind of
+  path.
+- `section_<title>/<field label>_<n>.<ext>` for the fields of a section, and
+  `group_<title>/item_NN/<field label>_<n>.<ext>` for the media sub-fields of
+  every item of a `repeatable_group`. Every URI in the exported `data_json` is
+  replaced by a `package-media:<relative path>` marker, so no device path ever
+  leaves the sender. A group value is a JSON array of item objects under the
+  group id, and a media sub-field of an item holds JSON text exactly like a
+  top-level one; the item itself is never removed, only its media references
+  are rewritten. Groups are walked one level deep (the builder does not allow a
+  group inside a group). The field list comes from the custom protocol's schema
   (`getModuleMediaFields`) and the traversal from `mapModuleMediaUris` /
   `listModuleMediaUris`, both in `core/project-sharing/module-media.ts` and
-  shared by every consumer below; shared-module sections (`moduleRef`)
-  carry no such fields.
+  shared by every consumer below; shared-module sections (`moduleRef`) carry no
+  such fields.
 
-Both carry `format_version: 1` and are rejected outright —
-`UnsupportedPackageVersionError`, `core/project-sharing/package-errors.ts`
-— if that field is missing or doesn't match, before any other field is
-even read.
+Both packages carry a `format_version` and are rejected outright if that field
+is missing or doesn't match, before any other field is even read. The
+configuration package is at version 1. The **points package is at version 2**:
+version 1 stored media flat (`photo_N`, `audio_note_N`, `modules/<file>`), and
+this build no longer reads that layout. A version 1 package is refused with
+`OutdatedPackageVersionError` (`core/project-sharing/package-errors.ts`; the
+message asks the collaborator to update the app and export again, in the four
+languages, `projectView.importPointsOutdated`); any other unknown version
+raises `UnsupportedPackageVersionError` ("created by a newer version").
 
 `ProjectConfigPackage.package_role_for_importer` is always the literal
 `"collaborator"`; `applyProjectConfigPackage` validates it explicitly and
@@ -242,10 +247,12 @@ ignored (`beginDecision`). When the list is empty the modal closes
 returns to the approval queue as `'pending'`; that is expected.
 
 Media extracted from the `.zip` is copied into
-`Paths.document/imported_points_media/<point_uuid>/` (module media into its
-`modules/` subdirectory) **before** any database write references it —
+`Paths.document/imported_points_media/<point_uuid>/` (the whole tree, folders
+included, so the relative paths in `points.json` and in the markers keep
+resolving) **before** any database write references it:
 never a path inside the temporary extraction directory, which is deleted
-once import finishes (`copyMediaToPersistentDir`). The `package-media:`
+once import finishes (`copyMediaToPersistentDir`; the tree walk is
+`transferMediaTree`). The `package-media:`
 markers inside module data are then rewritten to those persisted URIs
 (`restoreModuleMedia`), both for new points and for "Substituir" on a
 duplicate (`resolvePointDuplicate`).
@@ -504,9 +511,34 @@ titles and file base names are cut at 40 characters so full paths stay well
 under Windows' 260-character limit when the tree is downloaded. Two siblings
 that would end up with the same name are told apart by appending the field or
 group key and then a counter, because Drive accepts repeated names and a
-lookup by name would be ambiguous. The Drive paths come from
-`core/drive-sync/drive-media-paths.ts`, a Drive-only mapper: the points
-package (`module-media.ts`) keeps its own naming.
+lookup by name would be ambiguous. The Drive paths come from the shared
+allocator described next; `core/drive-sync/drive-media-paths.ts` keeps only the
+`package-media:` marker helpers and `splitRelativePath`.
+
+#### One media layout
+
+`core/media-layout` is the single place that decides where a media file goes,
+as a path **relative to a media root**. It is pure (no database, no file
+system): `names.ts` (fixed folder names, `sanitizeName`, `uniqueName`),
+`labels.ts` (section titles and field labels read from the protocol schema) and
+`allocator.ts` (`createMediaPathAllocator`). Three outputs use it, each with its
+own root, and get the same tree under it:
+
+| Output | Root | Purpose |
+|---|---|---|
+| "Exportar mídia" zip (`core/export/file-writer.ts`) | `Point_<n>/` | browsing, by people |
+| Collaborator points package | `media/<point_uuid>/` | moving points between devices |
+| Drive backup | `<point folder>/media/` | safe copy, restore |
+
+The tree is `photos/`, `audio/`, `section_<title>/`, `group_<title>/item_NN/`.
+Only the "Exportar mídia" output asks for the `dated` audio naming
+(`audio_note_<n>_<YYYY-MM-DD_HH-mm>.<ext>`, and the same time tag on audio inside
+sections and groups): there people browse the files and the recording time is
+part of the name; the package and the backup keep the time in their own data.
+A path is only handed out for a file that exists, so a folder is never empty.
+The allocator is deterministic for a given order of media, which is what makes a
+re-backup reuse the folders of the first attempt. The Drive layout did not
+change with this unification, so existing backups restore as before.
 
 `manifest.json` (`ProjectManifest`, `project-drive-service.ts`) holds
 `format_version`, `project_uuid`, `project_name`, `project_description`,

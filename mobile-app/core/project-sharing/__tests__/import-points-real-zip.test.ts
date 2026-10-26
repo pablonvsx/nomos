@@ -162,6 +162,7 @@ jest.mock("@/db/queries/points", () => ({
 
 import { exportAllPointsPackage } from "../export-points";
 import { importPointsPackage, resolvePointDuplicate } from "../import-points";
+import { OutdatedPackageVersionError } from "../package-errors";
 
 const PHOTO_BYTES = Buffer.from("fake-jpeg-bytes-0123456789");
 const AUDIO_BYTES = Buffer.from("fake-m4a-bytes-abcdefghijklmnop");
@@ -285,8 +286,8 @@ describe("points package round trip on a real filesystem", () => {
     const [photoUri] = uriList(moduleJson, "fotos");
     const [audioUri] = uriList(moduleJson, "gravacoes");
     // Persisted under the app's document directory, not the (deleted) extraction dir.
-    expect(photoUri).toContain("/document/imported_points_media/pt-1/modules/");
-    expect(audioUri).toContain("/document/imported_points_media/pt-1/modules/");
+    expect(photoUri).toContain("/document/imported_points_media/pt-1/");
+    expect(audioUri).toContain("/document/imported_points_media/pt-1/");
     expectFileWithBytes(photoUri, PHOTO_BYTES);
     expectFileWithBytes(audioUri, AUDIO_BYTES);
   });
@@ -348,7 +349,7 @@ describe("points package round trip on a real filesystem", () => {
     expect(new Set(media.groups).size).toBe(4);
     // Persisted under the app's document directory, not the sender's device path.
     for (const uri of [media.top, ...media.groups]) {
-      expect(uri).toContain("/document/imported_points_media/pt-1/modules/");
+      expect(uri).toContain("/document/imported_points_media/pt-1/");
     }
     expectFileWithBytes(media.groups[0], Buffer.from("i0-photo-bytes"));
     expectFileWithBytes(media.groups[1], Buffer.from("i0-audio-bytes"));
@@ -371,7 +372,7 @@ describe("points package round trip on a real filesystem", () => {
     expect(moduleJson).not.toContain("package-media:");
     const media = importedMediaUris(moduleJson);
     for (const uri of media.groups) {
-      expect(uri).toContain("/document/imported_points_media/pt-1/modules/");
+      expect(uri).toContain("/document/imported_points_media/pt-1/");
     }
     expectFileWithBytes(media.groups[0], Buffer.from("i0-photo-bytes"));
     expectFileWithBytes(media.groups[3], Buffer.from("i1-audio-bytes"));
@@ -422,6 +423,20 @@ describe("points package round trip on a real filesystem", () => {
     expect(result).toMatchObject({ imported: 1, missingMedia: 0 });
     const saved = points.find((p) => p.project_id === receiver.id)!.rawModules[0].data_json;
     expect(JSON.parse(saved)).toEqual(JSON.parse(legacyData));
+  });
+
+  it("a version 1 package (flat names, modules/ folder) is rejected as outdated and nothing is imported", async () => {
+    const { zipUri, receiver } = await exportCustomPoint();
+    const zip = await openZip(zipUri);
+    const pkg = JSON.parse(await zip.file("points.json")!.async("string"));
+    pkg.format_version = 1;
+    zip.file("points.json", JSON.stringify(pkg));
+    const v1ZipPath = localPath(zipUri).replace(/\.zip$/, "-v1.zip");
+    fs.writeFileSync(v1ZipPath, await zip.generateAsync({ type: "nodebuffer" }));
+    pickZip(`file://${v1ZipPath}`);
+
+    await expect(importPointsPackage(receiver.id)).rejects.toBeInstanceOf(OutdatedPackageVersionError);
+    expect(points.filter((p) => p.project_id === receiver.id)).toHaveLength(0);
   });
 
   it("a media file that points.json claims but the zip lacks is counted and never saved as a dead path", async () => {

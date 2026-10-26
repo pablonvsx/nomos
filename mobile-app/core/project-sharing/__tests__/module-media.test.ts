@@ -1,6 +1,5 @@
 import {
   PACKAGE_MEDIA_PREFIX,
-  buildModuleMediaRelativePath,
   getModuleMediaFields,
   listModuleMediaUris,
   mapModuleMediaUris,
@@ -179,29 +178,5 @@ describe("listModuleMediaUris", () => {
     expect(lastAudio.kind).toBe("audio");
     expect(lastAudio.location).toMatchObject({ groupId: "grupo", itemIndex: 1, fieldKey: "audio_item" });
     expect(lastAudio.entry).toEqual({ uri: "file:///d/i1.m4a", duration: 3, timestamp: 2 });
-  });
-});
-
-describe("buildModuleMediaRelativePath", () => {
-  it("keeps the existing top-level format", () => {
-    expect(
-      buildModuleMediaRelativePath({ moduleId: "section_1", fieldKey: "fotos_topo" }, 3, "file:///d/top.jpg"),
-    ).toBe("modules/section_1_3.jpg");
-  });
-
-  it("names group media after group, item and field, and never collides with other files of the same point", () => {
-    const base = { moduleId: "section_1", groupId: "grupo" };
-    const names = [
-      buildModuleMediaRelativePath({ moduleId: "section_1", fieldKey: "fotos_topo" }, 1, "file:///d/a.jpg"),
-      buildModuleMediaRelativePath({ ...base, itemIndex: 0, fieldKey: "foto_item" }, 2, "file:///d/b.jpg"),
-      buildModuleMediaRelativePath({ ...base, itemIndex: 0, fieldKey: "audio_item" }, 3, "file:///d/c.m4a"),
-      buildModuleMediaRelativePath({ ...base, itemIndex: 1, fieldKey: "foto_item" }, 4, "file:///d/d.jpg"),
-      // Pathological: a module whose id looks like a group file name prefix.
-      // The per-point counter is what keeps it distinct.
-      buildModuleMediaRelativePath({ moduleId: "section_1_grupo_0_foto_item", fieldKey: "x" }, 5, "file:///d/e.jpg"),
-    ];
-
-    expect(names[1]).toBe("modules/section_1_grupo_0_foto_item_2.jpg");
-    expect(new Set(names).size).toBe(names.length);
   });
 });

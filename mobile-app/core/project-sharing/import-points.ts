@@ -8,11 +8,11 @@ import { getConnectedGoogleAccountEmail } from "@/core/local-identity/connected-
 import {
   InvalidPackageError,
   NotAZipFileError,
+  OutdatedPackageVersionError,
   UnsupportedPackageVersionError,
 } from "@/core/project-sharing/package-errors";
 import { assertProjectActionAllowed } from "@/core/project-sharing/action-visibility";
 import {
-  MODULE_MEDIA_SUBDIR,
   PACKAGE_MEDIA_PREFIX,
   getModuleMediaFields,
   mapModuleMediaUris,
@@ -56,6 +56,9 @@ function assertValidPointsPackageShape(pkg: unknown): asserts pkg is PointsPacka
 
   // format_version must be checked before reading any other field.
   const version = (pkg as { format_version?: unknown }).format_version;
+  if (typeof version === "number" && version < POINTS_PACKAGE_FORMAT_VERSION) {
+    throw new OutdatedPackageVersionError();
+  }
   if (version !== POINTS_PACKAGE_FORMAT_VERSION) {
     throw new UnsupportedPackageVersionError();
   }
@@ -75,11 +78,34 @@ function assertValidPointsPackageShape(pkg: unknown): asserts pkg is PointsPacka
   }
 }
 
-interface CopiedPointMedia {
-  /** Files directly under media/<uuid>/ (the point's own photos and audio). */
-  pointFileUris: string[];
-  /** Files under media/<uuid>/modules/, keyed by their package-relative path ("modules/<name>"). */
-  moduleFileUris: Map<string, string>;
+/** Local URIs of a point's media, keyed by the path relative to media/<uuid>/ ("photos/photo_1.jpg"). */
+type MediaFilesByPath = Map<string, string>;
+
+/**
+ * Copies (or moves) a media tree file by file, creating the sub-folders the
+ * shared layout uses (photos, audio, section and group folders). Returns the
+ * destination URI of every file under its relative path.
+ */
+async function transferMediaTree(
+  source: Directory,
+  dest: Directory,
+  mode: "copy" | "move",
+  relativePrefix = "",
+  into: MediaFilesByPath = new Map(),
+): Promise<MediaFilesByPath> {
+  await dest.create({ intermediates: true, idempotent: true });
+  for (const entry of source.list()) {
+    const relativePath = `${relativePrefix}${entry.name}`;
+    if (entry instanceof File) {
+      const destFile = new File(dest, entry.name);
+      if (mode === "copy") await entry.copy(destFile);
+      else await entry.move(destFile);
+      into.set(relativePath, destFile.uri);
+    } else if (entry instanceof Directory) {
+      await transferMediaTree(entry, new Directory(dest, entry.name), mode, `${relativePath}/`, into);
+    }
+  }
+  return into;
 }
 
 /**
@@ -87,42 +113,19 @@ interface CopiedPointMedia {
  * directory into a persistent directory under Paths.document - never leave
  * a point's photos/audio referencing the extraction dir, which gets deleted
  * once import finishes (see the "photos not rendering" bug this replaces).
- * Returns the destination file URIs, split between the point's own media and
- * the media referenced from module data.
  */
 async function copyMediaToPersistentDir(
   extractDir: Directory,
   pointUuid: string,
   destSubdir: string,
-): Promise<CopiedPointMedia> {
+): Promise<MediaFilesByPath> {
   const sourceMediaDir = new Directory(extractDir, `media/${pointUuid}`);
   const destDir = new Directory(Paths.document, `${destSubdir}/${pointUuid}`);
   if (destDir.exists) await destDir.delete();
   await destDir.create({ intermediates: true });
 
-  const copied: CopiedPointMedia = { pointFileUris: [], moduleFileUris: new Map() };
-  if (!sourceMediaDir.exists) {
-    return copied;
-  }
-
-  for (const entry of sourceMediaDir.list()) {
-    if (entry instanceof File) {
-      const destFile = new File(destDir, entry.name);
-      await entry.copy(destFile);
-      copied.pointFileUris.push(destFile.uri);
-    } else if (entry instanceof Directory && entry.name === MODULE_MEDIA_SUBDIR) {
-      const destModulesDir = new Directory(destDir, MODULE_MEDIA_SUBDIR);
-      await destModulesDir.create({ intermediates: true, idempotent: true });
-      for (const moduleEntry of entry.list()) {
-        if (!(moduleEntry instanceof File)) continue;
-        const destFile = new File(destModulesDir, moduleEntry.name);
-        await moduleEntry.copy(destFile);
-        copied.moduleFileUris.set(`${MODULE_MEDIA_SUBDIR}/${moduleEntry.name}`, destFile.uri);
-      }
-    }
-  }
-
-  return copied;
+  if (!sourceMediaDir.exists) return new Map();
+  return transferMediaTree(sourceMediaDir, destDir, "copy");
 }
 
 /**
@@ -132,7 +135,7 @@ async function copyMediaToPersistentDir(
  */
 function resolvePointMedia(
   entry: PointPackageEntry,
-  pointFileUris: string[],
+  files: MediaFilesByPath,
 ): {
   photoUris: string[];
   audioNotes: Array<{ uri: string; duration: number; timestamp: number }>;
@@ -140,14 +143,14 @@ function resolvePointMedia(
 } {
   let missing = 0;
   const photoUris: string[] = [];
-  for (const filename of entry.photos) {
-    const uri = pointFileUris.find((candidate) => candidate.endsWith(`/${filename}`));
+  for (const relativePath of entry.photos) {
+    const uri = files.get(relativePath);
     if (uri) photoUris.push(uri);
     else missing += 1;
   }
   const audioNotes: Array<{ uri: string; duration: number; timestamp: number }> = [];
   for (const note of entry.audio_notes) {
-    const uri = pointFileUris.find((candidate) => candidate.endsWith(`/${note.filename}`));
+    const uri = files.get(note.filename);
     if (uri) audioNotes.push({ uri, duration: note.duration, timestamp: note.timestamp });
     else missing += 1;
   }
@@ -162,7 +165,7 @@ function resolvePointMedia(
 async function restoreModuleMedia(
   modules: Record<string, string>,
   fields: ModuleMediaField[],
-  moduleFileUris: Map<string, string>,
+  files: MediaFilesByPath,
 ): Promise<{ modules: Record<string, string>; missing: number }> {
   let missing = 0;
   const restored: Record<string, string> = {};
@@ -173,7 +176,7 @@ async function restoreModuleMedia(
         ? dataJson
         : await mapModuleMediaUris(dataJson, fieldsOfModule, (uri) => {
             if (!uri.startsWith(PACKAGE_MEDIA_PREFIX)) return uri;
-            const localUri = moduleFileUris.get(uri.slice(PACKAGE_MEDIA_PREFIX.length));
+            const localUri = files.get(uri.slice(PACKAGE_MEDIA_PREFIX.length));
             if (!localUri) missing += 1;
             return localUri ?? null;
           });
@@ -286,9 +289,9 @@ export async function importPointsPackage(
 
       if (!existing) {
         const copied = await copyMediaToPersistentDir(extractDir, entry.point_uuid, IMPORTED_MEDIA_DIR);
-        const { photoUris, audioNotes, missing } = resolvePointMedia(entry, copied.pointFileUris);
+        const { photoUris, audioNotes, missing } = resolvePointMedia(entry, copied);
         missingMedia += missing;
-        const restored = await restoreModuleMedia(entry.modules, moduleMediaFields, copied.moduleFileUris);
+        const restored = await restoreModuleMedia(entry.modules, moduleMediaFields, copied);
         missingMedia += restored.missing;
 
         await createPoint({
@@ -347,31 +350,14 @@ export async function resolvePointDuplicate(
   await permanentDir.create({ intermediates: true });
 
   const entry = duplicate.incoming;
-  const pointFileUris: string[] = [];
-  const moduleFileUris = new Map<string, string>();
-
+  let files: MediaFilesByPath = new Map();
   if (stagedDir.exists) {
-    for (const staged of stagedDir.list()) {
-      if (staged instanceof File) {
-        const destFile = new File(permanentDir, staged.name);
-        await staged.move(destFile);
-        pointFileUris.push(destFile.uri);
-      } else if (staged instanceof Directory && staged.name === MODULE_MEDIA_SUBDIR) {
-        const destModulesDir = new Directory(permanentDir, MODULE_MEDIA_SUBDIR);
-        await destModulesDir.create({ intermediates: true, idempotent: true });
-        for (const moduleEntry of staged.list()) {
-          if (!(moduleEntry instanceof File)) continue;
-          const destFile = new File(destModulesDir, moduleEntry.name);
-          await moduleEntry.move(destFile);
-          moduleFileUris.set(`${MODULE_MEDIA_SUBDIR}/${moduleEntry.name}`, destFile.uri);
-        }
-      }
-    }
+    files = await transferMediaTree(stagedDir, permanentDir, "move");
     await stagedDir.delete();
   }
 
-  const { photoUris, audioNotes } = resolvePointMedia(entry, pointFileUris);
-  const restored = await restoreModuleMedia(entry.modules, duplicate.moduleMediaFields, moduleFileUris);
+  const { photoUris, audioNotes } = resolvePointMedia(entry, files);
+  const restored = await restoreModuleMedia(entry.modules, duplicate.moduleMediaFields, files);
 
   await updatePoint(duplicate.existingPointId, {
     lat: entry.lat,

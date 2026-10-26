@@ -196,8 +196,14 @@ describe("exportAllPointsPackage - real zip contents", () => {
     expect(referenced).toHaveLength(2);
 
     const uuid = pkg.points[0].point_uuid;
-    expect(await zip.file(`media/${uuid}/photo_1.jpg`)!.async("nodebuffer")).toEqual(PHOTO_BYTES);
-    expect(await zip.file(`media/${uuid}/audio_note_1.m4a`)!.async("nodebuffer")).toEqual(AUDIO_BYTES);
+    expect(
+      Object.keys(zip.files)
+        .filter((n) => !zip.files[n].dir && n.startsWith("media/"))
+        .sort(),
+    ).toEqual([`media/${uuid}/audio/audio_1.m4a`, `media/${uuid}/photos/photo_1.jpg`]);
+    expect(pkg.format_version).toBe(2);
+    expect(await zip.file(`media/${uuid}/photos/photo_1.jpg`)!.async("nodebuffer")).toEqual(PHOTO_BYTES);
+    expect(await zip.file(`media/${uuid}/audio/audio_1.m4a`)!.async("nodebuffer")).toEqual(AUDIO_BYTES);
   });
 
   it("custom protocol: photo_input / audio_notes_input media inside module data are physically inside the zip", async () => {
@@ -232,11 +238,12 @@ describe("exportAllPointsPackage - real zip contents", () => {
     );
     console.info(`Entries found inside the real zip:\n  ${listing.join("\n  ")}`);
     const mediaFiles = Object.keys(zip.files).filter((n) => !zip.files[n].dir && n.startsWith("media/"));
-    expect(mediaFiles.sort()).toEqual([
-      "media/point-uuid-1/modules/section_1_1.jpg",
-      "media/point-uuid-1/modules/section_1_2.m4a",
+    const sorted = mediaFiles.sort();
+    expect(sorted).toEqual([
+      "media/point-uuid-1/section_Seção 1/Fotos_1.jpg",
+      "media/point-uuid-1/section_Seção 1/Gravações_1.m4a",
     ]);
-    const contents = await Promise.all(mediaFiles.map((n) => zip.file(n)!.async("nodebuffer")));
+    const contents = await Promise.all(sorted.map((n) => zip.file(n)!.async("nodebuffer")));
     expect(contents).toEqual([PHOTO_BYTES, AUDIO_BYTES]);
 
     // points.json must point at those entries, never at the sender's device paths.
@@ -292,15 +299,27 @@ describe("exportAllPointsPackage - real zip contents", () => {
     expect(report).toEqual({ skippedMedia: [] });
     const { zip, pkg } = await readSharedZip();
     const mediaFiles = Object.keys(zip.files).filter((n) => !zip.files[n].dir && n.startsWith("media/"));
-    expect(mediaFiles).toHaveLength(5);
+    expect(mediaFiles.sort()).toEqual([
+      "media/point-uuid-1/group_Grupo/item_01/Audio do item_1.m4a",
+      "media/point-uuid-1/group_Grupo/item_01/Foto do item_1.jpg",
+      "media/point-uuid-1/group_Grupo/item_02/Audio do item_1.m4a",
+      "media/point-uuid-1/group_Grupo/item_02/Foto do item_1.jpg",
+      "media/point-uuid-1/section_Seção 1/Fotos_1.jpg",
+    ]);
     expect(new Set(mediaFiles).size).toBe(5); // unique names
+    // No folder entry without a file inside it.
+    const folders = Object.keys(zip.files).filter((n) => zip.files[n].dir);
+    for (const folder of folders) {
+      expect(Object.keys(zip.files).some((n) => !zip.files[n].dir && n.startsWith(folder))).toBe(true);
+    }
 
     const moduleJson = pkg.points[0].modules["section_1"];
     expect(moduleJson).not.toContain("file://");
     const data = JSON.parse(moduleJson);
     const markerBytes = async (value: string) => {
       const [entry] = JSON.parse(value) as Array<{ uri: string }>;
-      expect(entry.uri.startsWith("package-media:modules/")).toBe(true);
+      expect(entry.uri.startsWith("package-media:")).toBe(true);
+      expect(entry.uri).not.toContain("modules/");
       const file = zip.file(`media/${pkg.points[0].point_uuid}/${entry.uri.slice("package-media:".length)}`);
       expect(file).not.toBeNull();
       return file!.async("nodebuffer");

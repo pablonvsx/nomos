@@ -1,1 +1,1 @@
-export type { AudioNote, MediaFiles, ProtocolExporter } from "@/protocol-kernel/types";
+export type { AudioNote, MediaEntry, MediaFiles, MediaOrigin, ProtocolExporter } from "@/protocol-kernel/types";

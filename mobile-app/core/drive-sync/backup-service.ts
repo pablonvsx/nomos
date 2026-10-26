@@ -17,7 +17,7 @@ import {
 } from "@/db/queries/points";
 import { getProjectById } from "@/db/queries/projects";
 import type { Point } from "@/types/database";
-import { getModuleMediaFields, mapModuleMediaUris } from "@/core/project-sharing/module-media";
+import { getModuleMediaFields, loadMediaLabelIndex, mapModuleMediaUris } from "@/core/project-sharing/module-media";
 import { parseAudioNotes, parsePhotoUris } from "@/db/mappers/json-utils";
 import type { PointPackageAudioNote, PointPackageEntry } from "@/core/project-sharing/export-points";
 import { isNetworkTimeoutError } from "@/core/net/network-timeout";
@@ -25,16 +25,13 @@ import { isConnectionError } from "@/core/drive-sync/backup-errors";
 import { isBackupEligibleStatus } from "@/core/drive-sync/backup-eligibility";
 import {
   APPROVED_FOLDER,
+  MEDIA_FOLDER,
   POINT_JSON_FILENAME,
   pointFolderLabel,
   pointFolderName,
 } from "@/core/drive-sync/drive-layout";
-import {
-  createDriveMediaPathAllocator,
-  loadMediaLabelIndex,
-  splitRelativePath,
-  toDriveMediaMarker,
-} from "@/core/drive-sync/drive-media-paths";
+import { splitRelativePath, toDriveMediaMarker } from "@/core/drive-sync/drive-media-paths";
+import { createMediaPathAllocator } from "@/core/media-layout/allocator";
 import {
   createDriveFolderCache,
   indexPointFolders,
@@ -200,7 +197,9 @@ export async function backupPoint(
   };
 
   const labels = await loadMediaLabelIndex(project.protocol_id, project.protocol_source);
-  const paths = createDriveMediaPathAllocator(labels);
+  // The shared layout's tree goes under the point folder's media/ folder.
+  const paths = createMediaPathAllocator(labels);
+  const inMedia = (relativePath: string): string => `${MEDIA_FOLDER}/${relativePath}`;
 
   const photoPaths: string[] = [];
   const audioEntries: PointPackageAudioNote[] = [];
@@ -208,7 +207,7 @@ export async function backupPoint(
   const photoUris = parsePhotoUris(point.photos);
   for (let i = 0; i < photoUris.length; i++) {
     if (isCancelled()) return cancelledResult;
-    const relativePath = paths.pointPhoto(photoUris[i], i);
+    const relativePath = inMedia(paths.pointPhoto(photoUris[i], i));
     if (!new File(photoUris[i]).exists) {
       mediaProblems.push(`Foto ${i + 1} não encontrada no dispositivo.`);
       missingMediaCount += 1;
@@ -226,7 +225,7 @@ export async function backupPoint(
   for (let i = 0; i < audioNotes.length; i++) {
     if (isCancelled()) return cancelledResult;
     const note = audioNotes[i];
-    const relativePath = paths.pointAudio(note.uri, i);
+    const relativePath = inMedia(paths.pointAudio(note.uri, i));
     if (!new File(note.uri).exists) {
       mediaProblems.push(`Áudio ${i + 1} não encontrado no dispositivo.`);
       missingMediaCount += 1;
@@ -254,7 +253,7 @@ export async function backupPoint(
         ? mod.data_json
         : await mapModuleMediaUris(mod.data_json, fieldsOfModule, async (uri, location) => {
             if (isCancelled()) return null;
-            const relativePath = paths.moduleMedia(location, uri);
+            const relativePath = inMedia(paths.moduleMedia(location, uri));
             if (!new File(uri).exists) {
               mediaProblems.push(`Mídia do módulo ${mod.module_id} não encontrada no dispositivo.`);
               missingMediaCount += 1;

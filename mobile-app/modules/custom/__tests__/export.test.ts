@@ -88,6 +88,9 @@ function makePoint(modules: Record<string, unknown>): PointEnvelope {
   };
 }
 
+const uris = (media: Array<{ kind: string; uri: string }>, kind: "photo" | "audio") =>
+  media.filter((m) => m.kind === kind).map((m) => m.uri);
+
 describe("customExporter.extractMedia", () => {
   it("aggregates audio notes (JSON of AudioNote[]) found in the modules", async () => {
     const audioJson = JSON.stringify([
@@ -100,9 +103,8 @@ describe("customExporter.extractMedia", () => {
 
     const media = await customExporter.extractMedia(point, PROJECT);
 
-    expect(media.audioNotes).toHaveLength(2);
-    expect(media.audioNotes[0]!.uri).toBe("file:///audio1.m4a");
-    expect(media.audioNotes[1]!.uri).toBe("file:///audio2.m4a");
+    expect(uris(media.media, "audio")).toEqual(["file:///audio1.m4a", "file:///audio2.m4a"]);
+    expect(media.media[0]).toMatchObject({ duration: 12, timestamp: 1000, origin: { moduleId: "section_1", fieldKey: "gravacoes" } });
   });
 
   it("aggregates text notes (notes_list) via schema, without becoming a column", async () => {
@@ -126,7 +128,7 @@ describe("customExporter.extractMedia", () => {
     const media = await customExporter.extractMedia(point, PROJECT);
 
     expect(media.notes).toEqual([]);
-    expect(media.audioNotes).toEqual([]);
+    expect(media.media).toEqual([]);
   });
 
   it("recognizes photos in PhotoInput's current format (JSON of {uri,timestamp}[])", async () => {
@@ -140,7 +142,7 @@ describe("customExporter.extractMedia", () => {
 
     const media = await customExporter.extractMedia(point, PROJECT);
 
-    expect(media.photos).toEqual(["file:///photo1.jpg", "file:///photo2.jpg"]);
+    expect(uris(media.media, "photo")).toEqual(["file:///photo1.jpg", "file:///photo2.jpg"]);
   });
 
   it("still recognizes photos in the legacy format (raw array of file:// strings)", async () => {
@@ -150,7 +152,7 @@ describe("customExporter.extractMedia", () => {
 
     const media = await customExporter.extractMedia(point, PROJECT);
 
-    expect(media.photos).toEqual(["file:///photo1.jpg", "file:///photo2.jpg"]);
+    expect(uris(media.media, "photo")).toEqual(["file:///photo1.jpg", "file:///photo2.jpg"]);
   });
 
   it("returns empty arrays when there is no media", async () => {
@@ -158,8 +160,7 @@ describe("customExporter.extractMedia", () => {
 
     const media = await customExporter.extractMedia(point, PROJECT);
 
-    expect(media.photos).toEqual([]);
-    expect(media.audioNotes).toEqual([]);
+    expect(media.media).toEqual([]);
     expect(media.notes).toEqual([]);
   });
 
@@ -182,7 +183,33 @@ describe("customExporter.extractMedia", () => {
 
     const media = await customExporter.extractMedia(point, PROJECT);
 
-    expect(media.photos).toEqual(["file:///top.jpg", "file:///g0.jpg", "file:///g1.jpg"]);
-    expect(media.audioNotes).toEqual([{ uri: "file:///g0.m4a", duration: 4, timestamp: 3 }]);
+    expect(uris(media.media, "photo")).toEqual(["file:///top.jpg", "file:///g0.jpg", "file:///g1.jpg"]);
+    expect(media.media.filter((m) => m.kind === "audio")).toEqual([
+      {
+        kind: "audio",
+        uri: "file:///g0.m4a",
+        duration: 4,
+        timestamp: 3,
+        origin: { moduleId: "section_1", groupId: "grupo", itemIndex: 0, fieldKey: "audio_item", ordinal: 0 },
+      },
+    ]);
+    // Each file says which group item it came from, so the export keeps items apart.
+    expect(media.media.find((m) => m.uri === "file:///g1.jpg")!.origin).toMatchObject({ groupId: "grupo", itemIndex: 1 });
+    expect(media.media.find((m) => m.uri === "file:///top.jpg")!.origin).toMatchObject({ moduleId: "section_1", groupId: undefined });
+  });
+
+  it("includes the point's own photos and audio notes, without an origin", async () => {
+    const point = {
+      ...makePoint({ section_1: {} }),
+      photos: ["file:///own.jpg"],
+      audioNotes: [{ uri: "file:///own.m4a", duration: 2, timestamp: 9 }],
+    };
+
+    const media = await customExporter.extractMedia(point, PROJECT);
+
+    expect(media.media).toEqual([
+      { kind: "photo", uri: "file:///own.jpg" },
+      { kind: "audio", uri: "file:///own.m4a", duration: 2, timestamp: 9 },
+    ]);
   });
 });

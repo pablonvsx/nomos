@@ -163,9 +163,29 @@ export interface AudioNote {
   timestamp: number;
 }
 
+/** Where a media file sits in a custom protocol's data, so the export can keep section, group and item apart. */
+export interface MediaOrigin {
+  moduleId: string;
+  /** Set for the media sub-fields of a repeatable group. */
+  groupId?: string;
+  itemIndex?: number;
+  fieldKey: string;
+  /** Position of the file inside that field's list. */
+  ordinal: number;
+}
+
+export interface MediaEntry {
+  kind: "photo" | "audio";
+  uri: string;
+  /** Audio notes only. */
+  duration?: number;
+  timestamp?: number;
+  /** Absent for the point's own photos and audio notes. */
+  origin?: MediaOrigin;
+}
+
 export interface MediaFiles {
-  photos: string[];
-  audioNotes: AudioNote[];
+  media: MediaEntry[];
   notes: string[];
 }
 

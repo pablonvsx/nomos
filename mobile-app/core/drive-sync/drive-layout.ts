@@ -9,15 +9,15 @@
  *   approved/
  *     point_<label>_<uuid>/
  *       point.json
- *       media/
- *         photos/                    the point's own photos
- *         audio/                     the point's own audio notes
- *         section_<title>/           media fields of a protocol section
- *         group_<title>/item_01/     media of one repeatable-group item
+ *       media/                       the point's media tree, laid out by
+ *                                    core/media-layout (photos/, audio/,
+ *                                    section_<title>/, group_<title>/item_01/)
  *
  * The uuid suffix is the identity of a point. The label is only for the
  * person browsing Drive and stays frozen at the first backup.
  */
+
+import { sanitizeName } from "@/core/media-layout/names";
 
 /** Drive's mime type for a folder. */
 export const FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
@@ -26,64 +26,8 @@ export const APPROVED_FOLDER = "approved";
 export const POINT_FOLDER_PREFIX = "point";
 export const POINT_JSON_FILENAME = "point.json";
 export const MEDIA_FOLDER = "media";
-export const PHOTOS_FOLDER = "photos";
-export const AUDIO_FOLDER = "audio";
-export const SECTION_FOLDER_PREFIX = "section";
-export const GROUP_FOLDER_PREFIX = "group";
-export const ITEM_FOLDER_PREFIX = "item";
-/** File names inside photos/ and audio/: photo_1.jpg, audio_1.m4a. */
-export const PHOTO_FILE_PREFIX = "photo";
-export const AUDIO_FILE_PREFIX = "audio";
 
 const SEPARATOR = "_";
-/**
- * Titles and file base names are capped well below Drive's limit so that the
- * full path stays comfortable when someone downloads the tree to Windows
- * (260 characters for the whole path).
- */
-export const MAX_NAME_LENGTH = 40;
-const FALLBACK_NAME = "unnamed";
-
-/**
- * Makes text from the data (a protocol title, a field label, a collector code)
- * safe as a Drive/file-system name: drops / \ : * ? " < > | and control
- * characters, collapses repeated whitespace and caps the length. Accents are
- * kept - the person reads these names.
- */
-export function sanitizeDriveName(name: string, maxLength: number = MAX_NAME_LENGTH): string {
-  const cleaned = name
-    // eslint-disable-next-line no-control-regex
-    .replace(/[/\\:*?"<>|\u0000-\u001f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, maxLength)
-    .trim();
-  return cleaned.length > 0 ? cleaned : FALLBACK_NAME;
-}
-
-/**
- * Returns `base` if no sibling uses it yet; otherwise `base_<key>`, then
- * `base_<key>_2`, `_3`... and records the result in `taken`. Drive accepts
- * repeated names, which would make a lookup by name ambiguous. Names are
- * compared ignoring case so the tree also extracts cleanly on
- * case-insensitive systems.
- */
-export function uniqueDriveName(base: string, key: string, taken: Set<string>): string {
-  const claim = (candidate: string): boolean => {
-    const folded = candidate.toLowerCase();
-    if (taken.has(folded)) return false;
-    taken.add(folded);
-    return true;
-  };
-
-  if (claim(base)) return base;
-  const withKey = `${base}${SEPARATOR}${sanitizeDriveName(key)}`;
-  if (claim(withKey)) return withKey;
-  for (let counter = 2; ; counter++) {
-    const candidate = `${withKey}${SEPARATOR}${counter}`;
-    if (claim(candidate)) return candidate;
-  }
-}
 
 /**
  * The human-readable part of a point folder name: collector code plus number
@@ -97,7 +41,7 @@ export function pointFolderLabel(point: { created_by?: string | null; point_numb
 
 /** `point_<label>_<uuid>`. */
 export function pointFolderName(label: string, uuid: string): string {
-  return [POINT_FOLDER_PREFIX, sanitizeDriveName(label), uuid].join(SEPARATOR);
+  return [POINT_FOLDER_PREFIX, sanitizeName(label), uuid].join(SEPARATOR);
 }
 
 const UUID_PATTERN = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
@@ -110,17 +54,4 @@ const POINT_FOLDER_REGEX = new RegExp(`^${POINT_FOLDER_PREFIX}${SEPARATOR}.+${SE
  */
 export function parsePointFolderUuid(name: string): string | null {
   return POINT_FOLDER_REGEX.exec(name)?.[1] ?? null;
-}
-
-/** `item_01` for the first item of a repeatable group. */
-export function itemFolderName(itemIndex: number): string {
-  return `${ITEM_FOLDER_PREFIX}${SEPARATOR}${String(itemIndex + 1).padStart(2, "0")}`;
-}
-
-export function sectionFolderName(title: string): string {
-  return `${SECTION_FOLDER_PREFIX}${SEPARATOR}${sanitizeDriveName(title)}`;
-}
-
-export function groupFolderName(title: string): string {
-  return `${GROUP_FOLDER_PREFIX}${SEPARATOR}${sanitizeDriveName(title)}`;
 }

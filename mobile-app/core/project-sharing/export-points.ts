@@ -13,13 +13,19 @@ import { parsePhotoUris, parseAudioNotes } from "@/db/mappers/json-utils";
 import { assertProjectActionAllowed } from "@/core/project-sharing/action-visibility";
 import {
   PACKAGE_MEDIA_PREFIX,
-  buildModuleMediaRelativePath,
   getModuleMediaFields,
+  loadMediaLabelIndex,
   mapModuleMediaUris,
 } from "@/core/project-sharing/module-media";
+import { createMediaPathAllocator } from "@/core/media-layout/allocator";
 import type { Point, PointModule } from "@/types/database";
 
-export const POINTS_PACKAGE_FORMAT_VERSION = 1;
+/**
+ * 2: media sits in the shared layout (photos/, audio/, section_*, group_*) and
+ * points.json lists paths relative to media/<point uuid>/. A version 1 package
+ * (flat names, modules/) is rejected on import.
+ */
+export const POINTS_PACKAGE_FORMAT_VERSION = 2;
 
 export interface PointPackageAudioNote {
   filename: string;
@@ -46,7 +52,7 @@ export interface PointPackageEntry {
 }
 
 export interface PointsPackage {
-  format_version: 1;
+  format_version: typeof POINTS_PACKAGE_FORMAT_VERSION;
   project_uuid: string;
   protocol_id: string;
   protocol_source: "official" | "custom";
@@ -69,11 +75,6 @@ export interface ExportPointsReport {
   skippedMedia: string[];
 }
 
-function extensionFromUri(uri: string, fallback: string): string {
-  const match = uri.split(".").pop();
-  return match && match.length <= 5 ? match : fallback;
-}
-
 async function buildAndSharePointsPackage(
   projectId: number,
   points: Array<Point & { rawModules: PointModule[] }>,
@@ -93,6 +94,7 @@ async function buildAndSharePointsPackage(
 
   const projectUuid = await ensureProjectUuid(projectId);
   const moduleMediaFields = await getModuleMediaFields(project.protocol_id, project.protocol_source);
+  const labels = await loadMediaLabelIndex(project.protocol_id, project.protocol_source);
   const skippedMedia: string[] = [];
 
   const stagingDir = new Directory(Paths.cache, `points_export_${Date.now()}`);
@@ -110,6 +112,8 @@ async function buildAndSharePointsPackage(
         createdBy = collectorCode;
         await updatePoint(point.id, { created_by: collectorCode });
       }
+
+      const paths = createMediaPathAllocator(labels);
 
       // The point's media directory is only created once a file is actually
       // copied into it, so no empty directories end up in the zip.
@@ -138,7 +142,7 @@ async function buildAndSharePointsPackage(
       const photoFilenames: string[] = [];
       const photoUris = parsePhotoUris(point.photos);
       for (let i = 0; i < photoUris.length; i++) {
-        const filename = `photo_${i + 1}.${extensionFromUri(photoUris[i], "jpg")}`;
+        const filename = paths.pointPhoto(photoUris[i], i);
         if (await copyIntoMediaDir(photoUris[i], filename)) photoFilenames.push(filename);
       }
 
@@ -147,7 +151,7 @@ async function buildAndSharePointsPackage(
       for (let i = 0; i < audioNotes.length; i++) {
         const note = audioNotes[i];
         if (!note?.uri) continue;
-        const filename = `audio_note_${i + 1}.${extensionFromUri(note.uri, "m4a")}`;
+        const filename = paths.pointAudio(note.uri, i);
         if (await copyIntoMediaDir(note.uri, filename)) {
           audioFilenames.push({
             filename,
@@ -160,7 +164,6 @@ async function buildAndSharePointsPackage(
       // Custom protocols keep photo_input / audio_notes_input media inside the
       // module data_json. Copy those files into the zip too and replace the
       // sender's device URIs with package-relative markers.
-      let moduleMediaCounter = 0;
       const modules: Record<string, string> = {};
       let schemaVersion = "1.0";
       for (const mod of point.rawModules) {
@@ -169,8 +172,7 @@ async function buildAndSharePointsPackage(
           mediaFieldsOfModule.length === 0
             ? mod.data_json
             : await mapModuleMediaUris(mod.data_json, mediaFieldsOfModule, async (uri, location) => {
-                moduleMediaCounter += 1;
-                const relativePath = buildModuleMediaRelativePath(location, moduleMediaCounter, uri);
+                const relativePath = paths.moduleMedia(location, uri);
                 return (await copyIntoMediaDir(uri, relativePath))
                   ? `${PACKAGE_MEDIA_PREFIX}${relativePath}`
                   : null;

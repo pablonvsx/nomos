@@ -1,16 +1,14 @@
 import { getCustomProtocolById } from "@/db/queries/custom-protocols";
 import { parseJsonText } from "@/db/mappers/json-utils";
+import { buildMediaLabelIndex, type MediaLabelIndex } from "@/core/media-layout/labels";
 
 /**
  * Marker written into an exported module's data_json in place of a sender's
  * device URI. The part after it is a path relative to `media/<point_uuid>/`
- * inside the points package zip. The importer swaps it for the persisted
+ * inside the points package zip (the shared layout of core/media-layout). The importer swaps it for the persisted
  * local URI of the extracted file.
  */
 export const PACKAGE_MEDIA_PREFIX = "package-media:";
-
-/** Subdirectory of `media/<point_uuid>/` that holds media referenced by module data. */
-export const MODULE_MEDIA_SUBDIR = "modules";
 
 /**
  * A media field of a custom protocol section. `groupId` is set when the field
@@ -48,41 +46,6 @@ export type MediaUriMapper = (
   location: ModuleMediaLocation,
   entry: unknown,
 ) => string | null | Promise<string | null>;
-
-function sanitizePathPart(part: string): string {
-  return part.replace(/[^A-Za-z0-9-]/g, "_");
-}
-
-/**
- * Package-relative path (`modules/<file>`) for the nth media file of a point.
- * Shared by the zip exporter and the Drive backup so both name module media
- * the same way. Drive stores it flat as the path with `/` -> `__`.
- *
- * Top-level media keeps `<moduleId>_<counter>.<ext>`. Group media is named
- * after its group, item and field: `<moduleId>_<groupId>_<itemIndex>_<fieldKey>_<counter>.<ext>`.
- * `counter` is the running number of media files already named for the same
- * point, so two files of one point can never get the same name.
- */
-export function buildModuleMediaRelativePath(
-  location: Pick<ModuleMediaLocation, "moduleId" | "groupId" | "itemIndex" | "fieldKey">,
-  counter: number,
-  sourceUri: string,
-): string {
-  const extension = sourceUri.split(".").pop();
-  const safeExtension = extension && extension.length <= 5 ? extension : "bin";
-  const moduleId = location.moduleId.replace(/[^A-Za-z0-9_-]/g, "_");
-  const stem =
-    location.groupId === undefined
-      ? `${moduleId}_${counter}`
-      : [
-          moduleId,
-          sanitizePathPart(location.groupId),
-          location.itemIndex ?? 0,
-          sanitizePathPart(location.fieldKey),
-          counter,
-        ].join("_");
-  return `${MODULE_MEDIA_SUBDIR}/${stem}.${safeExtension}`;
-}
 
 /**
  * Lists the photo_input / audio_notes_input fields of a custom protocol, i.e.
@@ -231,4 +194,20 @@ export async function listModuleMediaUris(
     return uri;
   });
   return listed;
+}
+
+/**
+ * Section titles and field labels of the protocol's media fields, for the
+ * shared media layout (core/media-layout) to name folders after. Empty for
+ * official protocols: their media lives in the point's own photo/audio columns.
+ */
+export async function loadMediaLabelIndex(
+  protocolId: string,
+  protocolSource: "official" | "custom",
+): Promise<MediaLabelIndex> {
+  if (protocolSource !== "custom") return new Map();
+  const id = parseInt(protocolId, 10);
+  if (isNaN(id)) return new Map();
+  const protocol = await getCustomProtocolById(id);
+  return protocol ? buildMediaLabelIndex(protocol.schema) : new Map();
 }

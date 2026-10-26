@@ -3,7 +3,7 @@ import { buildProtocolExportPlan } from "@/core/export/generic-export-engine";
 import { EXTRA_POINT_COLUMNS } from "./export-columns";
 import { paisageoManifest } from "../manifest";
 import { getSpeciesByPoint } from "@/db/queries/species";
-import { ProtocolExporter, MediaFiles, AudioNote } from "@/core/export/types";
+import { ProtocolExporter, MediaFiles, MediaEntry } from "@/core/export/types";
 import { escapeCsv, writeAndShare } from "@/core/export/file-writer";
 import { getTranslations } from "@/utils/i18n";
 import { IMPACTS_FIELD_CONFIG } from "../modules/impacts/impact-types-config";
@@ -141,14 +141,14 @@ async function exportCSV(points: PointEnvelope[], project: ProjectRef, language:
 // --- Media Extraction ---
 
 async function extractMedia(point: PointEnvelope, _project: ProjectRef): Promise<MediaFiles> {
-  const photos = point.photos ?? [];
-  const audioNotes: AudioNote[] = (point.audioNotes ?? []).map((n) => ({
-    uri: n.uri,
-    duration: n.duration,
-    timestamp: n.timestamp,
-  }));
+  const media: MediaEntry[] = [
+    ...(point.photos ?? []).map((uri): MediaEntry => ({ kind: "photo", uri })),
+    ...(point.audioNotes ?? []).map(
+      (n): MediaEntry => ({ kind: "audio", uri: n.uri, duration: n.duration, timestamp: n.timestamp }),
+    ),
+  ];
   const notes = point.additionalNotes ?? [];
-  return { photos, audioNotes, notes };
+  return { media, notes };
 }
 
 // --- Exporter ---

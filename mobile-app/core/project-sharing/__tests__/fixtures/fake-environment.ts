@@ -89,7 +89,13 @@ export class FakeDirectory {
   }
 
   get exists(): boolean {
-    return fsState.get(this.uri)?.isDir === true;
+    const entry = fsState.get(this.uri);
+    if (entry) return entry.isDir;
+    return [...fsState.keys()].some((key) => key.startsWith(`${this.uri}/`));
+  }
+
+  get name(): string {
+    return this.uri.split("/").pop() ?? "";
   }
 
   async create(): Promise<void> {
@@ -115,7 +121,10 @@ export class FakeDirectory {
     return [...directChildren].map((segment) => {
       const childUri = prefix + segment;
       const entry = fsState.get(childUri);
-      return entry?.isDir ? new FakeDirectory(childUri) : new FakeFile(childUri);
+      // A folder with files under it is a folder even when only its files were
+      // written (what a real file system gives, and what a zip entry list shows).
+      const hasChildren = [...fsState.keys()].some((key) => key.startsWith(`${childUri}/`));
+      return entry?.isDir || (!entry && hasChildren) ? new FakeDirectory(childUri) : new FakeFile(childUri);
     });
   }
 }

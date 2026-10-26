@@ -1,5 +1,6 @@
 // src/app/project-details/[id].tsx
 // Paisageo / official protocol project details screen
+import { loadMediaLabelIndex } from "@/core/project-sharing/module-media";
 import { ModalBody, ModalTitle } from "@/components/ui/ModalBody";
 import { MODAL_SHAPE_STYLE } from "@/constants/shape";
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
@@ -89,7 +90,11 @@ import {
   importPointsPackage,
   ProjectMismatchError,
 } from "@/core/project-sharing/import-points";
-import { NotAZipFileError } from "@/core/project-sharing/package-errors";
+import {
+  NotAZipFileError,
+  OutdatedPackageVersionError,
+  UnsupportedPackageVersionError,
+} from "@/core/project-sharing/package-errors";
 import { CollectorCodeModal } from "@/components/local-identity/CollectorCodeModal";
 import { PointDuplicatesModal } from "@/components/project-sharing/PointDuplicatesModal";
 import { GoogleConnectionModal } from "@/components/google-account/GoogleConnectionModal";
@@ -646,10 +651,13 @@ function UnifiedProjectDetailsScreen() {
         const envelopes = pointsWithMods.map(buildPointEnvelope);
         const exporter = mf.exporter({ bus });
         const projectRef = buildProjectRef(project);
+        // Section titles and field labels name the folders of a custom protocol's media.
+        const labels = await loadMediaLabelIndex(project.protocol_id, project.protocol_source);
         const hasMedia = await exportMedia(
           envelopes,
           (p: PointEnvelope) => exporter.extractMedia(p, projectRef),
           project.name,
+          labels,
         );
         if (!hasMedia) {
           alert(t("common.info"), t("projectView.noMediaToExport") || "No media available to export.");
@@ -815,6 +823,10 @@ function UnifiedProjectDetailsScreen() {
           alert(t("common.error"), error.message);
         } else if (error instanceof NotAZipFileError) {
           alert(t("common.error"), t("projectView.importPointsNotZip"));
+        } else if (error instanceof OutdatedPackageVersionError) {
+          alert(t("common.error"), t("projectView.importPointsOutdated"));
+        } else if (error instanceof UnsupportedPackageVersionError) {
+          alert(t("common.error"), t("projectsList.configPackageFormatMismatch"));
         } else {
           alert(t("common.error"), t("projectView.errorImportingPointsPackage"));
         }

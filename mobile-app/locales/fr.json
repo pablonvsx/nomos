@@ -557,6 +557,7 @@
     "pointsImported": "{{count}} point(s) importé(s), en attente de révision.",
     "errorImportingPointsPackage": "Impossible d'importer le paquet de points. Vérifiez si le fichier est valide.",
     "importPointsNotZip": "Le fichier sélectionné n'est pas un paquet de points (.zip). Choisissez le fichier .zip envoyé par le collaborateur.",
+    "importPointsOutdated": "Ce paquet a été créé par une ancienne version de Nomos et ne peut plus être importé. Demandez au collaborateur de mettre à jour l'application et d'exporter à nouveau les points.",
     "pointsImportOwnerEmailWarning": "L'e-mail du propriétaire enregistré dans ce paquet diffère du compte connecté sur cet appareil. Vérifiez la source avant d'approuver les données importées."
   },
   "mapView": {

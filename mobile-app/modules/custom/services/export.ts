@@ -1,5 +1,5 @@
 import type { PointEnvelope, ProjectRef, ModuleDescriptor, LanguageCode } from "@/protocol-kernel/types";
-import { ProtocolExporter, MediaFiles, AudioNote } from "@/core/export/types";
+import { ProtocolExporter, MediaFiles, MediaEntry, AudioNote } from "@/core/export/types";
 import { escapeCsv, writeAndShare } from "@/core/export/file-writer";
 import { buildProtocolExportPlan } from "@/core/export/generic-export-engine";
 import { getCustomProtocolById } from "@/db/queries/custom-protocols";
@@ -102,8 +102,15 @@ function isAudioNoteRecord(value: unknown): value is AudioNote {
 // and a generic value could coincidentally look like an AudioNote[]. Without
 // the schema there's no way to tell them apart safely.
 async function extractMedia(point: PointEnvelope, project: ProjectRef): Promise<MediaFiles> {
-  const photos: string[] = [];
-  const audioNotes: AudioNote[] = [];
+  // The point's own photos and audio notes first, then the media of the protocol's fields. Each
+  // entry from a field says where it came from, so the export can keep sections, groups and
+  // group items apart (core/media-layout).
+  const media: MediaEntry[] = [
+    ...(point.photos ?? []).map((uri): MediaEntry => ({ kind: "photo", uri })),
+    ...(point.audioNotes ?? []).map(
+      (n): MediaEntry => ({ kind: "audio", uri: n.uri, duration: n.duration, timestamp: n.timestamp }),
+    ),
+  ];
   const notes: string[] = [];
 
   const modules = await resolveCustomModulesCached(project.protocolId);
@@ -122,20 +129,29 @@ async function extractMedia(point: PointEnvelope, project: ProjectRef): Promise<
     // Drive backup use.
     const fieldsOfModule = mediaFields.filter((f) => f.moduleId === descriptor.id);
     if (fieldsOfModule.length === 0) continue;
-    for (const media of await listModuleMediaUris(JSON.stringify(data), fieldsOfModule)) {
-      if (media.kind === "photo") {
-        photos.push(media.uri);
-      } else if (isAudioNoteRecord(media.entry)) {
-        audioNotes.push({
-          uri: media.entry.uri,
-          duration: media.entry.duration,
-          timestamp: media.entry.timestamp,
+    for (const listed of await listModuleMediaUris(JSON.stringify(data), fieldsOfModule)) {
+      const origin = {
+        moduleId: listed.location.moduleId,
+        groupId: listed.location.groupId,
+        itemIndex: listed.location.itemIndex,
+        fieldKey: listed.location.fieldKey,
+        ordinal: listed.location.ordinal,
+      };
+      if (listed.kind === "photo") {
+        media.push({ kind: "photo", uri: listed.uri, origin });
+      } else if (isAudioNoteRecord(listed.entry)) {
+        media.push({
+          kind: "audio",
+          uri: listed.entry.uri,
+          duration: listed.entry.duration,
+          timestamp: listed.entry.timestamp,
+          origin,
         });
       }
     }
   }
 
-  return { photos, audioNotes, notes };
+  return { media, notes };
 }
 
 export const customExporter: ProtocolExporter = {

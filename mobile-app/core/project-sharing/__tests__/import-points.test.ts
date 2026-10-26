@@ -129,7 +129,12 @@ import {
   ProjectMismatchError,
   type PendingDuplicate,
 } from "../import-points";
-import { UnsupportedPackageVersionError, InvalidPackageError, NotAZipFileError } from "../package-errors";
+import {
+  UnsupportedPackageVersionError,
+  OutdatedPackageVersionError,
+  InvalidPackageError,
+  NotAZipFileError,
+} from "../package-errors";
 
 function pickZip(zipUri: string) {
   getDocumentAsyncMock.mockResolvedValue({
@@ -254,7 +259,7 @@ describe("importPointsPackage — identity checks", () => {
     const parsedZip = readFakeZip(zipEntry.content!);
     const pointsJsonKey = Object.keys(parsedZip.entries).find((k) => k.endsWith("/points.json"))!;
     const pkg = JSON.parse(parsedZip.entries[pointsJsonKey].content!);
-    pkg.format_version = 2;
+    pkg.format_version = 3;
     parsedZip.entries[pointsJsonKey].content = JSON.stringify(pkg);
     zipEntry.content = writeFakeZip(parsedZip);
 
@@ -264,6 +269,26 @@ describe("importPointsPackage — identity checks", () => {
       UnsupportedPackageVersionError,
     );
     expect(createPointMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a version 1 package (flat media names) with the outdated-version error, before any file is touched", async () => {
+    const project = seedOwnerProject();
+    seedPoint(project.id);
+    const zipUri = await exportAndCaptureZipUri(project.id);
+
+    const zipEntry = fsState.get(zipUri)!;
+    const parsedZip = readFakeZip(zipEntry.content!);
+    const pointsJsonKey = Object.keys(parsedZip.entries).find((k) => k.endsWith("/points.json"))!;
+    const pkg = JSON.parse(parsedZip.entries[pointsJsonKey].content!);
+    pkg.format_version = 1;
+    parsedZip.entries[pointsJsonKey].content = JSON.stringify(pkg);
+    zipEntry.content = writeFakeZip(parsedZip);
+    pickZip(zipUri);
+
+    await expect(importPointsPackage(project.id)).rejects.toBeInstanceOf(OutdatedPackageVersionError);
+    expect(createPointMock).not.toHaveBeenCalled();
+    // Nothing of the package was copied into the permanent media folder.
+    expect([...fsState.keys()].some((k) => k.includes("imported_points_media"))).toBe(false);
   });
 
   it("warns (non-blocking) when owner_email differs from the connected account, but still imports", async () => {

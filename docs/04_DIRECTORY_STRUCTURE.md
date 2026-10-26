@@ -92,6 +92,7 @@ core/
 │   ├── restore-service.ts          restoreOwnProjectFromDrive (always full, all-or-nothing)
 │   ├── restore-errors.ts           MediaRestoreError (dependency-free, usable with instanceof)
 │   └── restore-error-messages.ts   describeRestoreError (pure, testable error→i18n-key mapping)
+├── media-layout/                   the one media folder layout (photos/, audio/, section_*, group_*), pure; used by media export, points package and Drive, see 12_BACKUP_COLLABORATION.md
 ├── project-sharing/                the two export/import packages, see 12_BACKUP_COLLABORATION.md
 │   ├── project-config-package.ts   build/apply the configuration package
 │   ├── export-points.ts            build/share the points package (.zip)
