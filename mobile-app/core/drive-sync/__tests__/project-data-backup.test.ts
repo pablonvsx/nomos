@@ -163,6 +163,29 @@ describe("backupProjectData", () => {
     expect(outcome.notAttempted).toBe(items.length - 1);
   });
 
+  it("createManifest (activation) creates the manifest instead of requiring one, and replaces a leftover one on a retry", async () => {
+    const { items, payloads } = buildProjectDataItems(pkg());
+    const manifest = {
+      format_version: 1 as const,
+      project_uuid: "p",
+      project_name: "Campo",
+      project_description: "Notas de campo",
+      protocol_id: "nomos-paisageo-v1",
+      protocol_source: "official" as const,
+      owner_email: "o@x.com",
+      active_vegetation_classification: { type: "standard" as const },
+    };
+    const send = () =>
+      backupProjectData({ driveFolderId: ROOT_ID, pending: items, payloads, context: context(), onItemDone: async () => {}, createManifest: manifest });
+
+    await send();
+    expect(updateManifestMock).not.toHaveBeenCalled(); // no existing manifest was needed
+    expect(drive.nodeAt("manifest.json")!.json).toMatchObject({ owner_email: "o@x.com", project_description: "Notas de campo" });
+
+    await send(); // a retry
+    expect(drive.tree().filter((p) => p.endsWith("manifest.json"))).toHaveLength(1);
+  });
+
   it("a failure recording the snapshot does not lose the upload or abort the run", async () => {
     const { items, payloads } = buildProjectDataItems(pkg());
     const outcome = await run(items, payloads, context(), async () => {

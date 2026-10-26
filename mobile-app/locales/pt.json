@@ -1092,8 +1092,6 @@
   },
   "driveBackup": {
     "activateAction": "Ativar Backup no Drive",
-    "activatedSuccess": "Backup no Drive ativado com sucesso.",
-    "errorActivating": "Não foi possível ativar o backup no Drive.",
     "backupAction": "Fazer Backup",
     "discardMissingMediaTitle": "Mídias não encontradas",
     "discardMissingMediaMessage": "{{count}} arquivo(s) de foto ou áudio de {{points}} ponto(s) não existem mais neste aparelho e impedem o backup. Descartar essas mídias removerá apenas as referências a elas nesses pontos e o backup será tentado de novo. Essa ação não pode ser desfeita.",
@@ -1101,7 +1099,6 @@
     "confirmAccountLinkTitle": "Vincular conta do Google",
     "confirmAccountLink": "Este projeto ficará vinculado à conta {{email}} e isso não pode ser alterado depois.",
     "useOtherAccount": "Usar outra conta",
-    "activating": "Ativando backup no Drive...",
     "modalTitle": "Backup no Drive",
     "keepAppOpen": "Mantenha o app aberto até o fim.",
     "cancelTitle": "Cancelar o backup?",
@@ -1120,7 +1117,8 @@
       "protocol": "Enviando o protocolo...",
       "classifications": "Enviando classificações de vegetação: {{current}} de {{total}}",
       "catalog": "Enviando o catálogo de espécies: {{current}} de {{total}}",
-      "manifest": "Atualizando o manifesto do projeto..."
+      "manifest": "Atualizando o manifesto do projeto...",
+      "activationFolders": "Criando as pastas no Drive..."
     },
     "result": {
       "completed": {
@@ -1201,6 +1199,24 @@
         "classification": "Classificação sem nome",
         "protocol": "Protocolo sem nome",
         "manifest": "Projeto sem nome"
+      }
+    },
+    "activation": {
+      "modalTitle": "Ativando o backup no Drive",
+      "cancelTitle": "Cancelar a ativação?",
+      "cancelMessage": "O backup não será ativado. Os arquivos já enviados serão reaproveitados se você tentar de novo.",
+      "keepGoing": "Continuar ativação",
+      "cancelConfirm": "Cancelar ativação",
+      "completed": {
+        "title": "Backup ativado",
+        "message": "O backup no Drive foi ativado para este projeto."
+      },
+      "cancelled": {
+        "title": "Ativação cancelada",
+        "message": "O backup não foi ativado. Os arquivos já enviados serão reaproveitados se você tentar de novo."
+      },
+      "failed": {
+        "title": "Não foi possível ativar o backup"
       }
     }
   },

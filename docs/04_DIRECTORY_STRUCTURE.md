@@ -77,7 +77,8 @@ core/
 │   └── uuid.ts                     generateUuid() — the single shared uuid helper, see 12_BACKUP_COLLABORATION.md
 ├── drive-sync/                     backup/restore to Google Drive, see 12_BACKUP_COLLABORATION.md
 │   ├── drive-api-client.ts         raw Drive REST v3 calls (no SDK)
-│   ├── project-drive-service.ts    activateDriveBackup, getManifest/updateManifest, listOwnNomosProjectFolders
+│   ├── project-drive-service.ts    getManifest/updateManifest, ensureNomosRootFolder, listOwnNomosProjectFolders
+│   ├── activation-service.ts       runActivation: activates the Drive backup inside the backup session (owner only at the end)
 │   ├── backup-service.ts           backupPoint, backupAllPendingPoints
 │   ├── backup-session.ts           the one backup in flight (global state, single-flight lock)
 │   ├── backup-runners.ts           runPointsBackup / runProjectDataBackup / runSinglePointBackup

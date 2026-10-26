@@ -1092,8 +1092,6 @@
   },
   "driveBackup": {
     "activateAction": "Activate Drive Backup",
-    "activatedSuccess": "Drive backup activated successfully.",
-    "errorActivating": "Could not activate Drive backup.",
     "backupAction": "Back Up",
     "discardMissingMediaTitle": "Media not found",
     "discardMissingMediaMessage": "{{count}} photo or audio file(s) from {{points}} point(s) no longer exist on this device and block the backup. Discarding them removes only the references to them in those points, and the backup will be tried again. This cannot be undone.",
@@ -1101,7 +1099,6 @@
     "confirmAccountLinkTitle": "Link Google account",
     "confirmAccountLink": "This project will be linked to the account {{email}} and this cannot be changed later.",
     "useOtherAccount": "Use another account",
-    "activating": "Activating Drive backup...",
     "modalTitle": "Drive backup",
     "keepAppOpen": "Keep the app open until it finishes.",
     "cancelTitle": "Cancel the backup?",
@@ -1120,7 +1117,8 @@
       "protocol": "Sending the protocol...",
       "classifications": "Sending vegetation classifications: {{current}} of {{total}}",
       "catalog": "Sending the species catalog: {{current}} of {{total}}",
-      "manifest": "Updating the project manifest..."
+      "manifest": "Updating the project manifest...",
+      "activationFolders": "Creating the folders on Drive..."
     },
     "result": {
       "completed": {
@@ -1201,6 +1199,24 @@
         "classification": "Unnamed classification",
         "protocol": "Unnamed protocol",
         "manifest": "Unnamed project"
+      }
+    },
+    "activation": {
+      "modalTitle": "Activating the Drive backup",
+      "cancelTitle": "Cancel the activation?",
+      "cancelMessage": "The backup will not be activated. Files already sent will be reused if you try again.",
+      "keepGoing": "Keep going",
+      "cancelConfirm": "Cancel activation",
+      "completed": {
+        "title": "Backup activated",
+        "message": "The Drive backup was activated for this project."
+      },
+      "cancelled": {
+        "title": "Activation cancelled",
+        "message": "The backup was not activated. Files already sent will be reused if you try again."
+      },
+      "failed": {
+        "title": "The backup could not be activated"
       }
     }
   },

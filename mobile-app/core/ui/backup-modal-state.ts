@@ -5,7 +5,8 @@
  * backup?" confirmation is open.
  */
 
-import type { BackupResult, BackupSessionState } from "@/core/drive-sync/backup-session";
+import { predominantReason } from "@/core/drive-sync/backup-results";
+import type { BackupResult, BackupSessionScope, BackupSessionState } from "@/core/drive-sync/backup-session";
 
 export type BackupModalView =
   | { kind: "hidden" }
@@ -50,4 +51,93 @@ export function deriveBackupModalView(session: BackupSessionState, ui: BackupMod
   if (session.cancelRequested) return { kind: "cancelling" };
   const progress = session.total > 0 ? Math.min(1, session.current / session.total) : null;
   return ui.confirmingCancel ? { kind: "confirmingCancel", progress } : { kind: "running", progress };
+}
+
+/** Translation keys for the modal's fixed texts, which differ for the activation of the backup. */
+export interface ModalCopyKeys {
+  title: string;
+  cancelTitle: string;
+  cancelMessage: string;
+  keepGoing: string;
+  cancelConfirm: string;
+  cancelling: string;
+}
+
+export function modalCopyKeys(scope: BackupSessionScope): ModalCopyKeys {
+  if (scope === "activation") {
+    return {
+      title: "driveBackup.activation.modalTitle",
+      cancelTitle: "driveBackup.activation.cancelTitle",
+      cancelMessage: "driveBackup.activation.cancelMessage",
+      keepGoing: "driveBackup.activation.keepGoing",
+      cancelConfirm: "driveBackup.activation.cancelConfirm",
+      cancelling: "driveBackup.cancelling",
+    };
+  }
+  return {
+    title: "driveBackup.modalTitle",
+    cancelTitle: "driveBackup.cancelTitle",
+    cancelMessage: "driveBackup.cancelMessage",
+    keepGoing: "driveBackup.keepGoing",
+    cancelConfirm: "driveBackup.cancelConfirm",
+    cancelling: "driveBackup.cancelling",
+  };
+}
+
+/** What the result of a run says: the title, the message, and (optionally) a reason added under it. */
+export interface ResultCopy {
+  titleKey: string;
+  messageKey: string;
+  params?: Record<string, string>;
+  /** A plain-language reason appended to the message (incomplete backups). */
+  reason?: { key: string; params?: Record<string, string> };
+}
+
+/**
+ * The words for how a run ended. A backup says what was sent and what stays pending; the
+ * activation of the backup is all or nothing, so it only says it is active, cancelled, or why
+ * it could not be activated (never "N sent, M not sent").
+ */
+export function resultCopy(scope: BackupSessionScope, result: BackupResult): ResultCopy {
+  const offline = result.outcome === "error" && result.error?.reasonKey === "driveBackup.reason.offline";
+
+  if (scope === "activation") {
+    if (result.outcome === "completed") {
+      return { titleKey: "driveBackup.activation.completed.title", messageKey: "driveBackup.activation.completed.message" };
+    }
+    if (result.outcome === "cancelled") {
+      return { titleKey: "driveBackup.activation.cancelled.title", messageKey: "driveBackup.activation.cancelled.message" };
+    }
+    // Interrupted, incomplete or error: the backup was not activated. Say why in plain words.
+    const why =
+      result.outcome === "interrupted"
+        ? { key: "driveBackup.reason.offline" }
+        : result.outcome === "error"
+          ? { key: result.error?.reasonKey ?? "driveBackup.reason.unknown", params: result.error?.reasonParams }
+          : (() => {
+              const predominant = predominantReason(result.failures);
+              return { key: predominant?.reasonKey ?? "driveBackup.reason.unknown", params: predominant?.reasonParams };
+            })();
+    return { titleKey: "driveBackup.activation.failed.title", messageKey: why.key, params: why.params };
+  }
+
+  if (offline) return { titleKey: "driveBackup.preflight.offline.title", messageKey: "driveBackup.preflight.offline.message" };
+  if (result.outcome === "error") {
+    return {
+      titleKey: "driveBackup.result.error.title",
+      messageKey: result.error?.reasonKey ?? "driveBackup.reason.unknown",
+      params: result.error?.reasonParams,
+    };
+  }
+  if (result.outcome === "completed" && result.sent === 0) {
+    return { titleKey: "driveBackup.result.completed.title", messageKey: "driveBackup.result.completedNothing.message" };
+  }
+
+  const predominant = result.outcome === "incomplete" ? predominantReason(result.failures) : null;
+  return {
+    titleKey: `driveBackup.result.${result.outcome}.title`,
+    messageKey: `driveBackup.result.${result.outcome}.message`,
+    params: { sent: String(result.sent), notSent: String(result.notSent) },
+    reason: predominant ? { key: predominant.reasonKey, params: predominant.reasonParams } : undefined,
+  };
 }

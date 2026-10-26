@@ -1,17 +1,12 @@
-import { seedBackupSnapshots } from "@/core/drive-sync/backup-status-service";
 import {
   ensureFolder,
   findChildByName,
   listChildren,
   readJsonFile,
   updateJsonFile,
-  uploadJsonFile,
   type DriveFile,
 } from "@/core/drive-sync/drive-api-client";
-import { APPROVED_FOLDER } from "@/core/drive-sync/drive-layout";
-import { getCurrentGoogleAccount } from "@/core/google-auth/google-auth-service";
-import { getAllDriveFolderIds, getProjectById, setProjectAsOwner } from "@/db/queries/projects";
-import { buildProjectConfigPackage } from "@/core/project-sharing/project-config-package";
+import { getAllDriveFolderIds } from "@/db/queries/projects";
 import { UnsupportedPackageVersionError } from "@/core/project-sharing/package-errors";
 
 const NOMOS_ROOT_FOLDER_NAME = "Nomos";
@@ -54,7 +49,8 @@ export class InvalidCollaborationRoleError extends Error {
   }
 }
 
-async function ensureNomosRootFolder(): Promise<string> {
+/** The shared "Nomos" folder in the account's Drive root, created when missing. */
+export async function ensureNomosRootFolder(): Promise<string> {
   return ensureFolder(NOMOS_ROOT_FOLDER_NAME, DRIVE_ROOT_PARENT_ID);
 }
 
@@ -100,82 +96,13 @@ export async function updateManifest(
   await updateJsonFile(file.id, updated);
 }
 
-export async function activateDriveBackup(projectId: number): Promise<void> {
-  const account = getCurrentGoogleAccount();
-  if (!account) {
-    throw new GoogleAccountRequiredError();
-  }
-
-  const project = await getProjectById(projectId);
-  if (!project) {
-    throw new Error(`Project ${projectId} not found`);
-  }
-  if (project.collaboration_role === "owner" || project.collaboration_role === "collaborator") {
-    throw new InvalidCollaborationRoleError(project.collaboration_role);
-  }
-
-  // buildProjectConfigPackage (Fase 0) already ensures project_uuid, the
-  // custom protocol's uuid, and a uuid on every species/vegetation row -
-  // reused here instead of re-implementing that check-before-generate
-  // logic a second time.
-  const pkg = await buildProjectConfigPackage(projectId);
-
-  const rootFolderId = await ensureNomosRootFolder();
-  // ensureFolder (not createFolder) so a retry after a failed activation
-  // doesn't create a second folder with the same name.
-  const projectFolderId = await ensureFolder(
-    `Nomos_${project.name}_${pkg.project_uuid}`,
-    rootFolderId,
-  );
-
-  await ensureFolder(APPROVED_FOLDER, projectFolderId);
-
-  if (pkg.protocol_source === "custom" && pkg.custom_protocol) {
-    await uploadJsonFile("protocol-package.json", projectFolderId, pkg.custom_protocol);
-  }
-
-  const speciesCatalogFolderId = await ensureFolder("species-catalog", projectFolderId);
-  for (const speciesEntry of pkg.species_catalog) {
-    await uploadJsonFile(`${speciesEntry.uuid}.json`, speciesCatalogFolderId, speciesEntry);
-  }
-
-  const vegetationClassesFolderId = await ensureFolder("vegetation-classes", projectFolderId);
-  for (const vegEntry of pkg.vegetation_classes) {
-    await uploadJsonFile(`${vegEntry.uuid}.json`, vegetationClassesFolderId, vegEntry);
-  }
-
-  const manifest: ProjectManifest = {
-    format_version: MANIFEST_FORMAT_VERSION,
-    project_uuid: pkg.project_uuid,
-    project_name: pkg.project_name,
-    project_description: pkg.project_description ?? "",
-    protocol_id: pkg.protocol_id,
-    protocol_source: pkg.protocol_source,
-    owner_email: account.email,
-    active_vegetation_classification: pkg.active_vegetation_classification,
-  };
-  await uploadJsonFile("manifest.json", projectFolderId, manifest);
-
-  await setProjectAsOwner(projectId, projectFolderId, account.email);
-
-  // Everything the project data holds was just uploaded: record it as backed
-  // up, so the first look at the backup status says "up to date". Best
-  // effort: if it fails, the status shows these items as pending and the next
-  // backup re-sends them (idempotent).
-  try {
-    await seedBackupSnapshots(projectId, ["project"]);
-  } catch (error) {
-    console.error("Error recording the activation backup snapshot:", error);
-  }
-}
-
 const NOMOS_PROJECT_FOLDER_PREFIX = "Nomos_";
 const FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
 
 /**
  * Lists the signed-in account's own Nomos project folders in Drive (Fase 7
  * restore) - every subfolder of the shared "Nomos" root whose name follows
- * the convention set by activateDriveBackup (`Nomos_<name>_<uuid>`).
+ * the convention set by runActivation (activation-service.ts) (`Nomos_<name>_<uuid>`).
  */
 export async function listOwnNomosProjectFolders(): Promise<DriveFile[]> {
   const rootId = await ensureNomosRootFolder();

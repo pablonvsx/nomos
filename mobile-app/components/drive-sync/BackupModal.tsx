@@ -9,10 +9,16 @@ import {
   dismissBackupResult,
   requestBackupCancel,
   type BackupResult,
+  type BackupSessionScope,
 } from "@/core/drive-sync/backup-session";
 import { failureHeading } from "@/core/drive-sync/backup-labels";
-import { predominantReason } from "@/core/drive-sync/backup-results";
-import { deriveBackupModalView, initialBackupModalUi, reduceBackupModal } from "@/core/ui/backup-modal-state";
+import {
+  deriveBackupModalView,
+  initialBackupModalUi,
+  modalCopyKeys,
+  reduceBackupModal,
+  resultCopy,
+} from "@/core/ui/backup-modal-state";
 import { useBackupSession } from "@/hooks/use-backup-session";
 
 /**
@@ -38,6 +44,8 @@ export function BackupModal() {
   const view = deriveBackupModalView(session, ui);
   if (view.kind === "hidden") return null;
 
+  const scope = session.phase === "idle" || session.phase === "checking" ? "points" : session.scope;
+  const copy = modalCopyKeys(scope);
   const stage = session.phase === "running" ? session.stage : null;
   const stageText = stage ? t(stage.key, stage.params) : t("driveBackup.stage.preparing");
 
@@ -51,7 +59,7 @@ export function BackupModal() {
         <View style={[styles.card, MODAL_SHAPE_STYLE, { backgroundColor: theme.colors.surface }]}>
           {view.kind === "running" && (
             <>
-              <Text style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>{t("driveBackup.modalTitle")}</Text>
+              <Text style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>{t(copy.title)}</Text>
               <Text variant="bodyMedium" style={[styles.body, { color: theme.colors.onSurface }]}>
                 {stageText}
               </Text>
@@ -75,15 +83,15 @@ export function BackupModal() {
           {view.kind === "confirmingCancel" && (
             <>
               <Text style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>
-                {t("driveBackup.cancelTitle")}
+                {t(copy.cancelTitle)}
               </Text>
               <Text variant="bodyMedium" style={[styles.body, { color: theme.colors.onSurface }]}>
-                {t("driveBackup.cancelMessage")}
+                {t(copy.cancelMessage)}
               </Text>
               <ModalActions
-                cancelLabel={t("driveBackup.keepGoing")}
+                cancelLabel={t(copy.keepGoing)}
                 onCancel={() => dispatch({ type: "keepGoing" })}
-                confirmLabel={t("driveBackup.cancelConfirm")}
+                confirmLabel={t(copy.cancelConfirm)}
                 onConfirm={() => {
                   dispatch({ type: "cancelConfirmed" });
                   requestBackupCancel();
@@ -95,7 +103,7 @@ export function BackupModal() {
 
           {view.kind === "cancelling" && (
             <>
-              <Text style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>{t("driveBackup.modalTitle")}</Text>
+              <Text style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>{t(copy.title)}</Text>
               <View style={styles.cancellingRow}>
                 <ActivityIndicator size={20} />
                 <Text variant="bodyMedium" style={{ color: theme.colors.onSurface, flex: 1 }}>
@@ -105,37 +113,23 @@ export function BackupModal() {
             </>
           )}
 
-          {view.kind === "finished" && <FinishedContent result={view.result} />}
+          {view.kind === "finished" && <FinishedContent scope={scope} result={view.result} />}
         </View>
       </View>
     </Modal>
   );
 }
 
-function FinishedContent({ result }: { result: BackupResult }) {
+function FinishedContent({ scope, result }: { scope: BackupSessionScope; result: BackupResult }) {
   const theme = useTheme();
   const { t } = useI18n();
   const [showDetails, setShowDetails] = useState(false);
 
-  const params = { sent: String(result.sent), notSent: String(result.notSent) };
-  // No connection at all reads the same as the pre-flight dialog: "Sem conexão", nothing was sent.
-  const offline = result.outcome === "error" && result.error?.reasonKey === "driveBackup.reason.offline";
-
-  const title = offline ? t("driveBackup.preflight.offline.title") : t(`driveBackup.result.${result.outcome}.title`);
-
-  let message: string;
-  if (offline) {
-    message = t("driveBackup.preflight.offline.message");
-  } else if (result.outcome === "error") {
-    message = t(result.error?.reasonKey ?? "driveBackup.reason.unknown", result.error?.reasonParams);
-  } else if (result.outcome === "completed" && result.sent === 0) {
-    message = t("driveBackup.result.completedNothing.message");
-  } else {
-    message = t(`driveBackup.result.${result.outcome}.message`, params);
-    // Incomplete: counts plus, at most, the reason most items share. Item by item is in the details.
-    const predominant = result.outcome === "incomplete" ? predominantReason(result.failures) : null;
-    if (predominant) message += `\n${t(predominant.reasonKey, predominant.reasonParams)}`;
-  }
+  const copy = resultCopy(scope, result);
+  const title = t(copy.titleKey);
+  let message = t(copy.messageKey, copy.params);
+  // Incomplete: counts plus, at most, the reason most items share. Item by item is in the details.
+  if (copy.reason) message += `\n${t(copy.reason.key, copy.reason.params)}`;
 
   const details = failureDetailLines(result, t);
 

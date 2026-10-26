@@ -30,8 +30,8 @@ import { isOnline } from "@/core/net/connectivity";
 
 /**
  * The pre-flight every backup start goes through, for both scopes, the single
- * point backup and the export warning's "Fazer backup": connection, token and
- * one light Drive request. null means it is safe to open the progress modal.
+ * point backup, the activation and the export warning's "Fazer backup": connection,
+ * token and one light Drive request. null means it is safe to open the progress modal.
  */
 export async function preflightBackup(projectId: number): Promise<PreflightFailure | null> {
   const project = await getProjectById(projectId);
@@ -40,8 +40,10 @@ export async function preflightBackup(projectId: number): Promise<PreflightFailu
     isOnline,
     getToken: getDriveAccessToken,
     probe: async (timeoutMs) => {
-      // The project folder's own manifest lookup: a small GET the client already knows how to make.
+      // A small GET the client already knows how to make: the project folder's manifest lookup, or,
+      // for a project that is not linked to Drive yet (activation), the shared "Nomos" folder.
       if (folderId) await findChildByName(folderId, "manifest.json", timeoutMs);
+      else await findChildByName("root", "Nomos", timeoutMs);
     },
   });
 }

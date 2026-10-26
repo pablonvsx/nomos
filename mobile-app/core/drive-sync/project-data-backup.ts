@@ -13,7 +13,7 @@ import {
 } from "@/core/drive-sync/drive-api-client";
 import { failureFromReason } from "@/core/drive-sync/backup-results";
 import type { BackupItem } from "@/core/drive-sync/change-detection";
-import { updateManifest } from "@/core/drive-sync/project-drive-service";
+import { updateManifest, type ProjectManifest } from "@/core/drive-sync/project-drive-service";
 import type { BackupContext, BackupFailure, BackupStage } from "@/core/drive-sync/backup-session";
 import { isConnectionError } from "@/core/drive-sync/backup-errors";
 import { isNetworkTimeoutError } from "@/core/net/network-timeout";
@@ -22,6 +22,7 @@ import type { ProjectDataPayloads } from "@/core/drive-sync/backup-items";
 const SPECIES_FOLDER = "species-catalog";
 const CLASSIFICATIONS_FOLDER = "vegetation-classes";
 const PROTOCOL_FILE = "protocol-package.json";
+const MANIFEST_FILE = "manifest.json";
 
 const STAGE_KEY: Record<NonNullable<BackupItem["group"]>, string> = {
   protocol: "driveBackup.stage.protocol",
@@ -51,8 +52,14 @@ export async function backupProjectData(params: {
   payloads: ProjectDataPayloads;
   context: BackupContext;
   onItemDone: (item: BackupItem) => Promise<void>;
+  /**
+   * Activation only: the whole manifest to write. It is created, or replaced when a
+   * previous attempt already left one, because there is no manifest to update yet.
+   * Every later backup leaves this out and goes through updateManifest.
+   */
+  createManifest?: ProjectManifest;
 }): Promise<ProjectDataBackupOutcome> {
-  const { driveFolderId, pending, payloads, context, onItemDone } = params;
+  const { driveFolderId, pending, payloads, context, onItemDone, createManifest } = params;
   const failures: BackupFailure[] = [];
   let sent = 0;
   let attempted = 0;
@@ -97,6 +104,10 @@ export async function backupProjectData(params: {
       await upsertIn(CLASSIFICATIONS_FOLDER, `${item.key.slice("vegclass:".length)}.json`, payload);
     } else if (item.group === "catalog") {
       await upsertIn(SPECIES_FOLDER, `${item.key.slice("species:".length)}.json`, payload);
+    } else if (createManifest) {
+      const existing = await findChildByName(driveFolderId, MANIFEST_FILE);
+      if (existing) await updateJsonFile(existing.id, createManifest);
+      else await uploadJsonFile(MANIFEST_FILE, driveFolderId, createManifest);
     } else {
       // The manifest always goes through updateManifest: it refuses a write
       // that would lose the project_uuid or the owner_email.

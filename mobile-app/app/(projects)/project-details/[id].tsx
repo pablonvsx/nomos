@@ -34,7 +34,6 @@ import { OperationProgressBanner } from "@/components/ui/OperationProgressBanner
 import { closeModalThenShow } from "@/core/ui/close-then-show";
 import { makeEmailBreakable } from "@/core/ui/dialog-layout";
 import { isBackupEligibleStatus } from "@/core/drive-sync/backup-eligibility";
-import { isNetworkTimeoutError } from "@/core/net/network-timeout";
 import { waitForModalClose } from "@/core/ui/wait-for-modal-close";
 import { CardHeaderIconButton } from "@/components/ui/CardHeaderIconButton";
 import { useStableTextInput } from "@/hooks/use-stable-text-input";
@@ -94,10 +93,7 @@ import { CollectorCodeModal } from "@/components/local-identity/CollectorCodeMod
 import { PointDuplicatesModal } from "@/components/project-sharing/PointDuplicatesModal";
 import { GoogleConnectionModal } from "@/components/google-account/GoogleConnectionModal";
 import { getCurrentGoogleAccount, signOutFromGoogle } from "@/core/google-auth/google-auth-service";
-import {
-  activateDriveBackup,
-  GoogleAccountRequiredError,
-} from "@/core/drive-sync/project-drive-service";
+import { runActivation } from "@/core/drive-sync/activation-service";
 import {
   preflightBackup,
   runPointsBackup,
@@ -152,12 +148,6 @@ function UnifiedProjectDetailsScreen() {
 
   // Drive calls can time out on a slow connection: show the friendly localized
   // message instead of the technical one.
-  const describeError = (error: unknown, fallback: string): string =>
-    isNetworkTimeoutError(error)
-      ? t("common.slowConnection")
-      : error instanceof Error
-        ? error.message
-        : fallback;
   const registry = useProtocolRegistry();
   const bus = useCapabilityBus();
   const { clearMapData } = useMapData();
@@ -831,22 +821,17 @@ function UnifiedProjectDetailsScreen() {
     });
   };
 
+  // The activation runs in the same backup session as the other backups: the pre-flight first, then
+  // the modal that holds the person (progress, cancel, result). The project only becomes an owner
+  // project at the very end, when everything was sent.
   const runDriveBackupActivation = async () => {
     if (!project) return;
-    await run(t("driveBackup.activating"), async () => {
-      try {
-        await activateDriveBackup(project.id);
-        alert(t("common.success"), t("driveBackup.activatedSuccess"));
-        loadProjectData();
-      } catch (error) {
-        if (error instanceof GoogleAccountRequiredError) {
-          setPendingDriveIntent(() => handleActivateDriveBackup);
-          setDriveConnectionModalVisible(true);
-          return;
-        }
-        console.error("Error activating Drive backup:", error);
-        alert(t("common.error"), describeError(error, t("driveBackup.errorActivating")));
-      }
+    const projectId = project.id;
+    await launchBackup({
+      scope: "activation",
+      projectId,
+      run: (context) => runActivation(projectId, context),
+      onFinished: () => loadProjectData({ silent: true }),
     });
   };
 

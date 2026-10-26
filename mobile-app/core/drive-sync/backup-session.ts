@@ -11,6 +11,9 @@ import type { BackupItemKind } from "@/core/drive-sync/change-detection";
 
 export type BackupScope = "points" | "project";
 
+/** What a session can be about: a backup scope, or the activation of the Drive backup itself. */
+export type BackupSessionScope = BackupScope | "activation";
+
 /**
  * How a run ended (the table is in backup-results.ts, classifyRun):
  * - completed: every pending item was sent;
@@ -56,17 +59,17 @@ export interface BackupStage {
 export type BackupSessionState =
   | { phase: "idle" }
   /** The pre-flight is running: the lock is held, but there is nothing to show yet. */
-  | { phase: "checking"; scope: BackupScope; projectId: number }
+  | { phase: "checking"; scope: BackupSessionScope; projectId: number }
   | {
       phase: "running";
-      scope: BackupScope;
+      scope: BackupSessionScope;
       projectId: number;
       stage: BackupStage | null;
       current: number;
       total: number;
       cancelRequested: boolean;
     }
-  | { phase: "finished"; scope: BackupScope; projectId: number; result: BackupResult };
+  | { phase: "finished"; scope: BackupSessionScope; projectId: number; result: BackupResult };
 
 /** What a backup runner receives: report progress and learn whether the person asked to cancel. */
 export interface BackupContext {
@@ -75,7 +78,7 @@ export interface BackupContext {
 }
 
 export interface StartBackupOptions {
-  scope: BackupScope;
+  scope: BackupSessionScope;
   projectId: number;
   run: (context: BackupContext) => Promise<BackupResult>;
   /** Called as soon as the run ends, before the person taps OK (reload the screen data here). */

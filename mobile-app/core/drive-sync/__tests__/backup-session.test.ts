@@ -228,4 +228,16 @@ describe("startBackupWithPreflight", () => {
     });
     expect(backToWarning).toBe(true);
   });
+
+  it("the activation of the backup is a session like any other: it takes the same single lock", async () => {
+    const gate = deferred<BackupResult>();
+    const activation = startBackup({ scope: "activation", projectId: 1, run: () => gate.promise });
+    expect(activation.status).toBe("started");
+    expect(getBackupSession()).toMatchObject({ phase: "running", scope: "activation" });
+    expect(startBackup({ scope: "points", projectId: 1, run: async () => completed }).status).toBe("already-running");
+
+    gate.resolve(completed);
+    if (activation.status === "started") await activation.done;
+    expect(getBackupSession()).toMatchObject({ phase: "finished", scope: "activation" });
+  });
 });

@@ -90,7 +90,7 @@ The backup is on demand: the project screen has an owner-only "Drive backup"
 card (`DriveBackupCard`) with one row per scope (project data, points), each
 showing its status ("Up to date with Drive (date)" / "N item(s) pending" /
 "could not be verified") and a button that is disabled only when the scope is
-verifiably up to date. `BackupModal` is mounted once at the app root and
+verifiably up to date. The activation of the backup is a session too: after the account confirmation, the same pre-flight and the same `BackupModal` (with its own texts: "Activating the Drive backup", "Backup activated" / "Activation cancelled" / "The backup could not be activated"); leaving the screen is not possible while it runs, and the project only becomes an owner project when it ends complete. `BackupModal` is mounted once at the app root and
 driven by the global backup session, so it keeps the person until the end
 whatever screen started it: Back and a tap outside ask whether to cancel, and
 a finished backup closes only with OK. Its states: `running` → (`confirmingCancel`

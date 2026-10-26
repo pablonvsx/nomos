@@ -25,7 +25,7 @@ single column that decides everything else in this document:
 `createProject` (sets it once, at row creation — `NULL` by default, or
 `'collaborator'` when importing a configuration package) and
 `setProjectAsOwner` (the only place that flips it to `'owner'`, called
-by both `activateDriveBackup` and `restoreOwnProjectFromDrive` below).
+by both the activation (`runActivation`) and `restoreOwnProjectFromDrive` below).
 
 ## Schema
 
@@ -145,7 +145,7 @@ table, not something the helper enforces.
 
 **The services enforce the role too, not only the screens.** Besides the
 checks that already lived in the backup (`backup-service.ts`), the
-activation (`project-drive-service.ts`), the project-data backup
+activation (`activation-service.ts`), the project-data backup
 (`project-data-backup.ts`) and re-applying a configuration package
 (`project-config-package.ts`), the remaining entry points now refuse a
 wrong role themselves, with a typed `ProjectRoleNotAllowedError` (carries
@@ -354,14 +354,29 @@ account the project is binding to. **Use another account** signs the
 current account out and reopens the connection modal with the account
 chooser forced (see "Google account and shared modals"); once the new
 account connects, the confirmation is shown again with the new email.
-Only **Continue** starts `activateDriveBackup(projectId)`
-(`core/drive-sync/project-drive-service.ts`). Refuses a project whose
-`collaboration_role` is already set to anything
+Only **Continue** starts the activation, and it runs in the **same backup
+session** as the other backups (see "The backup session and modal"): the
+pre-flight first (no connection, no modal), then the modal that holds the person
+with progress ("Creating the folders on Drive...", then protocol, classifications,
+catalog, manifest) and **Cancel**, and a result that says "Backup activated" or
+why it could not be activated. It no longer uses the banner at the top of the
+screen, so leaving the screen is not possible while it runs.
+
+`runActivation(projectId, context)` (`core/drive-sync/activation-service.ts`)
+refuses a project whose `collaboration_role` is already set to anything
 (`InvalidCollaborationRoleError`) and a missing account
-(`GoogleAccountRequiredError`). Reuses `buildProjectConfigPackage` (same
-uuid-guaranteeing logic as the collaborator package) to build the
-initial state, then creates the whole Drive folder tree in one pass and
-finally calls `setProjectAsOwner`.
+(`GoogleAccountRequiredError`). It reuses `buildProjectConfigPackage` (same
+uuid-guaranteeing logic as the collaborator package), creates the folders
+(`ensureFolder`) and sends every item through `backupProjectData`, the same
+sender as the on-demand project-data backup, with the manifest **created**
+(`createManifest`) and last. **The project is marked as owner
+(`setProjectAsOwner`) only when everything was sent**, and only then is the
+snapshot recorded. A cancelled, interrupted or failed activation leaves the
+project local, and trying again reuses the folders and updates the files by name
+instead of creating second copies (the former `uploadJsonFile`-always version
+would have duplicated them). A half-finished activation leaves a partial
+`Nomos_<name>_<uuid>` folder in Drive, without a manifest, until it is completed;
+the restore list shows it by its folder name.
 
 **2. Ongoing backup of the owner's points** — `backupPoint`/
 `backupAllPendingPoints` (`core/drive-sync/backup-service.ts`), run only on
@@ -849,9 +864,9 @@ so a failing operation can never leave a screen blocked.
 
 `FAB.Group` has no per-action loading or disabled state, so while an
 operation runs the FAB offers no actions (and folds away); the banner shows
-what is happening. Covered: `project-details/[id].tsx` (activation, points
-import, every export, classification; the backups no longer use this banner:
-they run in the global backup session and modal above), `projects.tsx` (configuration-package import,
+what is happening. Covered: `project-details/[id].tsx` (points import, every
+export, classification; the backups and the activation no longer use this
+banner: they run in the global backup session and modal above), `projects.tsx` (configuration-package import,
 protocol import/export), the details screen (send to owner, approve/reject)
 and `RestoreProjectsModal` (its own spinner).
 
@@ -973,10 +988,11 @@ merged into one message rather than alerted one after another.
   only stops *waiting* at the limit; the native download may keep running
   and, if it finishes late, writes into a file the failed restore is already
   cleaning up. Requests made with `fetch` are really aborted.
-- **Activation is not atomic on Drive.** A timeout part-way through
-  `activateDriveBackup` can leave some folders created; nothing is marked as
-  activated (`setProjectAsOwner` is the last step) and a retry reuses them
-  (`ensureFolder` is idempotent).
+- **Activation is not atomic on Drive, but it is repeatable.** A cancel, a lost
+  connection or a failure part-way through leaves some folders and files created;
+  nothing is marked as activated (`setProjectAsOwner` runs only when everything was
+  sent) and a retry reuses them without duplicating anything (folders by
+  `ensureFolder`, files updated by name).
 - **No real-device validation of the dialog and progress flows.** The pure
   rules (review mode, close-then-show ordering, exclusive runner, dialog
   reducer, backup progress) are unit-tested; the stacking of dialogs over

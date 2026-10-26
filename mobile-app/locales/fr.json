@@ -1092,8 +1092,6 @@
   },
   "driveBackup": {
     "activateAction": "Activer la Sauvegarde sur Drive",
-    "activatedSuccess": "Sauvegarde sur Drive activée avec succès.",
-    "errorActivating": "Impossible d'activer la sauvegarde sur Drive.",
     "backupAction": "Sauvegarder",
     "discardMissingMediaTitle": "Médias introuvables",
     "discardMissingMediaMessage": "{{count}} fichier(s) photo ou audio de {{points}} point(s) n'existent plus sur cet appareil et bloquent la sauvegarde. Les écarter supprime uniquement les références à ces fichiers dans ces points, puis la sauvegarde sera retentée. Cette action est irréversible.",
@@ -1101,7 +1099,6 @@
     "confirmAccountLinkTitle": "Associer le compte Google",
     "confirmAccountLink": "Ce projet sera associé au compte {{email}} et cela ne pourra pas être modifié par la suite.",
     "useOtherAccount": "Utiliser un autre compte",
-    "activating": "Activation de la sauvegarde sur Drive...",
     "modalTitle": "Sauvegarde sur Drive",
     "keepAppOpen": "Gardez l'application ouverte jusqu'à la fin.",
     "cancelTitle": "Annuler la sauvegarde ?",
@@ -1120,7 +1117,8 @@
       "protocol": "Envoi du protocole...",
       "classifications": "Envoi des classifications de végétation : {{current}} sur {{total}}",
       "catalog": "Envoi du catalogue d'espèces : {{current}} sur {{total}}",
-      "manifest": "Mise à jour du manifeste du projet..."
+      "manifest": "Mise à jour du manifeste du projet...",
+      "activationFolders": "Création des dossiers sur Drive..."
     },
     "result": {
       "completed": {
@@ -1201,6 +1199,24 @@
         "classification": "Classification sans nom",
         "protocol": "Protocole sans nom",
         "manifest": "Projet sans nom"
+      }
+    },
+    "activation": {
+      "modalTitle": "Activation de la sauvegarde sur Drive",
+      "cancelTitle": "Annuler l'activation ?",
+      "cancelMessage": "La sauvegarde ne sera pas activée. Les fichiers déjà envoyés seront réutilisés si vous réessayez.",
+      "keepGoing": "Continuer",
+      "cancelConfirm": "Annuler l'activation",
+      "completed": {
+        "title": "Sauvegarde activée",
+        "message": "La sauvegarde sur Drive a été activée pour ce projet."
+      },
+      "cancelled": {
+        "title": "Activation annulée",
+        "message": "La sauvegarde n'a pas été activée. Les fichiers déjà envoyés seront réutilisés si vous réessayez."
+      },
+      "failed": {
+        "title": "La sauvegarde n'a pas pu être activée"
       }
     }
   },

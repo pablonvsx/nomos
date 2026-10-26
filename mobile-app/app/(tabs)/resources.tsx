@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
   },
   paragraph: {
     lineHeight: 22,
-    textAlign: "left",
+    textAlign: "justify",
     marginBottom: 16,
   },
   siteButton: {
