@@ -5,6 +5,7 @@ import { Card, Text, Button, IconButton, Portal, Modal, useTheme } from "react-n
 import type { DynamicGroupRule, LanguageCode } from "@/protocol-kernel/types";
 import { useI18n } from "@/contexts/i18n-context";
 import { DialogProvider } from "@/hooks/use-dialog";
+import { MODAL_PADDING_H, MODAL_PADDING_TOP } from "@/constants/modal-layout";
 import { BUTTON_RADIUS, MODAL_RADIUS } from "@/constants/shape";
 import { ModalActions } from "@/components/ui/ModalActions";
 import { GenericFieldRow } from "./GenericFieldRow";
@@ -111,7 +112,7 @@ export function RepeatableGroupField({
               fixes that, and its own Portal mounts after this one, so alerts
               stack on top of the modal instead of behind it. */}
           <DialogProvider>
-            <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
+            <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={styles.modalScroll}>
               <Text variant="titleMedium" style={{ ...MODAL_TITLE_STYLE, marginBottom: 16, color: theme.colors.primary }}>
                 {editingIndex === null
                   ? t("survey.addGroupItem", { label })
@@ -158,5 +159,8 @@ const styles = StyleSheet.create({
   container: { marginBottom: 16 },
   itemCard: { marginBottom: 8 },
   itemHeader: { flexDirection: "row", alignItems: "center" },
-  modalContent: { margin: 20, padding: 20, borderRadius: MODAL_RADIUS, maxHeight: "85%" },
+  // No padding on the card: the scroll carries the sides and the top, and the ModalActions
+  // footer (full width, outside the scroll) owns the space around the buttons.
+  modalContent: { margin: 20, borderRadius: MODAL_RADIUS, maxHeight: "85%", overflow: "hidden" },
+  modalScroll: { paddingHorizontal: MODAL_PADDING_H, paddingTop: MODAL_PADDING_TOP },
 });

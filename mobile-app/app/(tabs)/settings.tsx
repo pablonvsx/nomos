@@ -1,4 +1,5 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { ModalBody, ModalTitle } from "@/components/ui/ModalBody";
 import { APP_VERSION_LABEL } from "@/constants/app-version";
 import { MODAL_SHAPE_STYLE } from "@/constants/shape";
 import { ModalActions } from "@/components/ui/ModalActions";
@@ -267,8 +268,8 @@ export default function SettingsScreen() {
           visible={languageDialogVisible}
           onDismiss={() => setLanguageDialogVisible(false)}
         >
-          <Dialog.Title style={MODAL_TITLE_STYLE}>{t("settings.language")}</Dialog.Title>
-          <Dialog.Content>
+          <ModalTitle style={MODAL_TITLE_STYLE}>{t("settings.language")}</ModalTitle>
+          <ModalBody>
             <RadioButton.Group
               onValueChange={(value) => setSelectedLanguage(value)}
               value={selectedLanguage}
@@ -282,7 +283,7 @@ export default function SettingsScreen() {
                 />
               ))}
             </RadioButton.Group>
-          </Dialog.Content>
+          </ModalBody>
           <ModalActions
             cancelLabel={t("common.cancel")}
             onCancel={() => setLanguageDialogVisible(false)}

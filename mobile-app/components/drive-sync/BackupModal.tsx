@@ -3,6 +3,7 @@ import { Modal, ScrollView, StyleSheet, View } from "react-native";
 import { ActivityIndicator, ProgressBar, Text, TouchableRipple, useTheme } from "react-native-paper";
 import { ModalActions } from "@/components/ui/ModalActions";
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { MODAL_FOOTER_GAP_BELOW, MODAL_PADDING_H, MODAL_PADDING_TOP, MODAL_TITLE_GAP } from "@/constants/modal-layout";
 import { MODAL_SHAPE_STYLE } from "@/constants/shape";
 import { useI18n } from "@/contexts/i18n-context";
 import {
@@ -59,19 +60,21 @@ export function BackupModal() {
         <View style={[styles.card, MODAL_SHAPE_STYLE, { backgroundColor: theme.colors.surface }]}>
           {view.kind === "running" && (
             <>
-              <Text style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>{t(copy.title)}</Text>
-              <Text variant="bodyMedium" style={[styles.body, { color: theme.colors.onSurface }]}>
-                {stageText}
-              </Text>
-              <ProgressBar
-                progress={view.progress ?? 0}
-                indeterminate={view.progress === null}
-                color={theme.colors.primary}
-                style={styles.bar}
-              />
-              <Text variant="bodySmall" style={[styles.body, { color: theme.colors.onSurfaceVariant }]}>
-                {t("driveBackup.keepAppOpen")}
-              </Text>
+              <View style={styles.content}>
+                <Text style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>{t(copy.title)}</Text>
+                <Text variant="bodyMedium" style={[styles.body, { color: theme.colors.onSurface }]}>
+                  {stageText}
+                </Text>
+                <ProgressBar
+                  progress={view.progress ?? 0}
+                  indeterminate={view.progress === null}
+                  color={theme.colors.primary}
+                  style={styles.bar}
+                />
+                <Text variant="bodySmall" style={[styles.hint, { color: theme.colors.onSurfaceVariant }]}>
+                  {t("driveBackup.keepAppOpen")}
+                </Text>
+              </View>
               <ModalActions
                 confirmLabel={t("common.cancel")}
                 confirmVariant="outline"
@@ -82,12 +85,14 @@ export function BackupModal() {
 
           {view.kind === "confirmingCancel" && (
             <>
-              <Text style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>
-                {t(copy.cancelTitle)}
-              </Text>
-              <Text variant="bodyMedium" style={[styles.body, { color: theme.colors.onSurface }]}>
-                {t(copy.cancelMessage)}
-              </Text>
+              <View style={styles.content}>
+                  <Text style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>
+                    {t(copy.cancelTitle)}
+                  </Text>
+                  <Text variant="bodyMedium" style={[styles.body, { color: theme.colors.onSurface }]}>
+                    {t(copy.cancelMessage)}
+                  </Text>
+              </View>
               <ModalActions
                 cancelLabel={t(copy.keepGoing)}
                 onCancel={() => dispatch({ type: "keepGoing" })}
@@ -102,7 +107,8 @@ export function BackupModal() {
           )}
 
           {view.kind === "cancelling" && (
-            <>
+            // No footer here, so this state closes the card with the footer's own bottom gap.
+            <View style={[styles.content, styles.contentNoFooter]}>
               <Text style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>{t(copy.title)}</Text>
               <View style={styles.cancellingRow}>
                 <ActivityIndicator size={20} />
@@ -110,7 +116,7 @@ export function BackupModal() {
                   {t("driveBackup.cancelling")}
                 </Text>
               </View>
-            </>
+            </View>
           )}
 
           {view.kind === "finished" && <FinishedContent scope={scope} result={view.result} />}
@@ -135,27 +141,29 @@ function FinishedContent({ scope, result }: { scope: BackupSessionScope; result:
 
   return (
     <>
-      <Text style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>{title}</Text>
-      <Text variant="bodyMedium" style={[styles.body, { color: theme.colors.onSurface }]}>
-        {message}
-      </Text>
+      <View style={styles.content}>
+        <Text style={[MODAL_TITLE_STYLE, { color: theme.colors.onSurface }]}>{title}</Text>
+        <Text variant="bodyMedium" style={[styles.body, { color: theme.colors.onSurface }]}>
+          {message}
+        </Text>
 
-      {details.length > 0 && (
-        <>
-          <TouchableRipple onPress={() => setShowDetails((v) => !v)} style={styles.detailsToggle}>
-            <Text variant="labelMedium" style={{ color: theme.colors.primary }}>
-              {showDetails ? t("driveBackup.hideDetails") : t("driveBackup.showDetails")}
-            </Text>
-          </TouchableRipple>
-          {showDetails && (
-            <ScrollView style={styles.details}>
-              <Text selectable variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                {details.join("\n\n")}
+        {details.length > 0 && (
+          <>
+            <TouchableRipple onPress={() => setShowDetails((v) => !v)} style={styles.detailsToggle}>
+              <Text variant="labelMedium" style={{ color: theme.colors.primary }}>
+                {showDetails ? t("driveBackup.hideDetails") : t("driveBackup.showDetails")}
               </Text>
-            </ScrollView>
-          )}
-        </>
-      )}
+            </TouchableRipple>
+            {showDetails && (
+              <ScrollView style={styles.details}>
+                <Text selectable variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  {details.join("\n\n")}
+                </Text>
+              </ScrollView>
+            )}
+          </>
+        )}
+      </View>
 
       <ModalActions confirmLabel={t("common.ok")} onConfirm={dismissBackupResult} />
     </>
@@ -175,10 +183,15 @@ function failureDetailLines(result: BackupResult, t: (key: string, params?: Reco
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: "center", padding: 24 },
-  card: { padding: 24, maxHeight: "85%" },
-  body: { marginTop: 12 },
+  // The card has no padding of its own: the content carries the sides and the top, and the
+  // ModalActions footer owns the space around the buttons (and below them).
+  card: { maxHeight: "85%", overflow: "hidden" },
+  content: { paddingHorizontal: MODAL_PADDING_H, paddingTop: MODAL_PADDING_TOP },
+  contentNoFooter: { paddingBottom: MODAL_FOOTER_GAP_BELOW },
+  body: { marginTop: MODAL_TITLE_GAP },
+  hint: { marginTop: 12 },
   bar: { height: 6, borderRadius: 3, marginTop: 16, marginBottom: 12 },
   cancellingRow: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 16 },
   detailsToggle: { alignSelf: "flex-start", paddingVertical: 8, marginTop: 4 },
-  details: { maxHeight: 120, marginBottom: 8 },
+  details: { maxHeight: 120 },
 });

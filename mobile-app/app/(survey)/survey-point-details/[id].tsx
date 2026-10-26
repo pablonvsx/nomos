@@ -1,5 +1,6 @@
 // src/app/survey-point-details/[id].tsx
 // Tela unificada de detalhes de ponto (oficial e personalizado)
+import { ModalBody } from "@/components/ui/ModalBody";
 import { MODAL_SHAPE_STYLE } from "@/constants/shape";
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import { ModalActions } from "@/components/ui/ModalActions";
@@ -1139,9 +1140,9 @@ export default function UnifiedSurveyPointViewScreen() {
           onDismiss={() => setSelectedPhoto(null)}
           style={[MODAL_SHAPE_STYLE, isCustom ? undefined : { backgroundColor: "black" }]}
         >
-          <Dialog.Content>
+          <ModalBody>
             {selectedPhoto && <Image source={{ uri: selectedPhoto }} style={styles.fullPhoto} resizeMode="contain" />}
-          </Dialog.Content>
+          </ModalBody>
           {isCustom && <ModalActions confirmLabel={t("common.close")} onConfirm={() => setSelectedPhoto(null)} />}
         </Dialog>
       </Portal>

@@ -1,4 +1,6 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { MODAL_FOOTER_GAP_BELOW, MODAL_PADDING_H, MODAL_PADDING_TOP, MODAL_TITLE_GAP } from "@/constants/modal-layout";
+import { ModalBody, ModalTitle } from "@/components/ui/ModalBody";
 import { MODAL_SHAPE_STYLE, MODAL_RADIUS } from "@/constants/shape";
 import React, { useEffect, useState } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
@@ -190,8 +192,8 @@ export const RestoreProjectsModal: React.FC<RestoreProjectsModalProps> = ({
       </Modal>
 
       <Dialog style={MODAL_SHAPE_STYLE} visible={selected !== null} onDismiss={() => (isRestoring ? null : setSelected(null))}>
-        <Dialog.Title style={MODAL_TITLE_STYLE}>{selected?.projectName}</Dialog.Title>
-        <Dialog.Content>
+        <ModalTitle style={MODAL_TITLE_STYLE}>{selected?.projectName}</ModalTitle>
+        <ModalBody>
           <Text variant="bodyMedium" style={{ textAlign: "justify" }}>
             {t("driveRestore.confirmRestore")}
           </Text>
@@ -205,7 +207,7 @@ export const RestoreProjectsModal: React.FC<RestoreProjectsModalProps> = ({
               {error}
             </Text>
           )}
-        </Dialog.Content>
+        </ModalBody>
         <ModalActions
           cancelLabel={t("common.cancel")}
           onCancel={() => setSelected(null)}
@@ -229,16 +231,20 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingLeft: 16,
-    paddingRight: 4,
+    // The close button is 52dp tall, so 12 above puts the title 24 from the top, as in the dialogs.
+    paddingTop: MODAL_PADDING_TOP - 12,
+    paddingLeft: MODAL_PADDING_H,
+    paddingRight: MODAL_PADDING_H - 12,
   },
   headerTitle: {
     flex: 1,
     ...MODAL_TITLE_STYLE,
   },
   content: {
-    padding: 16,
-    paddingTop: 8,
+    paddingHorizontal: MODAL_PADDING_H,
+    paddingTop: MODAL_TITLE_GAP,
+    // No footer here: the list closes the modal with the footer's own bottom gap.
+    paddingBottom: MODAL_FOOTER_GAP_BELOW,
     minHeight: 120,
   },
   projectCard: {

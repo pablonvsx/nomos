@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { ModalBody } from "@/components/ui/ModalBody";
 import { MODAL_SHAPE_STYLE } from "@/constants/shape";
 import { View, StyleSheet, Animated } from "react-native";
 import { Dialog, Portal, Text, ProgressBar, Icon, useTheme } from "react-native-paper";
@@ -95,12 +96,7 @@ export default function SpeciesSearchProgressDialog({
   return (
     <Portal>
       <Dialog style={MODAL_SHAPE_STYLE} visible={visible} onDismiss={() => {}} dismissable={false}>
-        <View
-          style={[
-            styles.header,
-            { borderBottomColor: theme.colors.outlineVariant },
-          ]}
-        >
+        <View style={styles.header}>
           <View
             style={[
               styles.sourceChip,
@@ -126,7 +122,7 @@ export default function SpeciesSearchProgressDialog({
           </Text>
         </View>
 
-        <Dialog.Content style={styles.content}>
+        <ModalBody style={styles.content}>
           {phase === "counting" && (
             <Animated.View style={[styles.statusRow, { opacity: pulseAnim }]}>
               <Text
@@ -244,7 +240,7 @@ export default function SpeciesSearchProgressDialog({
               </Animated.View>
             </>
           )}
-        </Dialog.Content>
+        </ModalBody>
 
         {phase === "counted" ? (
           <ModalActions
@@ -266,7 +262,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 24,
     paddingBottom: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 4,
   },
   sourceChip: {

@@ -19,6 +19,7 @@ import { useI18n } from "@/contexts/i18n-context";
 import { useProtocolTranslations } from "@/hooks/use-protocol-translations";
 import InfoBubble from "@/components/ui/InfoBubble";
 import { ModalActions } from "@/components/ui/ModalActions";
+import { MODAL_PADDING_H, MODAL_PADDING_TOP } from "@/constants/modal-layout";
 import { BUTTON_RADIUS, SEGMENTED_BUTTONS_SHAPE_THEME, MODAL_RADIUS } from "@/constants/shape";
 import SoilOptionPicker from "./SoilOptionPicker";
 import {
@@ -672,7 +673,7 @@ export default function SoilProfileInput({ field, value, onChange }: Props) {
           onDismiss={() => setModalVisible(false)}
           contentContainerStyle={[styles.modalContent, { backgroundColor: theme.colors.surface }]}
         >
-          <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
+          <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={styles.modalScroll}>
             <Text variant="headlineSmall" style={{ ...MODAL_TITLE_STYLE, marginBottom: 16, color: theme.colors.primary }}>
               {modalMode === "simple" ? t("survey.generalSoilDescription") : t("survey.editLayer")}
             </Text>
@@ -773,7 +774,10 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     gap: 2,
   },
-  modalContent: { padding: 20, margin: 20, borderRadius: MODAL_RADIUS, maxHeight: "90%" },
+  // No padding on the card: the scroll carries the sides and the top, and the ModalActions
+  // footer (full width, outside the scroll) owns the space around the buttons.
+  modalContent: { margin: 20, borderRadius: MODAL_RADIUS, maxHeight: "90%", overflow: "hidden" },
+  modalScroll: { paddingHorizontal: MODAL_PADDING_H, paddingTop: MODAL_PADDING_TOP },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",

@@ -1,4 +1,5 @@
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
+import { ModalBody, ModalTitle } from "@/components/ui/ModalBody";
 import React, {
   createContext,
   useContext,
@@ -8,13 +9,12 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import { View, StyleSheet } from "react-native";
-import { Portal, Dialog, Button, Text, useTheme } from "react-native-paper";
+import { Portal, Dialog, Text, useTheme } from "react-native-paper";
 import { useI18n } from "@/contexts/i18n-context";
 import { dialogReducer, initialDialogState, pressDialogButton } from "@/core/ui/dialog-state";
 import { orderStackedButtons, type DialogButtonRole } from "@/core/ui/dialog-layout";
-import { BUTTON_RADIUS, MODAL_SHAPE_STYLE } from "@/constants/shape";
-import { ModalActions } from "@/components/ui/ModalActions";
+import { MODAL_SHAPE_STYLE } from "@/constants/shape";
+import { ModalActions, ModalActionsStacked } from "@/components/ui/ModalActions";
 
 interface DialogButton {
   label: string;
@@ -43,11 +43,6 @@ interface DialogContextType {
   hideDialog: () => void;
 }
 
-const styles = StyleSheet.create({
-  stackedActions: { paddingHorizontal: 24, paddingBottom: 24, paddingTop: 8, gap: 8 },
-  stackedButton: { width: "100%" },
-});
-
 /**
  * Footer for the non-stacked layout: two actions go in the split ModalActions
  * footer (first = cancel, last = confirm), one action (or none, an "OK") is
@@ -62,7 +57,6 @@ function DialogFooter({
   onPress: (onPress: () => void) => void;
   onDismiss: () => void;
 }) {
-  const theme = useTheme();
   if (!buttons || buttons.length === 0) {
     return <ModalActions confirmLabel="OK" onConfirm={onDismiss} />;
   }
@@ -88,19 +82,16 @@ function DialogFooter({
       />
     );
   }
+  // Three or more actions do not fit two columns: one per row, in the order given (the confirming one, last, is the solid one).
   return (
-    <Dialog.Actions>
-      {buttons.map((button, index) => (
-        <Button
-          key={index}
-          mode={button.mode || "text"}
-          onPress={() => onPress(button.onPress)}
-          textColor={button.style === "destructive" ? theme.colors.error : undefined}
-        >
-          {button.label}
-        </Button>
-      ))}
-    </Dialog.Actions>
+    <ModalActionsStacked
+      actions={buttons.map((button, index) => ({
+        label: button.label,
+        onPress: () => onPress(button.onPress),
+        primary: index === buttons.length - 1,
+        destructive: button.style === "destructive",
+      }))}
+    />
   );
 }
 
@@ -163,17 +154,17 @@ export function DialogProvider({ children }: { children: ReactNode }) {
           style={[MODAL_SHAPE_STYLE, { backgroundColor: theme.colors.surface }]}
         >
           {options?.title && (
-            <Dialog.Title
+            <ModalTitle
               style={[
                 MODAL_TITLE_STYLE,
                 { color: theme.colors.onSurface, textAlign: "justify" },
               ]}
             >
               {options.title}
-            </Dialog.Title>
+            </ModalTitle>
           )}
           {options?.message && (
-            <Dialog.Content>
+            <ModalBody>
               <Text
                 variant="bodyMedium"
                 style={{
@@ -183,22 +174,17 @@ export function DialogProvider({ children }: { children: ReactNode }) {
               >
                 {options.message}
               </Text>
-            </Dialog.Content>
+            </ModalBody>
           )}
           {options?.actionsLayout === "stacked" && options.buttons && options.buttons.length > 0 ? (
-            <View style={styles.stackedActions}>
-              {orderStackedButtons(options.buttons).map((button, index) => (
-                <Button
-                  key={index}
-                  mode={button.role === "primary" ? "contained" : "outlined"}
-                  onPress={() => handleButtonPress(button.onPress)}
-                  style={[styles.stackedButton, { borderRadius: BUTTON_RADIUS }]}
-                  textColor={button.style === "destructive" ? theme.colors.error : undefined}
-                >
-                  {button.label}
-                </Button>
-              ))}
-            </View>
+            <ModalActionsStacked
+              actions={orderStackedButtons(options.buttons).map((button) => ({
+                label: button.label,
+                onPress: () => handleButtonPress(button.onPress),
+                primary: button.role === "primary",
+                destructive: button.style === "destructive",
+              }))}
+            />
           ) : (
             <DialogFooter
               buttons={options?.buttons}

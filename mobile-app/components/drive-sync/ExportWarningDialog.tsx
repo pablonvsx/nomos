@@ -1,4 +1,5 @@
 import React from "react";
+import { ModalBody, ModalTitle } from "@/components/ui/ModalBody";
 import { StyleSheet } from "react-native";
 import { Dialog, Portal, Text, useTheme } from "react-native-paper";
 import { ModalActions } from "@/components/ui/ModalActions";
@@ -24,8 +25,8 @@ export function ExportWarningDialog({ warning, onDismiss, onExportAnyway, onBack
   return (
     <Portal>
       <Dialog visible={warning !== null} onDismiss={onDismiss} style={[MODAL_SHAPE_STYLE, { backgroundColor: theme.colors.surface }]}>
-        <Dialog.Title style={MODAL_TITLE_STYLE}>{t("driveBackup.exportWarning.title")}</Dialog.Title>
-        <Dialog.Content>
+        <ModalTitle style={MODAL_TITLE_STYLE}>{t("driveBackup.exportWarning.title")}</ModalTitle>
+        <ModalBody>
           <Text variant="bodyMedium">
             {warning?.reason === "pending"
               ? t("driveBackup.exportWarning.pending")
@@ -36,7 +37,7 @@ export function ExportWarningDialog({ warning, onDismiss, onExportAnyway, onBack
               {t("driveBackup.exportWarning.offline")}
             </Text>
           )}
-        </Dialog.Content>
+        </ModalBody>
         <ModalActions
           cancelLabel={t("driveBackup.exportWarning.exportAnyway")}
           onCancel={onExportAnyway}

@@ -4,6 +4,7 @@
  * Allows searching, adding, editing, and removing species
  */
 
+import { ModalBody, ModalTitle } from "@/components/ui/ModalBody";
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import { ModalActions } from "@/components/ui/ModalActions";
 import React, { useState, useCallback, useRef } from "react";
@@ -1316,8 +1317,8 @@ function SpeciesManagementModal({
         {/* Edit Species Modal */}
         <Portal>
           <Dialog style={MODAL_SHAPE_STYLE} visible={editModalVisible} onDismiss={handleCloseEditModal}>
-            <Dialog.Title style={MODAL_TITLE_STYLE}>{t("species.editSpecies")}</Dialog.Title>
-            <Dialog.Content>
+            <ModalTitle style={MODAL_TITLE_STYLE}>{t("species.editSpecies")}</ModalTitle>
+            <ModalBody>
               <TextInput
                 label={`${t("species.scientificName")} *`}
                 value={editedSpeciesData.scientificName}
@@ -1394,7 +1395,7 @@ function SpeciesManagementModal({
               >
                 {t("species.addCommonName")}
               </Button>
-            </Dialog.Content>
+            </ModalBody>
             <ModalActions
               cancelLabel={t("species.cancel")}
               onCancel={handleCloseEditModal}
@@ -1407,10 +1408,10 @@ function SpeciesManagementModal({
         {/* Delete Confirmation Dialog */}
         <Portal>
           <Dialog style={MODAL_SHAPE_STYLE} visible={deleteConfirmVisible} onDismiss={() => setDeleteConfirmVisible(false)}>
-            <Dialog.Title style={MODAL_TITLE_STYLE}>{t("species.confirmDelete")}</Dialog.Title>
-            <Dialog.Content>
+            <ModalTitle style={MODAL_TITLE_STYLE}>{t("species.confirmDelete")}</ModalTitle>
+            <ModalBody>
               <Text variant="bodyMedium">{t("species.deleteMessage")}</Text>
-            </Dialog.Content>
+            </ModalBody>
             <ModalActions
               cancelLabel={t("species.cancel")}
               onCancel={() => setDeleteConfirmVisible(false)}
@@ -1428,12 +1429,12 @@ function SpeciesManagementModal({
         {/* Reset Catalog Confirmation Dialog */}
         <Portal>
           <Dialog style={MODAL_SHAPE_STYLE} visible={resetCatalogConfirmVisible} onDismiss={() => setResetCatalogConfirmVisible(false)}>
-            <Dialog.Title style={MODAL_TITLE_STYLE}>{t("species.resetCatalogTitle")}</Dialog.Title>
-            <Dialog.Content>
+            <ModalTitle style={MODAL_TITLE_STYLE}>{t("species.resetCatalogTitle")}</ModalTitle>
+            <ModalBody>
               <Text variant="bodyMedium">
                 {t("species.resetCatalogMessage")}
               </Text>
-            </Dialog.Content>
+            </ModalBody>
             <ModalActions
               cancelLabel={t("species.cancel")}
               onCancel={() => setResetCatalogConfirmVisible(false)}

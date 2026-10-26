@@ -1,5 +1,6 @@
 // src/app/project-details/[id].tsx
 // Paisageo / official protocol project details screen
+import { ModalBody, ModalTitle } from "@/components/ui/ModalBody";
 import { MODAL_SHAPE_STYLE } from "@/constants/shape";
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import { ModalActions } from "@/components/ui/ModalActions";
@@ -1502,11 +1503,11 @@ function UnifiedProjectDetailsScreen() {
 
       <Portal>
         <Dialog style={MODAL_SHAPE_STYLE} visible={editDialogVisible} onDismiss={() => setEditDialogVisible(false)}>
-          <Dialog.Title style={MODAL_TITLE_STYLE}>{t("projectView.editProject")}</Dialog.Title>
-          <Dialog.Content>
+          <ModalTitle style={MODAL_TITLE_STYLE}>{t("projectView.editProject")}</ModalTitle>
+          <ModalBody>
             <TextInput key={nameInput.resetKey} label={t("projectView.name")} mode="outlined" {...nameInput.inputProps} />
             <TextInput key={descriptionInput.resetKey} label={t("projectView.description")} mode="outlined" multiline numberOfLines={3} style={{ marginTop: 12 }} {...descriptionInput.inputProps} />
-          </Dialog.Content>
+          </ModalBody>
           <ModalActions
             cancelLabel={t("common.cancel")}
             onCancel={() => setEditDialogVisible(false)}
