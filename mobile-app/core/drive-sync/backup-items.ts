@@ -12,6 +12,7 @@ import { fingerprintOf, type BackupItem } from "@/core/drive-sync/change-detecti
 import { parseAudioNotes, parsePhotoUris } from "@/db/mappers/json-utils";
 import type { Point, PointModule } from "@/types/database";
 import type { ProjectConfigPackage } from "@/core/project-sharing/project-config-package";
+import { MAP_LAYER_KEY, MAP_ROUTE_KEY } from "@/core/drive-sync/map-index";
 
 export interface PointItemInput {
   points: Point[];
@@ -83,8 +84,14 @@ export interface ProjectDataItems {
   payloads: ProjectDataPayloads;
 }
 
+/** The raw GeoJSON text of the project's mapping layer and field route, when it has them and they can be read. */
+export interface MapFilesInput {
+  layer?: string;
+  route?: string;
+}
+
 /** The pieces of the project that live in the Drive project folder (not the points). */
-export function buildProjectDataItems(pkg: ProjectConfigPackage): ProjectDataItems {
+export function buildProjectDataItems(pkg: ProjectConfigPackage, mapFiles: MapFilesInput = {}): ProjectDataItems {
   const items: BackupItem[] = [];
   const payloads: ProjectDataPayloads = new Map();
   const add = (item: Omit<BackupItem, "fingerprint">, payload: unknown) => {
@@ -109,6 +116,14 @@ export function buildProjectDataItems(pkg: ProjectConfigPackage): ProjectDataIte
       { key: `species:${entry.uuid}`, kind: "species", label: (entry.scientific_name ?? "").trim(), group: "catalog" },
       entry,
     );
+  }
+  // The route and the layer are sent as the raw file; the fingerprint is the CONTENT, so adding,
+  // replacing or editing one makes the backup pending (removing one is handled by the runner).
+  if (mapFiles.layer !== undefined) {
+    add({ key: MAP_LAYER_KEY, kind: "mapLayer", label: "", group: "map" }, mapFiles.layer);
+  }
+  if (mapFiles.route !== undefined) {
+    add({ key: MAP_ROUTE_KEY, kind: "fieldRoute", label: "", group: "map" }, mapFiles.route);
   }
   // The manifest points at the active classification, so it is sent last.
   add(

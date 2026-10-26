@@ -474,6 +474,7 @@ graph TD
     Proj --> Protocol["protocol-package.json<br/>(only if protocol_source = custom)"]
     Proj --> SpeciesCat["species-catalog/<br/>&lt;species_uuid&gt;.json"]
     Proj --> VegClasses["vegetation-classes/<br/>&lt;classification_uuid&gt;.json"]
+    Proj --> MapDir["map/<br/>index.json · map-layer.geojson · field-route.geojson<br/>(only if the project has them)"]
     Proj --> Approved["approved/"]
     Approved --> Point["point_&lt;label&gt;_&lt;uuid&gt;/"]
     Point --> PointJson["point.json"]
@@ -540,6 +541,46 @@ The allocator is deterministic for a given order of media, which is what makes a
 re-backup reuse the folders of the first attempt. The Drive layout did not
 change with this unification, so existing backups restore as before.
 
+#### Field route and map layer (`map/`)
+
+A project has **one mapping layer and one field route** (the columns
+`projects.geojson_layer` and `projects.geojson_field_route`). Each column holds
+the absolute URI of a file the app copied into the documents folder when the
+person attached it, so the value is specific to the device and is never sent:
+the backup sends the file's **content**, as raw GeoJSON (it opens in QGIS), and
+a restore writes a *new* file and stores the new URI.
+
+- `map/map-layer.geojson` and `map/field-route.geojson`: the two files, each
+  present only when the project has it.
+- `map/index.json` (`core/drive-sync/map-index.ts`): `{ format_version: 1,
+  layer: { file } | null, route: { file } | null }`. The app has one role per
+  file and no other metadata (name, order, colour), so the index exists to carry
+  a `format_version` a restore can refuse, and to tell "this project has no
+  route" from "the file is missing". Only the two fixed file names are valid; an
+  index naming anything else is refused, so a hand-edited index cannot make a
+  restore read another file of the folder.
+- Two items of the project-data scope (`maplayer`, `fieldroute`, group `map`,
+  sent before the manifest). Their fingerprint is the **content** of the file
+  (`collectMapFiles`, `backup-collectors.ts`), so attaching, replacing or editing
+  one makes the project-data backup pending; removing one is a pending removal
+  too (the key leaves the snapshot). A column that is empty, or whose file is
+  gone or no longer a `FeatureCollection`, simply has no item.
+- Sending (`sendMapItem`, `project-data-backup.ts`): the file is looked up by
+  name first and updated, never duplicated; **the file goes up before the index
+  is updated**, so the index never names a file that is not there. The index is
+  read-modify-write, like the manifest: an index with a `format_version` this
+  build does not know is never overwritten (the item fails). Removing a route or
+  layer only clears its slot; nothing is deleted on Drive (the same rule as every
+  other deletion). A file over 1 MB is sent with the transfer timeout
+  (`DRIVE_TRANSFER_TIMEOUT_MS`) instead of the metadata one, and one over 5 MB
+  fails with its own reason (`driveBackup.reason.mapTooLarge`) instead of going up
+  without a warning. The activation sends them too.
+- The manifest is untouched by all of this: it still goes only through
+  `updateManifest`, and the map items never write `project_uuid`, `owner_email`
+  or `format_version`.
+- The configuration package (the collaborator's copy of the project) does **not**
+  carry the route or the layer; only the owner's Drive backup does.
+
 `manifest.json` (`ProjectManifest`, `project-drive-service.ts`) holds
 `format_version`, `project_uuid`, `project_name`, `project_description`,
 `protocol_id`, `protocol_source`, `owner_email`, and `active_vegetation_classification`
@@ -573,7 +614,7 @@ modal and send only what is pending:
 | Scope | Items (snapshot key) | Sent by |
 |---|---|---|
 | `points` | one per eligible point (`point:<id>`): its data, its modules' data and the identity of its media | `runPointsBackup` → `backupAllPendingPoints` |
-| `project` | `protocol` (custom protocols only), `vegclass:<uuid>`, `species:<uuid>`, `manifest` | `runProjectDataBackup` → `backupProjectData` |
+| `project` | `protocol` (custom protocols only), `vegclass:<uuid>`, `species:<uuid>`, `maplayer` and `fieldroute` (when the project has them), `manifest` | `runProjectDataBackup` → `backupProjectData` |
 
 `backupProjectData` sends the items in that order, so the manifest goes last
 and is **held back** when any classification failed to upload (the manifest is
@@ -792,6 +833,15 @@ The restore is **always complete and all-or-nothing**; there is no "data
 only" mode, because media is part of the collection and a point restored
 without it would be re-uploaded without it by the next backup:
 
+- `map/` is read before the points (cheap to fail early): no folder, no index,
+  or an empty slot means the project had none; an index slot whose file is gone
+  from Drive restores that slot as empty. An index with an unknown
+  `format_version`, or a file that is not a GeoJSON `FeatureCollection` (the same
+  rule `core/utils/geojson.ts` applies when the person attaches a file), raises
+  `MapRestoreError` (`driveRestore.errorMapData`, four languages) and the whole
+  restore is undone, files written included. Each file is rewritten as a new
+  `layer_<time>.geojson` / `route_<time>.geojson` in the documents folder and
+  `updateProjectGeoJSON` stores the new URI.
 - `approved/` is listed (paginated) and only folders named
   `point_<label>_<uuid>` are read: anything else in it is ignored. Only the
   `_<uuid>` suffix matters, so editing the label part of a folder name does
@@ -1004,6 +1054,11 @@ merged into one message rather than alerted one after another.
   same 4 characters — there is no shared registry to check against in
   this single-owner model, and none is planned; it only matters as a
   display label alongside a point's own (unique) id.
+- **Route and layer: no real-device validation either**, and no size was
+  measured on real user files. The 1 MB / 5 MB thresholds are a safeguard, not a
+  measured limit; a route that does not upload shows the "map file too large"
+  reason. The colour, order and name of a layer are not stored by the app, so they
+  are not backed up.
 - **Deletions are not mirrored on Drive.** Deleting a point, a species or a
   classification locally counts as a pending change, but the backup only drops
   it from the snapshot; its Drive file stays (and a restore can bring it back).

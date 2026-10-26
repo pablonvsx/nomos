@@ -125,7 +125,13 @@ jest.mock("@/db/queries/points", () => ({
     return createdPoints.length;
   },
 }));
+const geoJsonColumns: { layer?: string; route?: string } = {};
 jest.mock("@/db/queries/projects", () => ({
+  updateProjectGeoJSON: async (_id: number, layer?: string, route?: string) => {
+    if (layer !== undefined) geoJsonColumns.layer = layer;
+    if (route !== undefined) geoJsonColumns.route = route;
+    return true;
+  },
   getProjectById: async () => ({
     id: 1,
     collaboration_role: "owner",
@@ -150,6 +156,8 @@ jest.mock("@/db/queries/vegetation-classifications", () => ({
 }));
 
 import { backupPoint } from "../backup-service";
+import { backupProjectData } from "../project-data-backup";
+import { buildProjectDataItems } from "../backup-items";
 import { restoreOwnProjectFromDrive } from "../restore-service";
 
 const MEDIA: Record<string, string> = {
@@ -163,6 +171,8 @@ const MEDIA: Record<string, string> = {
 };
 
 beforeEach(() => {
+  delete geoJsonColumns.layer;
+  delete geoJsonColumns.route;
   resetFakeFs();
   mockDrive.reset();
   createdPoints.length = 0;
@@ -213,3 +223,50 @@ describe("backup -> restore round trip", () => {
     expect(restored.drive_synced_at).toBe("2026-05-06T07:08:09.000Z");
   });
 });
+
+describe("backup -> restore round trip: field route and map layer", () => {
+  const layer = JSON.stringify({ type: "FeatureCollection", features: [{ type: "Feature", properties: { nome: "Área" }, geometry: { type: "Point", coordinates: [-34.9, -8.05] } }] });
+  const route = JSON.stringify({ type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: [[-34.9, -8.05], [-34.8, -8.0]] } }] });
+
+  async function backUpMap(map: { layer?: string; route?: string }) {
+    const project = {
+      format_version: 1 as const,
+      project_uuid: "project-uuid-1",
+      project_name: "Projeto",
+      protocol_id: "7",
+      protocol_source: "custom" as const,
+      species_catalog: [],
+      vegetation_classes: [],
+      active_vegetation_classification: { type: "standard" as const },
+      owner_email: "owner@example.com",
+      package_role_for_importer: "collaborator" as const,
+    };
+    const { items, payloads } = buildProjectDataItems(project as never, map);
+    const mapItems = items.filter((i) => i.group === "map");
+    const outcome = await backupProjectData({
+      driveFolderId: ROOT_ID,
+      pending: mapItems,
+      payloads,
+      context: { report: () => undefined, activity: () => undefined, isCancelled: () => false },
+      onItemDone: async () => undefined,
+    });
+    expect(outcome).toMatchObject({ failures: [], sent: mapItems.length });
+  }
+
+  it("a route and a layer sent by the backup come back as new files with the same content, and the project points at them", async () => {
+    await backUpMap({ layer, route });
+
+    await restoreOwnProjectFromDrive("root");
+
+    expect(geoJsonColumns.layer).toBeDefined();
+    expect(geoJsonColumns.route).toBeDefined();
+    expect(JSON.parse(fsState.get(geoJsonColumns.layer!)!.content!)).toEqual(JSON.parse(layer));
+    expect(JSON.parse(fsState.get(geoJsonColumns.route!)!.content!)).toEqual(JSON.parse(route));
+  });
+
+  it("a project with no route or layer is restored with neither", async () => {
+    await restoreOwnProjectFromDrive("root");
+    expect(geoJsonColumns).toEqual({});
+  });
+});
+

@@ -1118,6 +1118,7 @@
       "protocol": "Sending the protocol...",
       "classifications": "Sending vegetation classifications: {{current}} of {{total}}",
       "catalog": "Sending the species catalog: {{current}} of {{total}}",
+      "map": "Sending map data: {{current}} of {{total}}",
       "manifest": "Updating the project manifest...",
       "activationFolders": "Creating the folders on Drive..."
     },
@@ -1160,6 +1161,7 @@
       "folderMissing": "The project folder was not found on Drive.",
       "server": "Google Drive is unavailable right now. Try again in a moment.",
       "missingMedia": "{{count}} photo(s) or audio note(s) no longer exist on this device.",
+      "mapTooLarge": "The map file is {{size}} MB, over the {{limit}} MB limit for the backup.",
       "unknown": "An unexpected error occurred. See the details."
     },
     "cardTitle": "Drive backup",
@@ -1206,7 +1208,9 @@
         "species": "Unnamed species",
         "classification": "Unnamed classification",
         "protocol": "Unnamed protocol",
-        "manifest": "Unnamed project"
+        "manifest": "Unnamed project",
+        "mapLayer": "Unnamed mapping layer",
+        "fieldRoute": "Unnamed field route"
       }
     },
     "activation": {
@@ -1237,6 +1241,7 @@
     "confirmRestore": "All approved points will be restored with their photos and audio. If any media cannot be downloaded, nothing is restored and you can try again.",
     "restoreButton": "Restore",
     "errorMediaDownload": "Could not download all of the project's photos and audio. Nothing was restored; check your connection and try again.",
+    "errorMapData": "Could not restore the project's field route or map layer. Nothing was restored; try again.",
     "restoreSummary": "{{imported}} point(s) imported, {{mediaDownloaded}} with media downloaded.",
     "duplicatesSkippedWarning": "{{count}} duplicate point(s) on Drive were skipped.",
     "ownerEmailWarning": "The owner email recorded for this project differs from the account connected on this device.",

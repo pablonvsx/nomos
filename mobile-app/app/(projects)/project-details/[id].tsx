@@ -65,7 +65,6 @@ import {
 import { Project, Point, VegetationClassification, CustomProtocol } from "@/types/database";
 import type { PointEnvelope, ProjectRef, LanguageCode } from "@/protocol-kernel/types";
 import { useI18n } from "@/contexts/i18n-context";
-import { parseJsonText } from "@/db/mappers/json-utils";
 import { exportMedia } from "@/core/export/file-writer";
 import { useMapData } from "@/contexts/map-data-context";
 import VegetationClassificationPicker from "@/modules/paisageo/components/VegetationClassificationPicker";
@@ -114,6 +113,7 @@ import { useBackupStatus } from "@/hooks/use-backup-status";
 import { DriveBackupCard } from "@/components/drive-sync/DriveBackupCard";
 import { ExportWarningDialog } from "@/components/drive-sync/ExportWarningDialog";
 import { isOnline } from "@/core/net/connectivity";
+import { parseFeatureCollection } from "@/core/utils/geojson";
 import {
   isBackupBusy,
   startBackupWithPreflight,
@@ -128,10 +128,6 @@ import {
 } from "@/contexts/protocol-registry-context";
 
 // --- Helper Functions ---
-
-const safeJsonParse = (jsonString: string | null | undefined) => {
-  return parseJsonText<unknown | null>(jsonString, null);
-};
 
 
 function buildProjectRef(project: Project): ProjectRef {
@@ -443,9 +439,8 @@ function UnifiedProjectDetailsScreen() {
         const fileAsset = result.assets[0];
         const response = await fetch(fileAsset.uri);
         const content = await response.text();
-        const geojson = safeJsonParse(content) as { type?: string } | null;
 
-        if (!geojson?.type || geojson.type !== "FeatureCollection") {
+        if (!parseFeatureCollection(content)) {
           alert(t("common.error"), t("projectView.invalidGeoJSON"));
           return;
         }
@@ -486,9 +481,8 @@ function UnifiedProjectDetailsScreen() {
         const fileAsset = result.assets[0];
         const response = await fetch(fileAsset.uri);
         const content = await response.text();
-        const geojson = safeJsonParse(content) as { type?: string } | null;
 
-        if (!geojson?.type || geojson.type !== "FeatureCollection") {
+        if (!parseFeatureCollection(content)) {
           alert(t("common.error"), t("projectView.invalidGeoJSON"));
           return;
         }

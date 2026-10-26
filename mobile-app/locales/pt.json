@@ -1118,6 +1118,7 @@
       "protocol": "Enviando o protocolo...",
       "classifications": "Enviando classificações de vegetação: {{current}} de {{total}}",
       "catalog": "Enviando o catálogo de espécies: {{current}} de {{total}}",
+      "map": "Enviando dados do mapa: {{current}} de {{total}}",
       "manifest": "Atualizando o manifesto do projeto...",
       "activationFolders": "Criando as pastas no Drive..."
     },
@@ -1160,6 +1161,7 @@
       "folderMissing": "A pasta do projeto não foi encontrada no Drive.",
       "server": "O Google Drive está indisponível no momento. Tente novamente em instantes.",
       "missingMedia": "{{count}} foto(s) ou áudio(s) não existem mais neste aparelho.",
+      "mapTooLarge": "O arquivo do mapa tem {{size}} MB, acima do limite de {{limit}} MB para o backup.",
       "unknown": "Ocorreu um erro inesperado. Veja os detalhes."
     },
     "cardTitle": "Backup no Drive",
@@ -1206,7 +1208,9 @@
         "species": "Espécie sem nome",
         "classification": "Classificação sem nome",
         "protocol": "Protocolo sem nome",
-        "manifest": "Projeto sem nome"
+        "manifest": "Projeto sem nome",
+        "mapLayer": "Camada de mapeamento sem nome",
+        "fieldRoute": "Rota de campo sem nome"
       }
     },
     "activation": {
@@ -1237,6 +1241,7 @@
     "confirmRestore": "Todos os pontos aprovados serão restaurados com suas fotos e áudios. Se alguma mídia não puder ser baixada, nada será restaurado e você poderá tentar de novo.",
     "restoreButton": "Restaurar",
     "errorMediaDownload": "Não foi possível baixar todas as fotos e áudios do projeto. Nada foi restaurado; verifique a conexão e tente novamente.",
+    "errorMapData": "Não foi possível restaurar a rota ou a camada do mapa do projeto. Nada foi restaurado; tente novamente.",
     "restoreSummary": "{{imported}} ponto(s) importado(s), {{mediaDownloaded}} com mídia baixada.",
     "duplicatesSkippedWarning": "{{count}} ponto(s) duplicado(s) no Drive foram ignorados.",
     "ownerEmailWarning": "O e-mail do dono registrado neste projeto é diferente da conta conectada neste dispositivo.",

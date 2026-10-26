@@ -1118,6 +1118,7 @@
       "protocol": "Envoi du protocole...",
       "classifications": "Envoi des classifications de végétation : {{current}} sur {{total}}",
       "catalog": "Envoi du catalogue d'espèces : {{current}} sur {{total}}",
+      "map": "Envoi des données de la carte : {{current}} sur {{total}}",
       "manifest": "Mise à jour du manifeste du projet...",
       "activationFolders": "Création des dossiers sur Drive..."
     },
@@ -1160,6 +1161,7 @@
       "folderMissing": "Le dossier du projet est introuvable sur Drive.",
       "server": "Google Drive est indisponible pour le moment. Réessayez dans un instant.",
       "missingMedia": "{{count}} photo(s) ou note(s) audio n'existent plus sur cet appareil.",
+      "mapTooLarge": "Le fichier de la carte fait {{size}} Mo, au-dessus de la limite de {{limit}} Mo pour la sauvegarde.",
       "unknown": "Une erreur inattendue s'est produite. Voir les détails."
     },
     "cardTitle": "Sauvegarde sur Drive",
@@ -1206,7 +1208,9 @@
         "species": "Espèce sans nom",
         "classification": "Classification sans nom",
         "protocol": "Protocole sans nom",
-        "manifest": "Projet sans nom"
+        "manifest": "Projet sans nom",
+        "mapLayer": "Couche cartographique sans nom",
+        "fieldRoute": "Itinéraire de terrain sans nom"
       }
     },
     "activation": {
@@ -1237,6 +1241,7 @@
     "confirmRestore": "Tous les points approuvés seront restaurés avec leurs photos et audios. Si un média ne peut pas être téléchargé, rien n'est restauré et vous pourrez réessayer.",
     "restoreButton": "Restaurer",
     "errorMediaDownload": "Impossible de télécharger toutes les photos et tous les audios du projet. Rien n'a été restauré ; vérifiez la connexion et réessayez.",
+    "errorMapData": "Impossible de restaurer l'itinéraire de terrain ou la couche cartographique du projet. Rien n'a été restauré ; réessayez.",
     "restoreSummary": "{{imported}} point(s) importé(s), {{mediaDownloaded}} avec média téléchargé.",
     "duplicatesSkippedWarning": "{{count}} point(s) en double sur Drive ont été ignorés.",
     "ownerEmailWarning": "L'e-mail du propriétaire enregistré pour ce projet diffère du compte connecté sur cet appareil.",

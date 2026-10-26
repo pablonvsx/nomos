@@ -9,7 +9,14 @@ import type { BackupScope } from "@/core/drive-sync/backup-session";
 export type { BackupScope };
 
 /** What an item is; the screen words an unnamed one by its kind ("Espécie sem nome"). */
-export type BackupItemKind = "point" | "species" | "classification" | "protocol" | "manifest";
+export type BackupItemKind =
+  | "point"
+  | "species"
+  | "classification"
+  | "protocol"
+  | "manifest"
+  | "mapLayer"
+  | "fieldRoute";
 
 /** One thing the backup sends: a point, or one piece of the project data. */
 export interface BackupItem {
@@ -25,7 +32,7 @@ export interface BackupItem {
   /** Points only: the number the list shows ("Ponto 2") and where it is, to tell points apart. */
   point?: { number: number; lat: number; lon: number };
   /** Project-data items only: which step of the backup sends it (drives the stage text). */
-  group?: "protocol" | "classifications" | "catalog" | "manifest";
+  group?: "protocol" | "classifications" | "catalog" | "map" | "manifest";
   /** Changes whenever anything the backup would send for this item changes. */
   fingerprint: string;
 }

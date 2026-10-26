@@ -1,6 +1,6 @@
 import { describeRestoreError } from "../restore-error-messages";
 import { UnsupportedPackageVersionError } from "@/core/project-sharing/package-errors";
-import { MediaRestoreError } from "../restore-errors";
+import { MapRestoreError, MediaRestoreError } from "../restore-errors";
 import { DriveTimeoutError } from "../drive-errors";
 import { NetworkTimeoutError } from "@/core/net/network-timeout";
 
@@ -50,6 +50,12 @@ describe("describeRestoreError", () => {
     expect(describeRestoreError("some string thrown directly")).toEqual({
       key: "driveRestore.errorRestoring",
       technicalDetail: "some string thrown directly",
+    });
+  });
+
+  it("maps MapRestoreError (instanceof) to its own key, without the technical detail", () => {
+    expect(describeRestoreError(new MapRestoreError("O arquivo map-layer.geojson do mapa não é um GeoJSON FeatureCollection válido."))).toEqual({
+      key: "driveRestore.errorMapData",
     });
   });
 

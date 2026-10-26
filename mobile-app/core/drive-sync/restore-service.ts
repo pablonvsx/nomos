@@ -18,6 +18,7 @@ import {
   deleteProject,
   getProjectByUuid,
   setProjectAsOwner,
+  updateProjectGeoJSON,
 } from "@/db/queries/projects";
 import { createProjectSpecies, getProjectSpeciesByUuid } from "@/db/queries/project-species";
 import {
@@ -45,7 +46,10 @@ import {
   parsePointFolderUuid,
 } from "@/core/drive-sync/drive-layout";
 import { fromDriveMediaMarker, splitRelativePath } from "@/core/drive-sync/drive-media-paths";
-import { MediaRestoreError } from "@/core/drive-sync/restore-errors";
+import { MapRestoreError, MediaRestoreError } from "@/core/drive-sync/restore-errors";
+import { MAP_FOLDER, MAP_INDEX_FILENAME, fileNameOfSlot, parseMapIndex, type MapSlot } from "@/core/drive-sync/map-index";
+import { InvalidPackageError, UnsupportedPackageVersionError } from "@/core/project-sharing/package-errors";
+import { isFeatureCollection } from "@/core/utils/geojson";
 import { isNetworkTimeoutError } from "@/core/net/network-timeout";
 import type { PointPackageEntry } from "@/core/project-sharing/export-points";
 import type { CustomProtocolSchema, VegetationClass } from "@/types/database";
@@ -133,6 +137,8 @@ export async function restoreOwnProjectFromDrive(driveFolderId: string): Promise
 
   // Uuids of points whose media directory may exist on disk, for the undo below.
   const processedPointUuids: string[] = [];
+  // Route / layer files written to the documents folder, for the same undo.
+  const restoredMapFiles: File[] = [];
 
   try {
 
@@ -215,6 +221,9 @@ export async function restoreOwnProjectFromDrive(driveFolderId: string): Promise
     } else {
       await setActiveVegetationClassification(newProjectId, null, "standard");
     }
+
+    // map/ - the field route and the mapping layer, if the project had them.
+    await restoreMapData(driveFolderId, newProjectId, restoredMapFiles);
 
     // approved/ - every point folder.
     let imported = 0;
@@ -317,8 +326,60 @@ export async function restoreOwnProjectFromDrive(driveFolderId: string): Promise
       const mediaDir = new Directory(Paths.document, `${IMPORTED_MEDIA_DIR}/${pointUuid}`);
       if (mediaDir.exists) await mediaDir.delete();
     }
+    for (const mapFile of restoredMapFiles) {
+      if (mapFile.exists) await mapFile.delete();
+    }
     await deleteProject(newProjectId);
     throw error;
+  }
+}
+
+/**
+ * Brings the route and the layer back from `map/`: a new file in the documents
+ * folder for each (never the sender's path) and the project's columns pointing
+ * at it. No index, or an index slot that is empty, means the project had none.
+ * An index this build cannot read, or a file that is not a FeatureCollection,
+ * fails the restore, which is then undone like any other failure; the files
+ * written are pushed to `written` first so that undo can delete them.
+ */
+async function restoreMapData(driveFolderId: string, projectId: number, written: File[]): Promise<void> {
+  const mapFolder = await findChildByName(driveFolderId, MAP_FOLDER);
+  if (!mapFolder) return;
+  const indexFile = await findChildByName(mapFolder.id, MAP_INDEX_FILENAME);
+  if (!indexFile) return;
+
+  let index;
+  try {
+    index = parseMapIndex(await readJsonFile(indexFile.id));
+  } catch (error) {
+    if (error instanceof UnsupportedPackageVersionError || error instanceof InvalidPackageError) {
+      throw new MapRestoreError(error.message);
+    }
+    throw error;
+  }
+
+  const children = await listChildren(mapFolder.id);
+  const restoredUri: Partial<Record<MapSlot, string>> = {};
+  for (const slot of ["layer", "route"] as const) {
+    if (!index[slot]) continue;
+    // The index names a file that is not on Drive any more: that slot has nothing to restore.
+    const file = children.find((child) => child.name === fileNameOfSlot(slot));
+    if (!file) continue;
+
+    const geojson = await readJsonFile<unknown>(file.id);
+    if (!isFeatureCollection(geojson)) {
+      throw new MapRestoreError(`O arquivo ${file.name} do mapa não é um GeoJSON FeatureCollection válido.`);
+    }
+    const destination = new File(Paths.document, `${slot === "layer" ? "layer" : "route"}_${Date.now()}.geojson`);
+    await destination.create();
+    written.push(destination);
+    await destination.write(JSON.stringify(geojson));
+    restoredUri[slot] = destination.uri;
+  }
+
+  if (restoredUri.layer === undefined && restoredUri.route === undefined) return;
+  if (!(await updateProjectGeoJSON(projectId, restoredUri.layer, restoredUri.route))) {
+    throw new Error("Não foi possível registrar a rota e a camada do mapa no projeto restaurado.");
   }
 }
 

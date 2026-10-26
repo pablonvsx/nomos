@@ -5,12 +5,28 @@
 // button starts it (see backup-runners.ts).
 
 import {
+  DRIVE_METADATA_TIMEOUT_MS,
+  DRIVE_TRANSFER_TIMEOUT_MS,
   ensureFolder,
   findChildByName,
   listChildren,
+  readJsonFile,
   updateJsonFile,
   uploadJsonFile,
 } from "@/core/drive-sync/drive-api-client";
+import {
+  MAP_FILE_LARGE_BYTES,
+  MAP_FILE_LIMIT_BYTES,
+  MAP_FOLDER,
+  MAP_INDEX_FILENAME,
+  MapFileTooLargeError,
+  emptyMapIndex,
+  fileNameOfSlot,
+  parseMapIndex,
+  slotOfKey,
+  utf8ByteLength,
+  withMapSlot,
+} from "@/core/drive-sync/map-index";
 import { failureFromReason } from "@/core/drive-sync/backup-results";
 import type { BackupItem } from "@/core/drive-sync/change-detection";
 import { updateManifest, type ProjectManifest } from "@/core/drive-sync/project-drive-service";
@@ -28,6 +44,7 @@ const STAGE_KEY: Record<NonNullable<BackupItem["group"]>, string> = {
   protocol: "driveBackup.stage.protocol",
   classifications: "driveBackup.stage.classifications",
   catalog: "driveBackup.stage.catalog",
+  map: "driveBackup.stage.map",
   manifest: "driveBackup.stage.manifest",
 };
 
@@ -94,9 +111,51 @@ export async function backupProjectData(params: {
     }
   };
 
+  /**
+   * The route / the layer. `payload` is the file's text, or null when the person removed it.
+   * The file goes up first and the index is updated after it, so the index never names a file
+   * that is not there. Removing only clears the slot: nothing is ever deleted on Drive.
+   */
+  const sendMapItem = async (item: BackupItem, payload: unknown): Promise<void> => {
+    const slot = slotOfKey(item.key);
+    const present = typeof payload === "string";
+
+    let mapFolderId: string;
+    if (present) {
+      mapFolderId = await ensureFolder(MAP_FOLDER, driveFolderId);
+    } else {
+      const existingFolder = await findChildByName(driveFolderId, MAP_FOLDER);
+      if (!existingFolder) return; // never backed up: there is nothing on Drive to clear
+      mapFolderId = existingFolder.id;
+    }
+
+    if (present) {
+      const bytes = utf8ByteLength(payload);
+      if (bytes > MAP_FILE_LIMIT_BYTES) throw new MapFileTooLargeError(bytes);
+      const timeout = bytes > MAP_FILE_LARGE_BYTES ? DRIVE_TRANSFER_TIMEOUT_MS : DRIVE_METADATA_TIMEOUT_MS;
+      const fileName = fileNameOfSlot(slot);
+      const geojson = JSON.parse(payload);
+      // Look before writing: a second backup updates the file instead of adding another.
+      const existing = await findChildByName(mapFolderId, fileName);
+      if (existing) await updateJsonFile(existing.id, geojson, timeout);
+      else await uploadJsonFile(fileName, mapFolderId, geojson, timeout);
+    }
+
+    // Read-modify-write, like the manifest: an index this build cannot read is never overwritten.
+    const index = await findChildByName(mapFolderId, MAP_INDEX_FILENAME);
+    if (index) {
+      const current = parseMapIndex(await readJsonFile(index.id));
+      await updateJsonFile(index.id, withMapSlot(current, slot, present));
+    } else if (present) {
+      await uploadJsonFile(MAP_INDEX_FILENAME, mapFolderId, withMapSlot(emptyMapIndex(), slot, true));
+    }
+  };
+
   const send = async (item: BackupItem): Promise<void> => {
     const payload = payloads.get(item.key);
-    if (item.group === "protocol") {
+    if (item.group === "map") {
+      await sendMapItem(item, payload);
+    } else if (item.group === "protocol") {
       const existing = await findChildByName(driveFolderId, PROTOCOL_FILE);
       if (existing) await updateJsonFile(existing.id, payload);
       else await uploadJsonFile(PROTOCOL_FILE, driveFolderId, payload);
@@ -161,9 +220,18 @@ export async function backupProjectData(params: {
     } catch (error) {
       console.error(`Error sending ${item.key} to Drive:`, error);
       failures.push(
-        failureFromReason(item, error instanceof Error ? error.message : String(error), {
-          timedOut: isNetworkTimeoutError(error),
-        }),
+        error instanceof MapFileTooLargeError
+          ? {
+              kind: item.kind,
+              label: item.label,
+              point: item.point,
+              reasonKey: "driveBackup.reason.mapTooLarge",
+              reasonParams: { size: String(error.sizeMb), limit: String(MAP_FILE_LIMIT_BYTES / (1024 * 1024)) },
+              detail: error.message,
+            }
+          : failureFromReason(item, error instanceof Error ? error.message : String(error), {
+              timedOut: isNetworkTimeoutError(error),
+            }),
       );
       if (item.group === "classifications") classificationProblem = true;
       groupDone.set(group, position);

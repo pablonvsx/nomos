@@ -53,6 +53,12 @@ jest.mock("@/core/project-sharing/project-config-package", () => ({
   buildProjectConfigPackage: (id: number) => buildProjectConfigPackageMock(id),
 }));
 
+// The route / layer files of the project (read from the device in the real collector).
+let mapFilesOfProject: { layer?: string; route?: string } = {};
+jest.mock("@/core/drive-sync/backup-collectors", () => ({
+  collectMapFiles: jest.fn(async () => mapFilesOfProject),
+}));
+
 import { runActivation } from "../activation-service";
 import { GoogleAccountRequiredError, InvalidCollaborationRoleError } from "../project-drive-service";
 import type { BackupContext } from "../backup-session";
@@ -99,6 +105,7 @@ function context(cancelAfterReports = Infinity): BackupContext & { reports: numb
 const projectFolder = () => drive.nodeAt("Nomos/Nomos_Projeto Teste_project-uuid-1", ROOT_ID);
 
 beforeEach(() => {
+  mapFilesOfProject = {};
   drive.reset();
   projects = [{ id: 1, name: "Projeto Teste", collaboration_role: null, drive_folder_id: null }];
   jest.clearAllMocks();
@@ -160,6 +167,34 @@ describe("runActivation - a complete activation", () => {
     );
     await runActivation(1, context());
     expect(drive.nodeAt("Nomos/Nomos_Projeto Teste_project-uuid-1/protocol-package.json", ROOT_ID)).toBeDefined();
+  });
+});
+
+describe("runActivation - route and layer", () => {
+  it("sends the project's route and layer with the rest, before the manifest, and writes the index", async () => {
+    mapFilesOfProject = {
+      layer: JSON.stringify({ type: "FeatureCollection", features: [] }),
+      route: JSON.stringify({ type: "FeatureCollection", features: [{ type: "Feature" }] }),
+    };
+
+    const result = await runActivation(1, context());
+
+    expect(result.outcome).toBe("completed");
+    const folder = "Nomos/Nomos_Projeto Teste_project-uuid-1";
+    expect(drive.nodeAt(`${folder}/map/map-layer.geojson`, ROOT_ID)?.json).toEqual({ type: "FeatureCollection", features: [] });
+    expect(drive.nodeAt(`${folder}/map/field-route.geojson`, ROOT_ID)?.json).toMatchObject({ type: "FeatureCollection" });
+    expect(drive.nodeAt(`${folder}/map/index.json`, ROOT_ID)?.json).toEqual({
+      format_version: 1,
+      layer: { file: "map-layer.geojson" },
+      route: { file: "field-route.geojson" },
+    });
+  });
+
+  it("a project without route or layer gets no map folder at all", async () => {
+
+    await runActivation(1, context());
+
+    expect(drive.tree().some((path) => path.includes("map/"))).toBe(false);
   });
 });
 

@@ -12,6 +12,7 @@
 
 import { backupProjectData } from "@/core/drive-sync/project-data-backup";
 import { buildProjectDataItems } from "@/core/drive-sync/backup-items";
+import { collectMapFiles } from "@/core/drive-sync/backup-collectors";
 import { classifyRun } from "@/core/drive-sync/backup-results";
 import { seedBackupSnapshots } from "@/core/drive-sync/backup-status-service";
 import type { BackupContext, BackupResult } from "@/core/drive-sync/backup-session";
@@ -52,7 +53,7 @@ export async function runActivation(projectId: number, context: BackupContext): 
   const projectFolderId = await ensureFolder(`Nomos_${project.name}_${pkg.project_uuid}`, rootFolderId);
   await ensureFolder(APPROVED_FOLDER, projectFolderId);
 
-  const { items, payloads } = buildProjectDataItems(pkg);
+  const { items, payloads } = buildProjectDataItems(pkg, await collectMapFiles(projectId));
   const manifest: ProjectManifest = {
     format_version: MANIFEST_FORMAT_VERSION,
     project_uuid: pkg.project_uuid,

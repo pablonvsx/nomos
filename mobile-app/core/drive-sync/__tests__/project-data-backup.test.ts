@@ -9,12 +9,23 @@ import { createInMemoryDrive, ROOT_ID } from "./fixtures/in-memory-drive";
 jest.mock("expo-file-system", () => ({ File: FakeFile }));
 
 const drive = createInMemoryDrive(fsState);
+// The timeout each JSON write was asked for, to check that a large map file gets the long one.
+const timeoutsUsed: number[] = [];
 jest.mock("@/core/drive-sync/drive-api-client", () => ({
+  DRIVE_METADATA_TIMEOUT_MS: 30_000,
+  DRIVE_TRANSFER_TIMEOUT_MS: 180_000,
   ensureFolder: (...a: [string, string]) => drive.api.ensureFolder(...a),
   findChildByName: (...a: [string, string]) => drive.api.findChildByName(...a),
   listChildren: (...a: [string]) => drive.api.listChildren(...a),
-  uploadJsonFile: (...a: [string, string, unknown]) => drive.api.uploadJsonFile(...a),
-  updateJsonFile: (...a: [string, unknown]) => drive.api.updateJsonFile(...a),
+  readJsonFile: (...a: [string]) => drive.api.readJsonFile(...a),
+  uploadJsonFile: (name: string, parent: string, content: unknown, timeout?: number) => {
+    if (timeout !== undefined) timeoutsUsed.push(timeout);
+    return drive.api.uploadJsonFile(name, parent, content);
+  },
+  updateJsonFile: (id: string, content: unknown, timeout?: number) => {
+    if (timeout !== undefined) timeoutsUsed.push(timeout);
+    return drive.api.updateJsonFile(id, content);
+  },
 }));
 
 const manifestState = { current: { format_version: 1, project_uuid: "p", project_name: "Old", protocol_id: "x", protocol_source: "official", owner_email: "o@x.com", active_vegetation_classification: { type: "standard" } } };
@@ -124,6 +135,127 @@ describe("backupProjectData: progress by the item in progress, and the activity 
     expect(ctx.events.filter((e) => e.startsWith("item-start:species"))).toHaveLength(2);
     // The failure did not move the bar: the next item is simply the next position.
     expect(ctx.reported.map(([current]) => current)).toEqual([1, 2, 3, 4]);
+  });
+});
+
+describe("backupProjectData: field route and map layer", () => {
+  const layerText = JSON.stringify({ type: "FeatureCollection", features: [{ type: "Feature", properties: { n: 1 }, geometry: null }] });
+  const routeText = JSON.stringify({ type: "FeatureCollection", features: [] });
+  const withMap = (map: { layer?: string; route?: string }) => buildProjectDataItems(pkg(), map);
+  const mapNode = (name: string) => drive.nodeAt(`map/${name}`, ROOT_ID);
+
+  beforeEach(() => {
+    timeoutsUsed.length = 0;
+  });
+
+  it("writes the files raw under map/ with an index, before the manifest", async () => {
+    const { items, payloads } = withMap({ layer: layerText, route: routeText });
+    const done: string[] = [];
+
+    const outcome = await run(items, payloads, context(), async (i) => void done.push(i.key));
+
+    expect(outcome).toMatchObject({ sent: 6, failures: [] });
+    expect(done.slice(-3)).toEqual(["maplayer", "fieldroute", "manifest"]);
+    expect(mapNode("map-layer.geojson")!.json).toEqual(JSON.parse(layerText));
+    expect(mapNode("field-route.geojson")!.json).toEqual(JSON.parse(routeText));
+    expect(mapNode("index.json")!.json).toEqual({
+      format_version: 1,
+      layer: { file: "map-layer.geojson" },
+      route: { file: "field-route.geojson" },
+    });
+  });
+
+  it("backing up again updates the files and the index instead of adding copies", async () => {
+    const first = withMap({ layer: layerText });
+    await run(first.items, first.payloads, context());
+    const edited = JSON.stringify({ type: "FeatureCollection", features: [{ type: "Feature", properties: { n: 2 }, geometry: null }] });
+    const second = withMap({ layer: edited });
+    drive.resetCalls();
+
+    await run(second.items.filter((i) => i.key === "maplayer"), second.payloads, context());
+
+    expect(drive.tree().filter((p) => p.startsWith("map/"))).toEqual(["map/", "map/index.json", "map/map-layer.geojson"]);
+    expect(drive.callCount("uploadJsonFile")).toBe(0);
+    expect(mapNode("map-layer.geojson")!.json).toEqual(JSON.parse(edited));
+  });
+
+  it("the fingerprint is the content: same file same fingerprint, a changed file a different one", () => {
+    const a = withMap({ layer: layerText }).items.find((i) => i.key === "maplayer")!;
+    const same = withMap({ layer: layerText }).items.find((i) => i.key === "maplayer")!;
+    const other = withMap({ layer: layerText.replace('"n":1', '"n":2') }).items.find((i) => i.key === "maplayer")!;
+    expect(same.fingerprint).toBe(a.fingerprint);
+    expect(other.fingerprint).not.toBe(a.fingerprint);
+  });
+
+  it("a project without route or layer has no map item at all", () => {
+    expect(withMap({}).items.map((i) => i.key)).not.toEqual(expect.arrayContaining(["maplayer"]));
+    expect(withMap({}).items.some((i) => i.group === "map")).toBe(false);
+  });
+
+  it("removing one clears its slot in the index and leaves the file on Drive", async () => {
+    const both = withMap({ layer: layerText, route: routeText });
+    await run(both.items, both.payloads, context());
+    const removal: BackupItem = { key: "fieldroute", kind: "fieldRoute", label: "", group: "map", fingerprint: "removed" };
+
+    const outcome = await run([removal], new Map([["fieldroute", null]]), context());
+
+    expect(outcome).toMatchObject({ sent: 1, failures: [] });
+    expect(mapNode("index.json")!.json).toEqual({ format_version: 1, layer: { file: "map-layer.geojson" }, route: null });
+    expect(mapNode("field-route.geojson")).toBeDefined(); // nothing is ever deleted on Drive
+  });
+
+  it("removing something that was never backed up touches nothing on Drive", async () => {
+    const removal: BackupItem = { key: "maplayer", kind: "mapLayer", label: "", group: "map", fingerprint: "removed" };
+    drive.resetCalls();
+
+    const outcome = await run([removal], new Map([["maplayer", null]]), context());
+
+    expect(outcome).toMatchObject({ sent: 1, failures: [] });
+    expect(drive.callCount("uploadJsonFile")).toBe(0);
+    expect(drive.tree()).toEqual([]);
+  });
+
+  it("an index with a format_version this build does not know is never overwritten: the item fails", async () => {
+    const folder = await drive.api.ensureFolder("map", ROOT_ID);
+    await drive.api.uploadJsonFile("index.json", folder, { format_version: 9, layer: null, route: null });
+    const { items, payloads } = withMap({ layer: layerText });
+
+    const outcome = await run(items.filter((i) => i.key === "maplayer"), payloads, context());
+
+    expect(outcome.sent).toBe(0);
+    expect(outcome.failures).toHaveLength(1);
+    expect(mapNode("index.json")!.json).toEqual({ format_version: 9, layer: null, route: null });
+  });
+
+  it("a file over the limit fails with its own reason instead of going up", async () => {
+    const huge = JSON.stringify({ type: "FeatureCollection", features: [], pad: "x".repeat(5 * 1024 * 1024 + 10) });
+    const { items, payloads } = withMap({ layer: huge });
+
+    const outcome = await run(items.filter((i) => i.key === "maplayer"), payloads, context());
+
+    expect(outcome.sent).toBe(0);
+    expect(outcome.failures[0]).toMatchObject({ kind: "mapLayer", reasonKey: "driveBackup.reason.mapTooLarge" });
+    expect(mapNode("map-layer.geojson")).toBeUndefined();
+  });
+
+  it("a small file uses the short timeout, one over 1 MB the long (transfer) one", async () => {
+    const small = withMap({ layer: layerText });
+    await run(small.items.filter((i) => i.key === "maplayer"), small.payloads, context());
+    expect(timeoutsUsed).toEqual([30_000]);
+
+    timeoutsUsed.length = 0;
+    const big = JSON.stringify({ type: "FeatureCollection", features: [], pad: "x".repeat(1024 * 1024 + 10) });
+    const large = withMap({ route: big });
+    await run(large.items.filter((i) => i.key === "fieldroute"), large.payloads, context());
+    expect(timeoutsUsed[0]).toBe(180_000);
+  });
+
+  it("the manifest keeps its project_uuid, owner_email and format_version when a map item is sent with it", async () => {
+    const { items, payloads } = withMap({ layer: layerText });
+
+    await run(items, payloads, context());
+
+    expect(manifestState.current).toMatchObject({ format_version: 1, project_uuid: "p", owner_email: "o@x.com" });
   });
 });
 

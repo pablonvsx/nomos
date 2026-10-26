@@ -16,6 +16,7 @@ import { collectPointItems, collectProjectDataItems } from "@/core/drive-sync/ba
 import { pointItemKey } from "@/core/drive-sync/backup-items";
 import { backupProjectData } from "@/core/drive-sync/project-data-backup";
 import { diffAgainstSnapshot, type BackupItem } from "@/core/drive-sync/change-detection";
+import { MAP_LAYER_KEY, isMapItemKey } from "@/core/drive-sync/map-index";
 import {
   deleteSnapshotItems,
   getSnapshot,
@@ -105,6 +106,23 @@ export async function runProjectDataBackup(projectId: number, context: BackupCon
   const pendingKeys = new Set([...diff.added, ...diff.changed].map((item) => item.key));
   const pending: BackupItem[] = items.filter((item) => pendingKeys.has(item.key));
 
+  // A route or layer the person removed since the last backup: its slot in the Drive index has to
+  // be cleared, so a restore does not bring it back. It is a step like any other (sent before the
+  // manifest, retried if it fails), unlike a removed point or species, which only leaves the snapshot.
+  const removedMapKeys = diff.removedKeys.filter(isMapItemKey);
+  for (const key of removedMapKeys) {
+    payloads.set(key, null);
+    const removal: BackupItem = {
+      key,
+      kind: key === MAP_LAYER_KEY ? "mapLayer" : "fieldRoute",
+      label: "",
+      group: "map",
+      fingerprint: "removed",
+    };
+    const manifestAt = pending.findIndex((item) => item.group === "manifest");
+    pending.splice(manifestAt === -1 ? pending.length : manifestAt, 0, removal);
+  }
+
   let changedSnapshot = false;
   const outcome = await backupProjectData({
     driveFolderId: project.drive_folder_id,
@@ -112,12 +130,18 @@ export async function runProjectDataBackup(projectId: number, context: BackupCon
     payloads,
     context,
     onItemDone: async (item) => {
-      await markItemBackedUp(projectId, "project", item.key, item.fingerprint, new Date().toISOString());
+      if (payloads.get(item.key) === null) {
+        await deleteSnapshotItems(projectId, "project", [item.key]);
+      } else {
+        await markItemBackedUp(projectId, "project", item.key, item.fingerprint, new Date().toISOString());
+      }
       changedSnapshot = true;
     },
   });
 
-  if (changedSnapshot || diff.removedKeys.length > 0) await recordRun(projectId, "project", diff.removedKeys);
+  // The removed map keys are settled one by one above (a failed removal stays pending).
+  const otherRemovedKeys = diff.removedKeys.filter((key) => !isMapItemKey(key));
+  if (changedSnapshot || otherRemovedKeys.length > 0) await recordRun(projectId, "project", otherRemovedKeys);
 
   return classifyRun({
     sent: outcome.sent,

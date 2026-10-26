@@ -1,5 +1,5 @@
 import { UnsupportedPackageVersionError } from "@/core/project-sharing/package-errors";
-import { MediaRestoreError } from "@/core/drive-sync/restore-errors";
+import { MapRestoreError, MediaRestoreError } from "@/core/drive-sync/restore-errors";
 import { isNetworkTimeoutError } from "@/core/net/network-timeout";
 
 /**
@@ -40,6 +40,10 @@ export function describeRestoreError(error: unknown): RestoreErrorDescription {
 
   if (error instanceof MediaRestoreError) {
     return { key: "driveRestore.errorMediaDownload" };
+  }
+
+  if (error instanceof MapRestoreError) {
+    return { key: "driveRestore.errorMapData" };
   }
 
   const message = error instanceof Error ? error.message : String(error);

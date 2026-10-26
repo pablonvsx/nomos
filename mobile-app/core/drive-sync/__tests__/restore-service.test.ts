@@ -222,7 +222,10 @@ const deleteProjectMock = jest.fn(async (projectId: number) => {
   projects = projects.filter((p) => p.id !== projectId);
   return true;
 });
+const updateProjectGeoJSONMock = jest.fn(async (projectId: number, layer?: string, route?: string) => true);
 jest.mock("@/db/queries/projects", () => ({
+  updateProjectGeoJSON: (projectId: number, layer?: string, route?: string) =>
+    updateProjectGeoJSONMock(projectId, layer, route),
   deleteProject: (projectId: number) => deleteProjectMock(projectId),
   createProject: (...args: [string, string, string, "official" | "custom", string, string]) =>
     createProjectMock(...args),
@@ -274,6 +277,7 @@ jest.mock("@/db/queries/points", () => ({
 }));
 
 import { restoreOwnProjectFromDrive, MediaRestoreError } from "../restore-service";
+import { MapRestoreError } from "../restore-errors";
 import { DriveTimeoutError } from "../drive-errors";
 
 const restore = (driveFolderId: string) => restoreOwnProjectFromDrive(driveFolderId);
@@ -779,6 +783,101 @@ describe("restoreOwnProjectFromDrive - points and media (always a full restore)"
     expect(result.imported).toBe(1);
     expect(createPointMock).toHaveBeenCalledTimes(1);
     expect(result.duplicatesSkipped).toBe(1);
+  });
+});
+
+describe("restoreOwnProjectFromDrive - field route and map layer", () => {
+  const LAYER = { type: "FeatureCollection", features: [{ type: "Feature", properties: { a: 1 }, geometry: null }] };
+  const ROUTE = { type: "FeatureCollection", features: [] };
+
+  function addMapFolder(index: unknown, files: Record<string, unknown> = {}) {
+    const folder = addFolder("folder-1", "map-folder", "map");
+    if (index !== undefined) addJsonFile(folder.id, "map-index", "index.json", index);
+    for (const [name, content] of Object.entries(files)) addJsonFile(folder.id, `map-${name}`, name, content);
+  }
+  const mapFilesOnDevice = () => [...fsState.keys()].filter((key) => /\/(layer|route)_\d+\.geojson$/.test(key));
+
+  it("recreates both files as new documents and points the project at them (never the sender's path)", async () => {
+    getManifestMock.mockResolvedValue(baseManifest());
+    addMapFolder(
+      { format_version: 1, layer: { file: "map-layer.geojson" }, route: { file: "field-route.geojson" } },
+      { "map-layer.geojson": LAYER, "field-route.geojson": ROUTE },
+    );
+
+    const result = await restore("folder-1");
+
+    expect(updateProjectGeoJSONMock).toHaveBeenCalledTimes(1);
+    const [projectId, layerUri, routeUri] = updateProjectGeoJSONMock.mock.calls[0];
+    expect(projectId).toBe(result.projectId);
+    expect(layerUri).toMatch(/\/layer_\d+\.geojson$/);
+    expect(routeUri).toMatch(/\/route_\d+\.geojson$/);
+    // The saved files hold exactly what was on Drive.
+    expect(JSON.parse(fsState.get(layerUri!)!.content!)).toEqual(LAYER);
+    expect(JSON.parse(fsState.get(routeUri!)!.content!)).toEqual(ROUTE);
+  });
+
+  it("restores only what the index lists: a project with just a route comes back with just a route", async () => {
+    getManifestMock.mockResolvedValue(baseManifest());
+    addMapFolder({ format_version: 1, layer: null, route: { file: "field-route.geojson" } }, { "field-route.geojson": ROUTE });
+
+    await restore("folder-1");
+
+    const [, layerUri, routeUri] = updateProjectGeoJSONMock.mock.calls[0];
+    expect(layerUri).toBeUndefined();
+    expect(routeUri).toBeDefined();
+  });
+
+  it("a project with no map folder, or an index with nothing in it, comes back with no route and no layer", async () => {
+    getManifestMock.mockResolvedValue(baseManifest());
+    await restore("folder-1");
+    expect(updateProjectGeoJSONMock).not.toHaveBeenCalled();
+
+    resetDriveTree();
+    resetFakeDb();
+    addMapFolder({ format_version: 1, layer: null, route: null });
+    await restore("folder-1");
+    expect(updateProjectGeoJSONMock).not.toHaveBeenCalled();
+    expect(mapFilesOnDevice()).toEqual([]);
+  });
+
+  it("an index that names a file missing from Drive restores that slot as empty instead of failing", async () => {
+    getManifestMock.mockResolvedValue(baseManifest());
+    addMapFolder({ format_version: 1, layer: { file: "map-layer.geojson" }, route: null });
+
+    await expect(restore("folder-1")).resolves.toBeDefined();
+    expect(updateProjectGeoJSONMock).not.toHaveBeenCalled();
+  });
+
+  it("an index with an unknown format_version fails the restore and undoes it (project deleted)", async () => {
+    getManifestMock.mockResolvedValue(baseManifest());
+    addMapFolder({ format_version: 2, layer: null, route: null });
+
+    await expect(restore("folder-1")).rejects.toBeInstanceOf(MapRestoreError);
+
+    expect(deleteProjectMock).toHaveBeenCalledWith(1);
+    expect(projects).toHaveLength(0);
+  });
+
+  it("a file that is not a FeatureCollection fails the restore, undoes it and leaves no file behind", async () => {
+    getManifestMock.mockResolvedValue(baseManifest());
+    addMapFolder(
+      { format_version: 1, layer: { file: "map-layer.geojson" }, route: { file: "field-route.geojson" } },
+      { "map-layer.geojson": LAYER, "field-route.geojson": { type: "Feature" } },
+    );
+
+    await expect(restore("folder-1")).rejects.toBeInstanceOf(MapRestoreError);
+
+    expect(deleteProjectMock).toHaveBeenCalledWith(1);
+    expect(projects).toHaveLength(0);
+    expect(updateProjectGeoJSONMock).not.toHaveBeenCalled();
+    expect(mapFilesOnDevice()).toEqual([]); // the layer, written before the bad route was found, was removed
+  });
+
+  it("an index that names some other file is refused (only the two fixed names are ever read)", async () => {
+    getManifestMock.mockResolvedValue(baseManifest());
+    addMapFolder({ format_version: 1, layer: { file: "../approved/secret.json" }, route: null });
+
+    await expect(restore("folder-1")).rejects.toBeInstanceOf(MapRestoreError);
   });
 });
 

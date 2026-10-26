@@ -182,4 +182,69 @@ describe("runProjectDataBackup", () => {
     getProjectById.mockResolvedValueOnce({ id: 1, collaboration_role: "collaborator", drive_folder_id: null });
     await expect(runProjectDataBackup(1, ctx)).rejects.toThrow();
   });
+
+  describe("route and layer", () => {
+    const mapItem = (key: "maplayer" | "fieldroute", fp: string) => ({
+      key,
+      kind: key === "maplayer" ? ("mapLayer" as const) : ("fieldRoute" as const),
+      label: "",
+      fingerprint: fp,
+      group: "map" as const,
+    });
+
+    it("a route added or edited since the last backup is pending and recorded by its content fingerprint", async () => {
+      snapshotRows.set("maplayer", "old");
+      collectProjectDataItems.mockResolvedValue({
+        items: [mapItem("maplayer", "edited"), mapItem("fieldroute", "fresh"), dItem("manifest", "same")],
+        payloads: new Map(),
+      });
+      snapshotRows.set("manifest", "same");
+      backupProjectData.mockImplementation(async (params: { pending: { key: string }[]; onItemDone: (i: unknown) => Promise<void> }) => {
+        expect(params.pending.map((i) => i.key)).toEqual(["maplayer", "fieldroute"]);
+        for (const item of params.pending) await params.onItemDone(item);
+        return { sent: 2, failures: [], cancelled: false, connectionLost: false, notAttempted: 0 };
+      });
+
+      await runProjectDataBackup(1, ctx);
+
+      expect(snapshotRows.get("maplayer")).toBe("edited");
+      expect(snapshotRows.get("fieldroute")).toBe("fresh");
+    });
+
+    it("a route the person removed becomes a removal step before the manifest, and leaves the snapshot only when it was sent", async () => {
+      snapshotRows.set("fieldroute", "was-there");
+      snapshotRows.set("manifest", "old");
+      const payloads = new Map<string, unknown>();
+      const manifest = { ...dItem("manifest", "new"), kind: "manifest" as const, group: "manifest" as const };
+      collectProjectDataItems.mockResolvedValue({ items: [manifest], payloads });
+      backupProjectData.mockImplementation(async (params: { pending: { key: string; fingerprint: string }[]; payloads: Map<string, unknown>; onItemDone: (i: unknown) => Promise<void> }) => {
+        expect(params.pending.map((i) => i.key)).toEqual(["fieldroute", "manifest"]);
+        expect(params.payloads.get("fieldroute")).toBeNull(); // null payload = clear the slot
+        await params.onItemDone(params.pending[0]);
+        await params.onItemDone(params.pending[1]);
+        return { sent: 2, failures: [], cancelled: false, connectionLost: false, notAttempted: 0 };
+      });
+
+      await runProjectDataBackup(1, ctx);
+
+      expect(snapshotRows.has("fieldroute")).toBe(false);
+      expect(snapshotRows.get("manifest")).toBe("new");
+    });
+
+    it("a removal that failed stays in the snapshot, so it is retried by the next backup", async () => {
+      snapshotRows.set("maplayer", "was-there");
+      collectProjectDataItems.mockResolvedValue({ items: [], payloads: new Map() });
+      backupProjectData.mockResolvedValue({
+        sent: 0,
+        failures: [{ kind: "mapLayer", label: "", reasonKey: "driveBackup.reason.unknown", detail: "x" }],
+        cancelled: false,
+        connectionLost: false,
+        notAttempted: 0,
+      });
+
+      await runProjectDataBackup(1, ctx);
+
+      expect(snapshotRows.get("maplayer")).toBe("was-there");
+    });
+  });
 });

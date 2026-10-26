@@ -105,7 +105,12 @@ export async function ensureFolder(name: string, parentId: string): Promise<stri
   return created.id;
 }
 
-export async function uploadJsonFile(name: string, parentId: string, content: unknown): Promise<DriveFile> {
+export async function uploadJsonFile(
+  name: string,
+  parentId: string,
+  content: unknown,
+  timeoutMs: number = DRIVE_METADATA_TIMEOUT_MS,
+): Promise<DriveFile> {
   const headers = await authHeaders();
   const metadata = { name, parents: [parentId], mimeType: 'application/json' };
   const boundary = 'nomos-' + Math.random().toString(36).slice(2);
@@ -119,7 +124,7 @@ export async function uploadJsonFile(name: string, parentId: string, content: un
       headers: { ...headers, 'Content-Type': `multipart/related; boundary=${boundary}` },
       body,
     },
-    DRIVE_METADATA_TIMEOUT_MS,
+    timeoutMs,
     readJson<DriveFile>,
   );
 }
@@ -152,7 +157,11 @@ export async function uploadBinaryFile(
   );
 }
 
-export async function updateJsonFile(fileId: string, content: unknown): Promise<DriveFile> {
+export async function updateJsonFile(
+  fileId: string,
+  content: unknown,
+  timeoutMs: number = DRIVE_METADATA_TIMEOUT_MS,
+): Promise<DriveFile> {
   const headers = await authHeaders();
   return driveRequest(
     `${DRIVE_UPLOAD_BASE}/files/${fileId}?uploadType=media&fields=id,name,mimeType,modifiedTime`,
@@ -161,7 +170,7 @@ export async function updateJsonFile(fileId: string, content: unknown): Promise<
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify(content),
     },
-    DRIVE_METADATA_TIMEOUT_MS,
+    timeoutMs,
     readJson<DriveFile>,
   );
 }

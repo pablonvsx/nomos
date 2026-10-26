@@ -11,3 +11,15 @@ export class MediaRestoreError extends Error {
     this.name = "MediaRestoreError";
   }
 }
+
+/**
+ * Thrown when the project's route or layer on Drive cannot be restored: its
+ * file is not a valid GeoJSON FeatureCollection, or the folder holds an index
+ * this build cannot read. All-or-nothing like the media: the restore is undone.
+ */
+export class MapRestoreError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MapRestoreError";
+  }
+}

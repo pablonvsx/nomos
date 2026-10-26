@@ -15,6 +15,7 @@ export type BackupReasonKey =
   | "driveBackup.reason.folderMissing"
   | "driveBackup.reason.server"
   | "driveBackup.reason.missingMedia"
+  | "driveBackup.reason.mapTooLarge"
   | "driveBackup.reason.unknown";
 
 export interface BackupReason {

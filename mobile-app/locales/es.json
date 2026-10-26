@@ -1115,6 +1115,7 @@
       "protocol": "Enviando el protocolo...",
       "classifications": "Enviando clasificaciones de vegetación: {{current}} de {{total}}",
       "catalog": "Enviando el catálogo de especies: {{current}} de {{total}}",
+      "map": "Enviando datos del mapa: {{current}} de {{total}}",
       "manifest": "Actualizando el manifiesto del proyecto...",
       "activationFolders": "Creando las carpetas en Drive..."
     },
@@ -1157,6 +1158,7 @@
       "folderMissing": "No se encontró la carpeta del proyecto en Drive.",
       "server": "Google Drive no está disponible en este momento. Inténtelo en unos instantes.",
       "missingMedia": "{{count}} foto(s) o audio(s) ya no existen en este dispositivo.",
+      "mapTooLarge": "El archivo del mapa pesa {{size}} MB, por encima del límite de {{limit}} MB para el respaldo.",
       "unknown": "Ocurrió un error inesperado. Vea los detalles."
     },
     "cardTitle": "Copia de seguridad en Drive",
@@ -1203,7 +1205,9 @@
         "species": "Especie sin nombre",
         "classification": "Clasificación sin nombre",
         "protocol": "Protocolo sin nombre",
-        "manifest": "Proyecto sin nombre"
+        "manifest": "Proyecto sin nombre",
+        "mapLayer": "Capa de mapeo sin nombre",
+        "fieldRoute": "Ruta de campo sin nombre"
       }
     },
     "activation": {
@@ -1234,6 +1238,7 @@
     "confirmRestore": "Todos los puntos aprobados se restaurarán con sus fotos y audios. Si algún archivo multimedia no se puede descargar, no se restaura nada y podrás intentarlo de nuevo.",
     "restoreButton": "Restaurar",
     "errorMediaDownload": "No se pudieron descargar todas las fotos y audios del proyecto. No se restauró nada; revisa la conexión e inténtalo de nuevo.",
+    "errorMapData": "No se pudo restaurar la ruta de campo o la capa del mapa del proyecto. No se restauró nada; inténtalo de nuevo.",
     "restoreSummary": "{{imported}} punto(s) importado(s), {{mediaDownloaded}} con multimedia descargada.",
     "duplicatesSkippedWarning": "{{count}} punto(s) duplicado(s) en Drive fueron ignorados.",
     "ownerEmailWarning": "El correo del dueño registrado en este proyecto es diferente de la cuenta conectada en este dispositivo.",

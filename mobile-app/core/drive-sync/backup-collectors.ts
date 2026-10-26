@@ -6,6 +6,7 @@ import { File } from "expo-file-system";
 import {
   buildPointItems,
   buildProjectDataItems,
+  type MapFilesInput,
   type ProjectDataItems,
 } from "@/core/drive-sync/backup-items";
 import type { BackupItem } from "@/core/drive-sync/change-detection";
@@ -13,6 +14,7 @@ import { getModuleMediaFields, mapModuleMediaUris } from "@/core/project-sharing
 import { buildProjectConfigPackage } from "@/core/project-sharing/project-config-package";
 import { getBackupCandidatePointsByProject, getPointModulesByProject } from "@/db/queries/points";
 import { getProjectById } from "@/db/queries/projects";
+import { parseFeatureCollection } from "@/core/utils/geojson";
 import type { Point, PointModule } from "@/types/database";
 
 const yieldToUi = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -68,6 +70,27 @@ export async function collectPointItems(projectId: number): Promise<CurrentPoint
   return { items, points };
 }
 
+/**
+ * The text of the project's mapping layer and field route files. A column that is
+ * empty, or whose file is gone or not a FeatureCollection any more, simply has no
+ * map item (nothing to send); the map screen would not draw it either.
+ */
+export async function collectMapFiles(projectId: number): Promise<MapFilesInput> {
+  const project = await getProjectById(projectId);
+  const read = async (uri: string | undefined): Promise<string | undefined> => {
+    if (!uri) return undefined;
+    try {
+      const file = new File(uri);
+      if (!file.exists) return undefined;
+      const text = await file.text();
+      return parseFeatureCollection(text) ? text : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  return { layer: await read(project?.geojson_layer), route: await read(project?.geojson_field_route) };
+}
+
 export async function collectProjectDataItems(projectId: number): Promise<ProjectDataItems> {
-  return buildProjectDataItems(await buildProjectConfigPackage(projectId));
+  return buildProjectDataItems(await buildProjectConfigPackage(projectId), await collectMapFiles(projectId));
 }
