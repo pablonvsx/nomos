@@ -494,16 +494,19 @@ export default function ProjectsScreen() {
 
         <Card.Actions>
           <IconButton
+            accessibilityLabel={t("common.export")}
             icon="export"
             size={20}
             onPress={() => handleExportProtocol(item)}
           />
           <IconButton
+            accessibilityLabel={t("common.edit")}
             icon="pencil"
             size={20}
             onPress={() => handleEditProtocol(item.id)}
           />
           <IconButton
+            accessibilityLabel={t("common.delete")}
             icon="delete"
             size={20}
             onPress={() => handleDeleteProtocol(item)}

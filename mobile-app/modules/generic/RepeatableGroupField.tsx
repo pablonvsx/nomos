@@ -84,8 +84,8 @@ export function RepeatableGroupField({
             <Text variant="titleSmall" style={{ flex: 1, fontWeight: "bold", color: theme.colors.onSurface }}>
               {label} {index + 1}
             </Text>
-            <IconButton icon="pencil" onPress={() => openEdit(index)} />
-            <IconButton icon="delete" iconColor={theme.colors.error} onPress={() => removeItem(index)} />
+            <IconButton accessibilityLabel={t("common.edit")} icon="pencil" onPress={() => openEdit(index)} />
+            <IconButton accessibilityLabel={t("common.delete")} icon="delete" iconColor={theme.colors.error} onPress={() => removeItem(index)} />
           </Card.Content>
         </Card>
       ))}

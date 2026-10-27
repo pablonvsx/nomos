@@ -233,6 +233,7 @@ export default function AudioNotesInput({ value, onChange }: AudioNotesInputProp
                 <ActivityIndicator size={20} style={{ marginRight: 4 }} />
               ) : (
                 <IconButton
+                  accessibilityLabel={t(isPlaying ? "common.pause" : "common.play")}
                   icon={isPlaying ? "pause-circle" : "play-circle"}
                   size={28}
                   iconColor={isPlaying ? theme.colors.primary : theme.colors.onSurfaceVariant}
@@ -243,6 +244,7 @@ export default function AudioNotesInput({ value, onChange }: AudioNotesInputProp
 
               {/* Delete button */}
               <IconButton
+                accessibilityLabel={t("common.delete")}
                 icon="delete-outline"
                 size={20}
                 iconColor={theme.colors.error}

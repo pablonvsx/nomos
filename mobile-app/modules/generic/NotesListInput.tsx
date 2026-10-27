@@ -100,6 +100,7 @@ export default function NotesListInput({ value, onChange }: NotesListInputProps)
               {note}
             </Text>
             <IconButton
+              accessibilityLabel={t("common.delete")}
               icon="delete-outline"
               size={18}
               onPress={() => handleDeleteNote(index)}

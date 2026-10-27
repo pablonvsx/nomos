@@ -1075,6 +1075,7 @@ function UnifiedProjectDetailsScreen() {
             </View>
             {visibility.backup && isBackupEligibleStatus(item.approval_status) && (
               <IconButton
+                accessibilityLabel={t("driveBackup.exportWarning.backup")}
                 icon={item.drive_synced_at ? "cloud-check" : "cloud-outline"}
                 size={22}
                 disabled={busy || (Boolean(item.drive_synced_at) && !pointsBackup.status?.pendingKeys.has(pointItemKey(item.id)))}
@@ -1150,6 +1151,7 @@ function UnifiedProjectDetailsScreen() {
             <View style={styles.cardHeader}>
               <Text variant="titleMedium" style={styles.cardTitle}>{t("projectView.visualization")}</Text>
               <CardHeaderIconButton
+                accessibilityLabel={t("common.map")}
                 icon="map"
                 onPress={handleViewMap}
                 disabled={!project?.geojson_layer && !project?.geojson_field_route && surveyPoints.length === 0}
@@ -1162,6 +1164,7 @@ function UnifiedProjectDetailsScreen() {
                   <Icon source="map-outline" size={16} color={paperTheme.colors.onSurfaceVariant} />
                   <Text variant="labelMedium" style={styles.vizItemTitle}>{t("projectView.previousMapping")}</Text>
                   <IconButton
+                    accessibilityLabel={t(project.geojson_layer ? "common.remove" : "common.add")}
                     icon={project.geojson_layer ? "delete" : "plus"}
                     size={16}
                     iconColor={project.geojson_layer ? paperTheme.colors.error : paperTheme.colors.primary}
@@ -1178,6 +1181,7 @@ function UnifiedProjectDetailsScreen() {
                   <Icon source="routes" size={16} color={paperTheme.colors.onSurfaceVariant} />
                   <Text variant="labelMedium" style={styles.vizItemTitle}>{t("projectView.fieldRoute")}</Text>
                   <IconButton
+                    accessibilityLabel={t(project.geojson_field_route ? "common.remove" : "common.add")}
                     icon={project.geojson_field_route ? "delete" : "plus"}
                     size={16}
                     iconColor={project.geojson_field_route ? paperTheme.colors.error : paperTheme.colors.primary}
@@ -1210,6 +1214,7 @@ function UnifiedProjectDetailsScreen() {
             <View style={styles.cardHeader}>
               <Text variant="titleMedium" style={styles.cardTitle}>{t("vegetationClassification.vegetationData")}</Text>
               <CardHeaderIconButton
+                accessibilityLabel={t("common.edit")}
                 icon="pencil"
                 onPress={() => setVegClassesModalVisible(true)}
               />
@@ -1275,6 +1280,7 @@ function UnifiedProjectDetailsScreen() {
             <View style={styles.cardHeader}>
               <Text variant="titleMedium" style={styles.cardTitle}>{t("species.speciesCatalog")}</Text>
               <CardHeaderIconButton
+                accessibilityLabel={t("common.edit")}
                 icon="pencil"
                 onPress={() => {
                   const lat = surveyPoints.length > 0 ? surveyPoints[0].lat || 0 : 0;
@@ -1325,6 +1331,7 @@ function UnifiedProjectDetailsScreen() {
             <View style={styles.cardHeader}>
               <Text variant="titleMedium" style={styles.cardTitle}>{t("projectView.surveyPoints")} ({surveyPoints.length})</Text>
               <CardHeaderIconButton
+                accessibilityLabel={t("common.add")}
                 icon="plus"
                 onPress={() => {
                   if (isNavigating) return;

@@ -172,7 +172,7 @@ function CardinalPointDialog({
                       fontWeight: isSelected ? "600" : "400",
                     }}
                   >
-                    {`${cardinal} — ${t(`survey.azimuthCardinalPoints.${cardinal}`)}`}
+                    {`${cardinal}: ${t(`survey.azimuthCardinalPoints.${cardinal}`)}`}
                   </Text>
                   {isSelected && (
                     <IconButton icon="check" size={18} iconColor={theme.colors.primary} />
@@ -240,6 +240,7 @@ function AzimuthInput({
           style={[styles.input, { flex: 1 }]}
         />
         <IconButton
+          accessibilityLabel={t("protocol.fieldTypes.azimuth")}
           icon="compass-outline"
           mode="outlined"
           onPress={() => setPickerVisible(true)}
@@ -547,6 +548,7 @@ function FieldRenderer({
           </Text>
           {field.desc && (
             <IconButton
+              accessibilityLabel={t("common.info")}
               icon="information-outline"
               size={18}
               iconColor={theme.colors.secondary}

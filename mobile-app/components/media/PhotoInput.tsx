@@ -255,6 +255,7 @@ export default function PhotoInput({ value, onChange, maxPhotos = 10 }: Props) {
                   resizeMode="cover"
                 />
                 <IconButton
+                  accessibilityLabel={t("common.close")}
                   icon="close-circle"
                   iconColor={theme.colors.error}
                   size={24}

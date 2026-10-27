@@ -44,6 +44,7 @@ export function MapLegend({
           {t("mapView.legend")}
         </Text>
         <IconButton
+          accessibilityLabel={t("common.close")}
           icon="close"
           size={16}
           iconColor={theme.colors.onSurface}

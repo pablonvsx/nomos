@@ -567,11 +567,12 @@ function KuchlerMatrix({
                   </Text>
                   {lifeForm.desc && onInfoPress ? (
                     <IconButton
+                      accessibilityLabel={t("common.info")}
                       icon="information-outline"
                       size={12}
                       iconColor={theme.colors.secondary}
                       style={{ margin: 0, marginTop: -4 }}
-                      onPress={() => onInfoPress(`${lifeForm.id} — ${translateField(lifeForm.name)}: ${translateField(lifeForm.desc)}`)}
+                      onPress={() => onInfoPress(`${lifeForm.id} (${translateField(lifeForm.name)}): ${translateField(lifeForm.desc)}`)}
                     />
                   ) : null}
                 </View>

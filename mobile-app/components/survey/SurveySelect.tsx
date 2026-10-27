@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { RadioButton, Checkbox, Text, useTheme, IconButton } from "react-native-paper";
+import { useI18n } from "@/contexts/i18n-context";
 
 type SelectOption = string | { label: string; value?: string; desc?: string };
 
@@ -40,6 +41,7 @@ function SurveySelect({
   inlineDesc = false,
 }: Props) {
   const theme = useTheme();
+  const { t } = useI18n();
 
   const [localMultipleValue, setLocalMultipleValue] = useState<string[]>(
     Array.isArray(value) ? value : []
@@ -128,6 +130,7 @@ function SurveySelect({
         </Text>
         {optDesc && onInfoPress ? (
           <IconButton
+            accessibilityLabel={t("common.info")}
             icon="information-outline"
             size={14}
             iconColor={theme.colors.secondary}
@@ -149,6 +152,7 @@ function SurveySelect({
           </Text>
           {desc && onInfoPress && !inlineDesc ? (
             <IconButton
+              accessibilityLabel={t("common.info")}
               icon="information-outline"
               size={16}
               iconColor={theme.colors.secondary}

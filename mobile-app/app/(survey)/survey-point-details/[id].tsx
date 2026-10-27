@@ -118,6 +118,7 @@ type AudioNote = { uri: string; duration: number; timestamp: number };
 // one "stealing" the play icon from another.
 function AudioNoteList({ audioNotes }: { audioNotes: AudioNote[] }) {
   const paperTheme = usePaperTheme();
+  const { t } = useI18n();
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -186,6 +187,7 @@ function AudioNoteList({ audioNotes }: { audioNotes: AudioNote[] }) {
         >
           <View style={styles.noteViewRow}>
             <IconButton
+              accessibilityLabel={t(playingIndex === index ? "common.pause" : "common.play")}
               icon={playingIndex === index ? "pause" : "play"}
               size={22}
               iconColor={paperTheme.colors.primary}
@@ -819,7 +821,7 @@ export default function UnifiedSurveyPointViewScreen() {
                 </Text>
                 {/* The map only lists approved/own points, so it can't show a pending or rejected one. */}
                 {mode === "normal" && (
-                  <IconButton icon="map" size={20} onPress={handleViewMap} style={{ margin: 0 }} />
+                  <IconButton accessibilityLabel={t("common.map")} icon="map" size={20} onPress={handleViewMap} style={{ margin: 0 }} />
                 )}
               </View>
               <View style={styles.coordRow}>
@@ -1120,7 +1122,7 @@ export default function UnifiedSurveyPointViewScreen() {
             <Text variant="titleMedium" style={{ ...MODAL_TITLE_STYLE, flex: 1 }}>
               {t("surveyView.photos")} ({galleryPhotos?.length ?? 0})
             </Text>
-            <IconButton icon="close" onPress={() => setGalleryPhotos(null)} />
+            <IconButton accessibilityLabel={t("common.close")} icon="close" onPress={() => setGalleryPhotos(null)} />
           </View>
           <ScrollView contentContainerStyle={[styles.photoContainer, { padding: 16 }]}>
             {(galleryPhotos ?? []).map((uri, index) => (

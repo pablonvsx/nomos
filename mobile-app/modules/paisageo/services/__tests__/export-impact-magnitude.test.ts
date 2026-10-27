@@ -66,7 +66,7 @@ describe("impactMagnitudeDescColumns", () => {
 
     const row2 = rowFor(points[1]);
     expect(row2[0]).toBe(
-      "Passivo ambiental grave; solo ou água visivelmente comprometidos — recuperação improvável sem intervenção.",
+      "Passivo ambiental grave; solo ou água visivelmente comprometidos, recuperação improvável sem intervenção.",
     );
     expect(row2[1]).toBe(
       "Ravinas ativas com sulcos 10–50 cm; perda expressiva do horizonte A; assoreamento de drenagens.",

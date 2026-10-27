@@ -195,12 +195,14 @@ export default function VegetationClassificationsManagementModal({
                         </View>
                         <View style={styles.cardActions}>
                           <IconButton
+                            accessibilityLabel={t("common.edit")}
                             icon="pencil"
                             size={20}
                             onPress={() => handleEdit(item)}
                             iconColor={theme.colors.primary}
                           />
                           <IconButton
+                            accessibilityLabel={t("common.delete")}
                             icon="delete"
                             size={20}
                             onPress={() => handleDelete(item)}

@@ -93,6 +93,7 @@ export function LayerMenu({
             {t("mapView.mapType")}
           </Text>
           <IconButton
+            accessibilityLabel={t("common.close")}
             icon="close"
             size={18}
             iconColor={theme.colors.onSurface}
@@ -104,6 +105,7 @@ export function LayerMenu({
           {AVAILABLE_MAP_TYPES.map((type) => (
             <View key={type} style={styles.menuItem}>
               <IconButton
+                accessibilityLabel={t(`mapView.${type}`)}
                 icon={getIconForType(type)}
                 iconColor={
                   mapType === type

@@ -67,7 +67,7 @@ export const CollectorCodeModal: React.FC<CollectorCodeModalProps> = ({
           <Text variant="titleLarge" style={[styles.headerTitle, { color: theme.colors.onSurface }]}>
             {t("collectorCode.modalTitle")}
           </Text>
-          <IconButton icon="close" onPress={onDismiss} />
+          <IconButton accessibilityLabel={t("common.close")} icon="close" onPress={onDismiss} />
         </View>
 
         <View style={styles.content}>

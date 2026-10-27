@@ -133,6 +133,7 @@ function OptionsListInput({
                   {option.value}
                 </Text>
                 <IconButton
+                  accessibilityLabel={t("common.close")}
                   icon="close"
                   size={16}
                   onPress={() => handleRemove(index)}

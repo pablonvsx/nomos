@@ -32,6 +32,9 @@
     "import": "Importer",
     "active": "Actif",
     "info": "Information",
+    "play": "Lire",
+    "pause": "Pause",
+    "myLocation": "Ma position",
     "warning": "Attention",
     "featureInDevelopment": "Fonctionnalité en cours de développement",
     "somethingWentWrong": "Une erreur s'est produite",
@@ -419,7 +422,7 @@
     "techDatabaseTitle": "Base de Données",
     "techDatabaseDesc": "SQLite 3.45 assurant le stockage local des projets",
     "techFrameworkTitle": "Framework et Langage",
-    "techFrameworkDesc": "React Native e TypeScript",
+    "techFrameworkDesc": "React Native et TypeScript",
     "techArchitectureTitle": "Architecture",
     "techArchitectureDesc": "Conçue comme offline-first : la collecte et le stockage fonctionnent sans internet, qui n'est utilisé que pour des fonctions optionnelles, comme la sauvegarde sur Drive. L'architecture est extensible et basée sur des plugins, qui permettent d'ajouter de nouveaux protocoles de relevé.",
     "license": "Licence",
@@ -481,7 +484,7 @@
     "officialProtocol": "Protocole Paisageo",
     "loadError": "Impossible de charger la base de données.",
     "projectImported": "Projet importé avec succès.",
-    "projectAlreadyExists": "Ce projet existait déjà sur cet appareil — aucun doublon n'a été créé.",
+    "projectAlreadyExists": "Ce projet existait déjà sur cet appareil. Aucun doublon n'a été créé.",
     "errorImportingProject": "Impossible d'importer le projet. Vérifiez si le fichier est un paquet de configuration valide.",
     "invalidConfigPackageFile": "Fichier invalide. Sélectionnez un paquet de configuration de projet (.json) exporté par Nomos.",
     "configPackageFormatMismatch": "Ce fichier a été créé par une version plus récente de Nomos et ne peut pas être importé dans cette version de l'application."
@@ -691,8 +694,8 @@
     "individuals": "individus",
     "conservationStatus": {
       "conservada": "Conservée",
-      "em_regeneracao_nativas": "En Régénération — Espèces Natives",
-      "em_regeneracao_consorciada": "En Régénération — Avec Espèces Invasives",
+      "em_regeneracao_nativas": "En Régénération : Espèces Natives",
+      "em_regeneracao_consorciada": "En Régénération : Avec Espèces Invasives",
       "substituida": "Substituée"
     },
     "landUse": {
@@ -994,7 +997,7 @@
     "speciesCatalog": "Catalogue d'Espèces",
     "speciesLinkDescription": "Données robustes axées sur la biodiversité brésilienne",
     "speciesLinkIntegration": "Intégration SpeciesLink",
-    "speciesLinkNetwork": "Réseau SpeciesLink – CRIA",
+    "speciesLinkNetwork": "Réseau SpeciesLink, CRIA",
     "speciesLinkNotConfigured": "SpeciesLink non configuré",
     "speciesUpdated": "Espèce mise à jour avec succès !",
     "speciesWithAbundance": "ajoutée avec abondance",

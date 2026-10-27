@@ -160,7 +160,7 @@ export const SpeciesLinkSettingsModal: React.FC<SpeciesLinkSettingsModalProps> =
           <Text variant="titleLarge" style={[styles.headerTitle, { color: theme.colors.onSurface }]}>
             {t('species.speciesLinkIntegration')}
           </Text>
-          <IconButton icon="close" onPress={onDismiss} />
+          <IconButton accessibilityLabel={t("common.close")} icon="close" onPress={onDismiss} />
         </View>
 
         <ScrollView
@@ -234,6 +234,7 @@ export const SpeciesLinkSettingsModal: React.FC<SpeciesLinkSettingsModalProps> =
 
             {isConfigured && (
               <IconButton
+                accessibilityLabel={t("common.delete")}
                 icon="delete-outline"
                 iconColor={theme.colors.error}
                 mode="outlined"

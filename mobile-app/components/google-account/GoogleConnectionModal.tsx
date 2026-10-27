@@ -82,7 +82,7 @@ export const GoogleConnectionModal: React.FC<GoogleConnectionModalProps> = ({
           <Text variant="titleLarge" style={[styles.headerTitle, { color: theme.colors.onSurface }]}>
             {t("googleAccount.settingsItemTitle")}
           </Text>
-          <IconButton icon="close" onPress={onDismiss} disabled={isConnecting} />
+          <IconButton accessibilityLabel={t("common.close")} icon="close" onPress={onDismiss} disabled={isConnecting} />
         </View>
 
         <View style={styles.content}>

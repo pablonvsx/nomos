@@ -654,11 +654,13 @@ function SectionCard({
                   </View>
                   <View style={styles.fieldActions}>
                     <IconButton
+                      accessibilityLabel={t("common.edit")}
                       icon="pencil"
                       size={20}
                       onPress={() => onEditField(fieldIndex)}
                     />
                     <IconButton
+                      accessibilityLabel={t("common.delete")}
                       icon="delete"
                       size={20}
                       onPress={() => onDeleteField(fieldIndex)}
@@ -976,8 +978,8 @@ const ItemFieldsManagerDialog = memo(function ItemFieldsManagerDialog({
                           </Text>
                         </View>
                         <View style={styles.fieldActions}>
-                          <IconButton icon="pencil" size={20} onPress={() => openEditSubField(index)} />
-                          <IconButton icon="delete" size={20} onPress={() => deleteSubField(index)} />
+                          <IconButton accessibilityLabel={t("common.edit")} icon="pencil" size={20} onPress={() => openEditSubField(index)} />
+                          <IconButton accessibilityLabel={t("common.delete")} icon="delete" size={20} onPress={() => deleteSubField(index)} />
                         </View>
                       </View>
                     </Card.Content>

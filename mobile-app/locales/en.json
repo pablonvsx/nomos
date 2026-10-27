@@ -32,6 +32,9 @@
     "import": "Import",
     "active": "Active",
     "info": "Information",
+    "play": "Play",
+    "pause": "Pause",
+    "myLocation": "My location",
     "warning": "Warning",
     "featureInDevelopment": "Feature under development",
     "somethingWentWrong": "Something went wrong",
@@ -419,7 +422,7 @@
     "techDatabaseTitle": "Database",
     "techDatabaseDesc": "SQLite 3.45 providing local storage for projects",
     "techFrameworkTitle": "Framework and Language",
-    "techFrameworkDesc": "React Native e TypeScript",
+    "techFrameworkDesc": "React Native and TypeScript",
     "techArchitectureTitle": "Architecture",
     "techArchitectureDesc": "Designed as offline-first: data collection and storage work without internet, which is used only for optional features, such as the Drive backup. The architecture is extensible and plugin-based, allowing new survey protocols to be added.",
     "license": "License",
@@ -481,7 +484,7 @@
     "officialProtocol": "Paisageo Protocol",
     "loadError": "Could not load database.",
     "projectImported": "Project imported successfully.",
-    "projectAlreadyExists": "This project already existed on this device — no duplicate was created.",
+    "projectAlreadyExists": "This project already existed on this device. No duplicate was created.",
     "errorImportingProject": "Could not import the project. Check whether the file is a valid configuration package.",
     "invalidConfigPackageFile": "Invalid file. Select a project configuration package (.json) exported by Nomos.",
     "configPackageFormatMismatch": "This file was created by a newer version of Nomos and cannot be imported into this version of the app."
@@ -691,8 +694,8 @@
     "individuals": "individuals",
     "conservationStatus": {
       "conservada": "Conserved",
-      "em_regeneracao_nativas": "In Regeneration — Native Species",
-      "em_regeneracao_consorciada": "In Regeneration — With Invasive Species",
+      "em_regeneracao_nativas": "In Regeneration: Native Species",
+      "em_regeneracao_consorciada": "In Regeneration: With Invasive Species",
       "substituida": "Substituted"
     },
     "landUse": {
@@ -994,7 +997,7 @@
     "speciesCatalog": "Species Catalog",
     "speciesLinkDescription": "Robust data focused on Brazilian biodiversity",
     "speciesLinkIntegration": "SpeciesLink Integration",
-    "speciesLinkNetwork": "SpeciesLink Network – CRIA",
+    "speciesLinkNetwork": "SpeciesLink Network, CRIA",
     "speciesLinkNotConfigured": "SpeciesLink not configured",
     "speciesUpdated": "Species updated successfully!",
     "speciesWithAbundance": "added with abundance",

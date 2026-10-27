@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { Pressable, View } from "react-native";
 import { Card, IconButton, Text, useTheme } from "react-native-paper";
+import { useI18n } from "@/contexts/i18n-context";
 import KuchlerMatrix from "@/modules/paisageo/components/KuchlerMatrix";
 import { GenericFieldRow } from "@/modules/generic/GenericFieldRow";
 import type { ModuleRendererProps } from "@/protocol-kernel/types";
@@ -118,6 +119,7 @@ export const VegetationModuleRenderer = React.memo(function VegetationModuleRend
   customClasses,
 }: VegetationModuleRendererProps) {
   const theme = useTheme();
+  const { t } = useI18n();
   const data: VegetationModuleData =
     value != null && typeof value === "object" ? (value as VegetationModuleData) : {};
 
@@ -221,6 +223,7 @@ export const VegetationModuleRenderer = React.memo(function VegetationModuleRend
               )}
               {contextFlagsDesc && onInfoPress && (
                 <IconButton
+                  accessibilityLabel={t("common.info")}
                   icon="information-outline"
                   size={18}
                   iconColor={theme.colors.secondary}

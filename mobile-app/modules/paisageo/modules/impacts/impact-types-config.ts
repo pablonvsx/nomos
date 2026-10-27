@@ -50,10 +50,10 @@ export const IMPACTS_FIELD_CONFIG = {
           "fr": "Contamination diffuse visible ; signes de toxicité dans la végétation ou le sol."
         },
         {
-          "pt": "Passivo ambiental grave; solo ou água visivelmente comprometidos — recuperação improvável sem intervenção.",
-          "en": "Severe environmental liability; soil or water visibly compromised — recovery unlikely without intervention.",
-          "es": "Pasivo ambiental grave; suelo o agua visiblemente comprometidos — recuperación improbable sin intervención.",
-          "fr": "Passif environnemental grave ; sol ou eau visiblement compromis — récupération improbable sans intervention."
+          "pt": "Passivo ambiental grave; solo ou água visivelmente comprometidos, recuperação improvável sem intervenção.",
+          "en": "Severe environmental liability; soil or water visibly compromised, recovery unlikely without intervention.",
+          "es": "Pasivo ambiental grave; suelo o agua visiblemente comprometidos, recuperación improbable sin intervención.",
+          "fr": "Passif environnemental grave ; sol ou eau visiblement compromis, récupération improbable sans intervention."
         }
       ]
     },
@@ -85,10 +85,10 @@ export const IMPACTS_FIELD_CONFIG = {
           "fr": "Ravines actives de 10 à 50 cm de profondeur ; perte significative de l'horizon A ; envasement des drains."
         },
         {
-          "pt": "Voçorocamento — sulcos > 50 cm ou colapso de encosta; exposição de horizontes B/C ou rocha.",
-          "en": "Gullying — channels > 50 cm or slope collapse; exposure of B/C horizons or bedrock.",
+          "pt": "Voçorocamento: sulcos > 50 cm ou colapso de encosta; exposição de horizontes B/C ou rocha.",
+          "en": "Gullying: channels > 50 cm or slope collapse; exposure of B/C horizons or bedrock.",
           "es": "Cárcavas profundas > 50 cm o colapso de ladera; exposición de horizontes B/C o roca madre.",
-          "fr": "Ravinement — chenaux > 50 cm ou effondrement de versant ; exposition des horizons B/C ou de la roche mère."
+          "fr": "Ravinement : chenaux > 50 cm ou effondrement de versant ; exposition des horizons B/C ou de la roche mère."
         }
       ]
     },
@@ -108,22 +108,22 @@ export const IMPACTS_FIELD_CONFIG = {
       },
       "magnitude_desc": [
         {
-          "pt": "Presença pontual sem dominância; cobertura de invasoras < 25% — regeneração nativa não comprometida.",
-          "en": "Scattered presence without dominance; invasive cover < 25% — native regeneration not compromised.",
-          "es": "Presencia puntual sin dominancia; cobertura de invasoras < 25% — regeneración nativa no comprometida.",
-          "fr": "Présence ponctuelle sans dominance ; couverture des invasives < 25 % — régénération native non compromise."
+          "pt": "Presença pontual sem dominância; cobertura de invasoras < 25%, regeneração nativa não comprometida.",
+          "en": "Scattered presence without dominance; invasive cover < 25%, native regeneration not compromised.",
+          "es": "Presencia puntual sin dominancia; cobertura de invasoras < 25%, regeneración nativa no comprometida.",
+          "fr": "Présence ponctuelle sans dominance ; couverture des invasives < 25 %, régénération native non compromise."
         },
         {
-          "pt": "Co-dominância com espécies nativas; cobertura 25–75% — regeneração natural dificultada.",
-          "en": "Co-dominance with native species; cover 25–75% — natural regeneration hindered.",
-          "es": "Co-dominancia con especies nativas; cobertura 25–75% — regeneración natural dificultada.",
-          "fr": "Co-dominance avec les espèces natives ; couverture 25–75 % — régénération naturelle entravée."
+          "pt": "Co-dominância com espécies nativas; cobertura 25–75%: regeneração natural dificultada.",
+          "en": "Co-dominance with native species; cover 25–75%: natural regeneration hindered.",
+          "es": "Co-dominancia con especies nativas; cobertura 25–75%: regeneración natural dificultada.",
+          "fr": "Co-dominance avec les espèces natives ; couverture 25–75 % : régénération naturelle entravée."
         },
         {
-          "pt": "Dominância total; cobertura > 75% — regeneração nativa suprimida, intervenção necessária.",
-          "en": "Total dominance; cover > 75% — native regeneration suppressed, intervention required.",
-          "es": "Dominancia total; cobertura > 75% — regeneración nativa suprimida, intervención necesaria.",
-          "fr": "Dominance totale ; couverture > 75 % — régénération native supprimée, intervention nécessaire."
+          "pt": "Dominância total; cobertura > 75%: regeneração nativa suprimida, intervenção necessária.",
+          "en": "Total dominance; cover > 75%: native regeneration suppressed, intervention required.",
+          "es": "Dominancia total; cobertura > 75%: regeneración nativa suprimida, intervención necesaria.",
+          "fr": "Dominance totale ; couverture > 75 %, régénération native supprimée, intervention nécessaire."
         }
       ]
     },
@@ -143,10 +143,10 @@ export const IMPACTS_FIELD_CONFIG = {
       },
       "magnitude_desc": [
         {
-          "pt": "Fogo de baixa intensidade; danos restritos ao estrato herbáceo — troncos e copa intactos.",
-          "en": "Low-intensity fire; damage restricted to the herbaceous layer — trunks and crown intact.",
-          "es": "Fuego de baja intensidad; daños restringidos al estrato herbáceo — troncos y copa intactos.",
-          "fr": "Feu de faible intensité ; dommages limités à la strate herbacée — troncs et couronnes intacts."
+          "pt": "Fogo de baixa intensidade; danos restritos ao estrato herbáceo, troncos e copa intactos.",
+          "en": "Low-intensity fire; damage restricted to the herbaceous layer, trunks and crown intact.",
+          "es": "Fuego de baja intensidad; daños restringidos al estrato herbáceo, troncos y copa intactos.",
+          "fr": "Feu de faible intensité ; dommages limités à la strate herbacée, troncs et couronnes intacts."
         },
         {
           "pt": "Queimada de média intensidade; danos ao sub-bosque e arbustos; troncos chamuscados mas vivos.",
@@ -353,10 +353,10 @@ export const IMPACTS_FIELD_CONFIG = {
       },
       "magnitude_desc": [
         {
-          "pt": "Corte seletivo de espécies; estrutura e dossel preservados — sem alteração fisionômica significativa.",
-          "en": "Selective cutting of species; structure and canopy preserved — no significant physiognomic change.",
-          "es": "Corte selectivo de especies; estructura y dosel preservados — sin alteración fisionómica significativa.",
-          "fr": "Coupe sélective d'espèces ; structure et canopée préservées — pas de changement physionomique significatif."
+          "pt": "Corte seletivo de espécies; estrutura e dossel preservados, sem alteração fisionômica significativa.",
+          "en": "Selective cutting of species; structure and canopy preserved, no significant physiognomic change.",
+          "es": "Corte selectivo de especies; estructura y dosel preservados, sin alteración fisionómica significativa.",
+          "fr": "Coupe sélective d'espèces ; structure et canopée préservées, pas de changement physionomique significatif."
         },
         {
           "pt": "Abertura de clareiras > 20% da área; estrutura parcialmente comprometida; sub-bosque exposto.",

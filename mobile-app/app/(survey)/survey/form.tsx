@@ -156,6 +156,7 @@ interface PlotSizeCardProps {
 
 const PlotSizeCard = React.memo(function PlotSizeCard({ lang, value, onChange, onInfoPress }: PlotSizeCardProps) {
   const theme = usePaperTheme();
+  const { t } = useI18n();
   const description = POINT_SIZE_FIELD.description
     ? POINT_SIZE_FIELD.description[lang] ?? POINT_SIZE_FIELD.description["pt"]
     : undefined;
@@ -166,6 +167,7 @@ const PlotSizeCard = React.memo(function PlotSizeCard({ lang, value, onChange, o
         titleVariant="titleMedium"
         right={description ? () => (
           <IconButton
+            accessibilityLabel={t("common.info")}
             icon="information-outline"
             size={18}
             iconColor={theme.colors.secondary}
@@ -207,6 +209,7 @@ const ConservationCard = React.memo(function ConservationCard({
   onInfoPress,
 }: ConservationCardProps) {
   const theme = usePaperTheme();
+  const { t } = useI18n();
   const description = CONSERVATION_SECTION_DESC[lang] ?? CONSERVATION_SECTION_DESC["pt"];
   return (
     <Card mode="elevated" style={styles.sectionCard}>
@@ -215,6 +218,7 @@ const ConservationCard = React.memo(function ConservationCard({
         titleVariant="titleMedium"
         right={() => (
           <IconButton
+            accessibilityLabel={t("common.info")}
             icon="information-outline"
             size={18}
             iconColor={theme.colors.secondary}
@@ -483,6 +487,7 @@ export default function SurveyFormScreen() {
     desc
       ? () => (
           <IconButton
+            accessibilityLabel={t("common.info")}
             icon="information-outline"
             size={18}
             iconColor={theme.colors.secondary}

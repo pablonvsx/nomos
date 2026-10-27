@@ -293,6 +293,7 @@ export function LocationPickerModal({
           ]}
         >
           <IconButton
+            accessibilityLabel={t("common.close")}
             icon="close"
             onPress={onDismiss}
             iconColor={theme.colors.onSurface}
@@ -368,6 +369,7 @@ export function LocationPickerModal({
                   {t("mapView.legend")}
                 </Text>
                 <IconButton
+                  accessibilityLabel={t("common.close")}
                   icon="close"
                   size={16}
                   iconColor={theme.colors.onSurface}
@@ -443,6 +445,7 @@ export function LocationPickerModal({
           {/* Legend button (when legend panel is closed) */}
           {!shouldBlockMapRender && !legendVisible && (
             <IconButton
+              accessibilityLabel={t("location.legend")}
               icon="map-legend"
               size={24}
               iconColor={theme.colors.primary}
@@ -455,6 +458,7 @@ export function LocationPickerModal({
           {/* GPS button */}
           {!shouldBlockMapRender && (
             <IconButton
+              accessibilityLabel={t("common.myLocation")}
               icon="crosshairs-gps"
               size={24}
               iconColor={theme.colors.primary}
@@ -467,6 +471,7 @@ export function LocationPickerModal({
           {/* Map/layer button */}
           {!shouldBlockMapRender && mapData.layerData && (
             <IconButton
+              accessibilityLabel={t("common.map")}
               icon="map"
               size={24}
               iconColor={theme.colors.primary}
@@ -479,6 +484,7 @@ export function LocationPickerModal({
           {/* Route button */}
           {!shouldBlockMapRender && mapData.routeData && (
             <IconButton
+              accessibilityLabel={t("location.fieldRoute")}
               icon="routes"
               size={24}
               iconColor={theme.colors.primary}

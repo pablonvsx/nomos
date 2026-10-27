@@ -149,7 +149,7 @@ export const RestoreProjectsModal: React.FC<RestoreProjectsModalProps> = ({
           <Text variant="titleLarge" style={[styles.headerTitle, { color: theme.colors.onSurface }]}>
             {t("driveRestore.modalTitle")}
           </Text>
-          <IconButton icon="close" onPress={handleDismiss} disabled={isRestoring} />
+          <IconButton accessibilityLabel={t("common.close")} icon="close" onPress={handleDismiss} disabled={isRestoring} />
         </View>
 
         <View style={styles.content}>

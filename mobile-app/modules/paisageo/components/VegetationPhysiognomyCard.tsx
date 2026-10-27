@@ -151,6 +151,7 @@ export default function VegetationPhysiognomyCard({
           </Pressable>
           {onInfoPress && (
             <IconButton
+              accessibilityLabel={t("common.info")}
               icon="information-outline"
               size={18}
               iconColor={theme.colors.secondary}

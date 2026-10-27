@@ -795,7 +795,7 @@ function SpeciesManagementModal({
       {!isScreen && (
         <View style={styles.header}>
           <Text variant="headlineSmall" style={MODAL_TITLE_STYLE}>{t("species.manageSpecies")}</Text>
-          <IconButton icon="close" onPress={onDismiss} />
+          <IconButton accessibilityLabel={t("common.close")} icon="close" onPress={onDismiss} />
         </View>
       )}
 
@@ -1197,6 +1197,7 @@ function SpeciesManagementModal({
               </Text>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <IconButton
+                  accessibilityLabel={t("species.importCatalog")}
                   icon="upload-outline"
                   size={22}
                   iconColor={theme.colors.primary}
@@ -1206,6 +1207,7 @@ function SpeciesManagementModal({
                 {projectSpecies.length > 0 && (
                   <>
                     <IconButton
+                      accessibilityLabel={t("common.export")}
                       icon="share-variant-outline"
                       size={22}
                       iconColor={theme.colors.primary}
@@ -1213,6 +1215,7 @@ function SpeciesManagementModal({
                       disabled={isExportingCatalog}
                     />
                     <IconButton
+                      accessibilityLabel={t("common.delete")}
                       icon="trash-can"
                       size={22}
                       iconColor={theme.colors.error}
@@ -1272,12 +1275,14 @@ function SpeciesManagementModal({
                             </Text>
                             <View style={styles.actionButtons}>
                               <IconButton
+                                accessibilityLabel={t("common.edit")}
                                 icon="pencil"
                                 size={18}
                                 iconColor={theme.colors.primary}
                                 onPress={() => handleOpenEditModal(item)}
                               />
                               <IconButton
+                                accessibilityLabel={t("common.delete")}
                                 icon="delete"
                                 size={18}
                                 iconColor={theme.colors.error}
@@ -1368,6 +1373,7 @@ function SpeciesManagementModal({
                   />
                   {editedSpeciesData.commonNames.length > 1 && (
                     <IconButton
+                      accessibilityLabel={t("common.close")}
                       icon="close"
                       size={20}
                       onPress={() => {

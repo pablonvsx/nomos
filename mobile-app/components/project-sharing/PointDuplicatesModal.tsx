@@ -70,7 +70,7 @@ export const PointDuplicatesModal: React.FC<PointDuplicatesModalProps> = ({
           <Text variant="titleLarge" style={[styles.headerTitle, { color: theme.colors.onSurface }]}>
             {t("pointDuplicates.title")}
           </Text>
-          <IconButton icon="close" onPress={onDismiss} />
+          <IconButton accessibilityLabel={t("common.close")} icon="close" onPress={onDismiss} />
         </View>
 
         <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>

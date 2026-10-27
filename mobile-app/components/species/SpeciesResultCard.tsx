@@ -28,6 +28,7 @@ export default function SpeciesResultCard({ item, onImport }: SpeciesResultCardP
             {item.scientificName}
           </Text>
           <IconButton
+            accessibilityLabel={t("common.add")}
             icon="plus-circle"
             size={24}
             iconColor={theme.colors.primary}

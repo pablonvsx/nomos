@@ -188,6 +188,7 @@ export default function SoilProfileInput({ field, value, onChange }: Props) {
     if (!desc) return null;
     return (
       <IconButton
+        accessibilityLabel={t("common.info")}
         icon="information-outline"
         size={14}
         iconColor={theme.colors.secondary}
@@ -525,6 +526,7 @@ export default function SoilProfileInput({ field, value, onChange }: Props) {
             </Text>
             {desc ? (
               <IconButton
+                accessibilityLabel={t("common.info")}
                 icon="information-outline"
                 size={14}
                 iconColor={theme.colors.secondary}
@@ -563,6 +565,7 @@ export default function SoilProfileInput({ field, value, onChange }: Props) {
               <Text style={{ flex: 1, color: theme.colors.onSurface }}>{translateField(opt)}</Text>
               {desc && (
                 <IconButton
+                  accessibilityLabel={t("common.info")}
                   icon="information-outline"
                   size={14}
                   iconColor={theme.colors.secondary}
@@ -613,8 +616,8 @@ export default function SoilProfileInput({ field, value, onChange }: Props) {
                   <Text variant="titleSmall" style={{ flex: 1, fontWeight: "bold", color: theme.colors.onSurface }}>
                     {t("survey.generalSoilDescription")}
                   </Text>
-                  <IconButton icon="pencil" onPress={openSimpleDescription} />
-                  <IconButton icon="delete" iconColor={theme.colors.error} onPress={deleteSimpleDescription} />
+                  <IconButton accessibilityLabel={t("common.edit")} icon="pencil" onPress={openSimpleDescription} />
+                  <IconButton accessibilityLabel={t("common.delete")} icon="delete" iconColor={theme.colors.error} onPress={deleteSimpleDescription} />
                 </View>
                 <View style={[styles.layerSummary, { borderTopColor: theme.colors.outlineVariant }]}>
                   {renderLayerSummary({
@@ -641,8 +644,8 @@ export default function SoilProfileInput({ field, value, onChange }: Props) {
                   <Text variant="titleSmall" style={{ flex: 1, fontWeight: "bold", color: theme.colors.onSurface }}>
                     {t("survey.layer")} {index + 1}: {layer.depth_start}-{layer.depth_end} cm
                   </Text>
-                  <IconButton icon="pencil" onPress={() => editLayer(layer)} />
-                  <IconButton icon="delete" iconColor={theme.colors.error} onPress={() => deleteLayer(layer.id)} />
+                  <IconButton accessibilityLabel={t("common.edit")} icon="pencil" onPress={() => editLayer(layer)} />
+                  <IconButton accessibilityLabel={t("common.delete")} icon="delete" iconColor={theme.colors.error} onPress={() => deleteLayer(layer.id)} />
                 </View>
                 <View style={[styles.layerSummary, { borderTopColor: theme.colors.outlineVariant }]}>
                   {renderLayerSummary(layer)}

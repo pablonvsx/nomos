@@ -509,11 +509,13 @@ export default function SpeciesInput({
 
       <View style={styles.actionButtons}>
         <IconButton
+          accessibilityLabel={t("common.edit")}
           icon="pencil"
           size={18}
           onPress={() => handleEditSpecies(item)}
         />
         <IconButton
+          accessibilityLabel={t("common.delete")}
           icon="delete"
           size={18}
           iconColor={theme.colors.error}
@@ -596,6 +598,7 @@ export default function SpeciesInput({
           )}
         </View>
         <IconButton
+          accessibilityLabel={t("common.add")}
           icon="plus"
           size={24}
           iconColor={theme.colors.primary}
@@ -668,7 +671,7 @@ export default function SpeciesInput({
               <Paragraph style={{ ...MODAL_TITLE_STYLE, flex: 1 }}>
                 {`${t("species.registeredSpecies")} (${speciesList.length})`}
               </Paragraph>
-              <IconButton icon="close" onPress={() => setShowAllSpeciesModal(false)} />
+              <IconButton accessibilityLabel={t("common.close")} icon="close" onPress={() => setShowAllSpeciesModal(false)} />
             </View>
 
             <FlatList
@@ -841,12 +844,14 @@ export default function SpeciesInput({
         {/* Action Buttons */}
         <View style={styles.buttonRow}>
           <IconButton
+            accessibilityLabel={t(editingId ? "common.edit" : "common.add")}
             icon={editingId ? "pencil" : "plus"}
             mode="contained"
             onPress={handleAddSpecies}
             style={{ flex: 1, borderRadius: BUTTON_RADIUS }}
           />
           <IconButton
+            accessibilityLabel={t("common.close")}
             icon="close"
             mode="outlined"
             onPress={handleClearInputs}
@@ -868,6 +873,7 @@ export default function SpeciesInput({
               Espécies Registradas ({speciesList.length})
             </Paragraph>
             <IconButton
+              accessibilityLabel={t("common.close")}
               icon="close"
               onPress={() => setShowRegisteredModal(false)}
             />
@@ -905,6 +911,7 @@ export default function SpeciesInput({
               Catálogo de Espécies
             </Paragraph>
             <IconButton
+              accessibilityLabel={t("common.close")}
               icon="close"
               onPress={() => {
                 setShowCatalogModal(false);

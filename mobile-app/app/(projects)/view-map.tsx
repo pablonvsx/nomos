@@ -325,6 +325,7 @@ function ViewMapScreen() {
       {/* Legend button (visible when legend is closed) */}
       {!shouldBlockMapRender && !legendVisible && (
         <IconButton
+          accessibilityLabel={t("mapView.legend")}
           icon="map-legend"
           size={24}
           iconColor={theme.colors.primary}
@@ -373,6 +374,7 @@ function ViewMapScreen() {
       {/* GPS zoom button */}
       {!shouldBlockMapRender && (
         <IconButton
+          accessibilityLabel={t("common.myLocation")}
           icon="crosshairs-gps"
           size={24}
           iconColor={theme.colors.primary}
@@ -385,6 +387,7 @@ function ViewMapScreen() {
       {/* Zoom to the project's map/layer feature (geojson_layer) */}
       {!shouldBlockMapRender && layerData && (
         <IconButton
+          accessibilityLabel={t("common.map")}
           icon="map"
           size={24}
           iconColor={theme.colors.primary}
@@ -397,6 +400,7 @@ function ViewMapScreen() {
       {/* Zoom to the project's field route (geojson_field_route) */}
       {!shouldBlockMapRender && routeData && (
         <IconButton
+          accessibilityLabel={t("projectView.fieldRoute")}
           icon="routes"
           size={24}
           iconColor={theme.colors.primary}

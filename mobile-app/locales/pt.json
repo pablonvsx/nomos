@@ -32,6 +32,9 @@
     "import": "Importar",
     "active": "Ativo",
     "info": "Informação",
+    "play": "Reproduzir",
+    "pause": "Pausar",
+    "myLocation": "Minha localização",
     "warning": "Atenção",
     "featureInDevelopment": "Funcionalidade em desenvolvimento",
     "somethingWentWrong": "Algo deu errado",
@@ -481,7 +484,7 @@
     "officialProtocol": "Protocolo Paisageo",
     "loadError": "Não foi possível carregar o banco de dados.",
     "projectImported": "Projeto importado com sucesso.",
-    "projectAlreadyExists": "Este projeto já existia neste dispositivo — nenhuma duplicata foi criada.",
+    "projectAlreadyExists": "Este projeto já existia neste dispositivo. Nenhuma duplicata foi criada.",
     "errorImportingProject": "Não foi possível importar o projeto. Verifique se o arquivo é um pacote de configuração válido.",
     "invalidConfigPackageFile": "Arquivo inválido. Selecione um pacote de configuração de projeto (.json) exportado pelo Nomos.",
     "configPackageFormatMismatch": "Este arquivo foi criado por uma versão mais nova do Nomos e não pode ser importado nesta versão do aplicativo."
@@ -691,8 +694,8 @@
     "individuals": "indivíduos",
     "conservationStatus": {
       "conservada": "Conservada",
-      "em_regeneracao_nativas": "Em Regeneração — Nativas",
-      "em_regeneracao_consorciada": "Em Regeneração — Consorciada com Invasoras",
+      "em_regeneracao_nativas": "Em Regeneração: Nativas",
+      "em_regeneracao_consorciada": "Em Regeneração: Consorciada com Invasoras",
       "substituida": "Substituída"
     },
     "landUse": {
@@ -994,7 +997,7 @@
     "speciesCatalog": "Catálogo de Espécies",
     "speciesLinkDescription": "Dados robustos focados em biodiversidade brasileira",
     "speciesLinkIntegration": "Integração SpeciesLink",
-    "speciesLinkNetwork": "Rede SpeciesLink – CRIA",
+    "speciesLinkNetwork": "Rede SpeciesLink, CRIA",
     "speciesLinkNotConfigured": "SpeciesLink não configurado",
     "speciesUpdated": "Espécie atualizada com sucesso!",
     "speciesWithAbundance": "adicionada com abundância",

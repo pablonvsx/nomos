@@ -364,6 +364,7 @@ export default function VegetationClassesModal({
                         </View>
                         <View style={{ flexDirection: "row" }}>
                           <IconButton
+                            accessibilityLabel={t("common.edit")}
                             icon="pencil"
                             size={20}
                             style={styles.classIconButton}
@@ -372,6 +373,7 @@ export default function VegetationClassesModal({
                             disabled={saving}
                           />
                           <IconButton
+                            accessibilityLabel={t("common.delete")}
                             icon="delete"
                             size={20}
                             iconColor={theme.colors.error}

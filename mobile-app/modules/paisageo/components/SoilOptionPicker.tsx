@@ -60,6 +60,7 @@ export default function SoilOptionPicker({ label, options, value, onSelect, onIn
         </Pressable>
 
         <IconButton
+          accessibilityLabel={t("common.info")}
           icon="information-outline"
           size={18}
           iconColor={theme.colors.secondary}
@@ -107,6 +108,7 @@ export default function SoilOptionPicker({ label, options, value, onSelect, onIn
                   </Pressable>
                   {desc && (
                     <IconButton
+                      accessibilityLabel={t("common.info")}
                       icon="information-outline"
                       size={16}
                       iconColor={theme.colors.secondary}
