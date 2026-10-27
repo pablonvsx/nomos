@@ -63,22 +63,6 @@ Beyond data collection based on the primary methodological instrument, the app a
 
 ## Installation
 
-Requirements: Node.js and the Expo CLI.
-
-```bash
-# clone the repository
-git clone https://github.com/pablonvsx/nomos.git
-cd nomos/mobile-app
-
-# install dependencies
-npm install
-
-# start the development server
-npm start
-
-# or run directly on a connected Android device / emulator
-npm run android
-```
 
 A pre-built APK of the latest release is also available under [Releases](https://github.com/pablonvsx/nomos/releases) or in the [Documentation](#documentation) folder below, for users who only want to install the app without building it from source.
 
