@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Nomos | Aplicativo para inventários ambientais</title>
-  <meta name="description" content="Nomos é um aplicativo móvel para inventários ambientais, construído como plataforma extensível para diferentes protocolos de levantamento de campo.">
+  <title>Nomos | Aplicativo para inventários ambientais: download, autoria e citação</title>
+  <meta name="description" content="Nomos é um aplicativo móvel para inventários ambientais, desenvolvido no PPGEO da UFPE. Baixe o APK para Android, conheça a autoria e a vinculação acadêmica e veja como citar o software.">
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#151718" media="(prefers-color-scheme: dark)">
   <link rel="icon" type="image/svg+xml" href="assets/img/logo.svg">
@@ -14,12 +14,13 @@
   <meta property="og:locale" content="pt_BR">
   <meta property="og:site_name" content="Nomos">
   <meta property="og:title" content="Nomos | Aplicativo para inventários ambientais">
-  <meta property="og:description" content="Aplicativo móvel para inventários ambientais, construído como plataforma extensível para diferentes protocolos de levantamento de campo.">
+  <meta property="og:description" content="Baixe o aplicativo Nomos para Android, conheça a autoria e a vinculação acadêmica e veja como citar o software em ABNT, APA, Vancouver, IEEE, MLA, Chicago, BibTeX e RIS.">
   <meta property="og:url" content="https://pablonvsx.github.io/nomos/">
   <meta property="og:image" content="https://pablonvsx.github.io/nomos/assets/img/icon.png">
   <meta property="og:image:alt" content="Logo do Nomos">
   <link rel="stylesheet" href="assets/css/style.css">
-  <script src="assets/js/version.js" defer></script>
+  <script src="assets/js/citation.js" defer></script>
+  <script src="assets/js/main.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
@@ -37,9 +38,29 @@
   </header>
 
   <main id="conteudo" class="container">
+    <!-- Download addresses: change them here only (button and "Ver todas as versões"). -->
+    <section class="download" aria-labelledby="baixar">
+      <h2 id="baixar">Baixar o Nomos</h2>
+      <a class="link-button link-button--block" href="https://github.com/pablonvsx/nomos/releases/latest/download/nomos.apk">Baixar para Android</a>
+      <p class="download-note">Disponível para Android.</p>
+      <p id="app-version" class="download-note">Última versão publicada</p>
+      <p class="download-note"><a href="https://github.com/pablonvsx/nomos/releases">Ver todas as versões</a></p>
+
+      <details class="install">
+        <summary>Como instalar</summary>
+        <ol>
+          <li>Toque em <strong>Baixar para Android</strong> e aguarde o arquivo ser baixado.</li>
+          <li>O navegador pode avisar que o arquivo pode ser prejudicial. Isso é comum em aplicativos instalados fora da loja. Escolha manter o download.</li>
+          <li>Abra o arquivo baixado.</li>
+          <li>O Android pode pedir permissão para o navegador instalar aplicativos de fontes desconhecidas. Autorize somente para esta instalação.</li>
+          <li>Conclua a instalação.</li>
+        </ol>
+      </details>
+    </section>
+
     <section aria-labelledby="sobre">
       <h2 id="sobre">O que é o Nomos</h2>
-      <p>O Nomos apoia inventários ambientais. Em sua versão inicial, implementa um protocolo de cartografia da paisagem desenvolvido no PPGEO da UFPE, servindo como intermediário técnico-metodológico para substituir registros analógicos por um fluxo digital estruturado, padronizado e reprodutível. O aplicativo também permite usar protocolos mais simples, criados pelo próprio usuário.</p>
+      <p>O Nomos apoia inventários ambientais. Em sua versão inicial, implementa um protocolo de cartografia da paisagem desenvolvido no PPGEO da UFPE, servindo como intermediário <span class="nowrap">técnico-metodológico</span> para substituir registros analógicos por um fluxo digital estruturado, padronizado e reprodutível. O aplicativo também permite usar protocolos mais simples, criados pelo próprio usuário.</p>
       <ul class="features">
         <li><strong>Coleta offline.</strong> Os registros ficam salvos no próprio aparelho, sem exigir conexão em campo.</li>
         <li><strong>Classificação fisionômica automatizada.</strong> Gera a fórmula de vegetação segundo o sistema de Küchler.</li>
@@ -49,9 +70,76 @@
       </ul>
     </section>
 
-    <section aria-labelledby="versao">
-      <h2 id="versao">Versão</h2>
-      <p id="app-version">Informações de versão indisponíveis no momento.</p>
+    <section aria-labelledby="autoria">
+      <h2 id="autoria">Autoria e vinculação</h2>
+
+      <div class="people">
+        <div class="person">
+          <h3>Autor</h3>
+          <p class="person-name">Pablo Guilherme de Melo Neves</p>
+          <ul class="link-list">
+            <li><a class="link-button link-button--outline" href="http://lattes.cnpq.br/0232693906809043" target="_blank" rel="noopener noreferrer">Currículo Lattes<span class="visually-hidden"> (abre em nova aba)</span></a></li>
+            <li><a class="link-button link-button--outline" href="https://www.researchgate.net/profile/Pablo-Neves-2" target="_blank" rel="noopener noreferrer">ResearchGate<span class="visually-hidden"> (abre em nova aba)</span></a></li>
+            <li><a class="link-button link-button--outline" href="https://github.com/pablonvsx" target="_blank" rel="noopener noreferrer">GitHub<span class="visually-hidden"> (abre em nova aba)</span></a></li>
+          </ul>
+        </div>
+        <div class="person">
+          <h3>Orientador</h3>
+          <p class="person-name">Lucas Costa de Souza Cavalcanti</p>
+          <ul class="link-list">
+            <li><a class="link-button link-button--outline" href="http://lattes.cnpq.br/0571151043430712" target="_blank" rel="noopener noreferrer">Currículo Lattes<span class="visually-hidden"> (abre em nova aba)</span></a></li>
+            <li><a class="link-button link-button--outline" href="https://www.researchgate.net/profile/Lucas-Cavalcanti-7" target="_blank" rel="noopener noreferrer">ResearchGate<span class="visually-hidden"> (abre em nova aba)</span></a></li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Vinculação</h3>
+      <p>O Nomos é um produto tecnológico desenvolvido em pesquisa de mestrado vinculada ao Programa de <span class="nowrap">Pós-Graduação</span> em Geografia (PPGEO) da Universidade Federal de Pernambuco (UFPE). A pesquisa tem afiliação científica ao Laboratório de Pesquisa em Dinâmicas de Paisagens Intertropicais (INTERTRÓPICOS) e ao Grupo de Pesquisa em Geografia e Conservação em Paisagens Tropicais (PAISAGEO).</p>
+      <ul class="link-list">
+        <li><a class="link-button link-button--outline" href="https://www.ufpe.br/" target="_blank" rel="noopener noreferrer">Site da UFPE<span class="visually-hidden"> (abre em nova aba)</span></a></li>
+        <li><a class="link-button link-button--outline" href="https://www.instagram.com/ufpe.oficial" target="_blank" rel="noopener noreferrer">Instagram da UFPE<span class="visually-hidden"> (abre em nova aba)</span></a></li>
+        <li><a class="link-button link-button--outline" href="https://sites.ufpe.br/paisageo/" target="_blank" rel="noopener noreferrer">Página do PAISAGEO<span class="visually-hidden"> (abre em nova aba)</span></a></li>
+        <li><a class="link-button link-button--outline" href="https://www.instagram.com/paisageo.ufpe" target="_blank" rel="noopener noreferrer">Instagram do PAISAGEO<span class="visually-hidden"> (abre em nova aba)</span></a></li>
+        <li><a class="link-button link-button--outline" href="https://github.com/pablonvsx/nomos" target="_blank" rel="noopener noreferrer">Repositório do Nomos<span class="visually-hidden"> (abre em nova aba)</span></a></li>
+      </ul>
+
+      <h3>Apoio institucional</h3>
+      <ul class="logo-strip">
+        <li class="logo-card"><img src="assets/img/logo-ufpe.png" alt="Logo da Universidade Federal de Pernambuco" width="75" height="112" loading="lazy"></li>
+        <li class="logo-card"><img src="assets/img/logo-capes.png" alt="Logo da Coordenação de Aperfeiçoamento de Pessoal de Nível Superior (CAPES)" width="121" height="112" loading="lazy"></li>
+        <li class="logo-card"><img src="assets/img/logo-ppgeo.png" alt="Logo do Programa de Pós-Graduação em Geografia (PPGEO) da UFPE" width="102" height="112" loading="lazy"></li>
+        <li class="logo-card"><img src="assets/img/logo-intertropicos.png" alt="Logo do Laboratório de Pesquisa em Dinâmicas de Paisagens Intertropicais (INTERTRÓPICOS)" width="173" height="112" loading="lazy"></li>
+        <li class="logo-card"><img src="assets/img/logo-paisageo.png" alt="Logo do Grupo de Pesquisa em Geografia e Conservação em Paisagens Tropicais (PAISAGEO)" width="400" height="97" loading="lazy"></li>
+      </ul>
+      <p class="small-note">Universidade Federal de Pernambuco (UFPE), Coordenação de Aperfeiçoamento de Pessoal de Nível Superior (CAPES), Programa de <span class="nowrap">Pós-Graduação</span> em Geografia (PPGEO), Laboratório de Pesquisa em Dinâmicas de Paisagens Intertropicais (INTERTRÓPICOS) e Grupo de Pesquisa em Geografia e Conservação em Paisagens Tropicais (PAISAGEO).</p>
+    </section>
+
+    <section class="citation" aria-labelledby="citar">
+      <h2 id="citar">Como citar</h2>
+      <p>Para citar o Nomos como software, use a referência abaixo.</p>
+
+      <!-- Hidden until main.js runs; without JavaScript only the static ABNT reference shows. -->
+      <div id="cite-controls" class="cite-controls" hidden>
+        <label for="cite-format">Formato da citação</label>
+        <select id="cite-format">
+          <option value="abnt" selected>ABNT</option>
+          <option value="apa7">APA 7</option>
+          <option value="vancouver">Vancouver</option>
+          <option value="ieee">IEEE</option>
+          <option value="mla9">MLA 9</option>
+          <option value="chicago">Chicago (autor-data)</option>
+          <option value="bibtex">BibTeX</option>
+          <option value="ris">RIS</option>
+        </select>
+      </div>
+
+      <div id="cite-text" class="reference" aria-live="polite">NEVES, Pablo Guilherme de Melo. Nomos: aplicativo móvel para inventários ambientais. Recife: Universidade Federal de Pernambuco, 2026. Software. Disponível em: https://pablonvsx.github.io/nomos/.</div>
+
+      <div class="cite-actions">
+        <button type="button" id="cite-copy" class="link-button" hidden>Copiar referência</button>
+        <span id="cite-status" class="cite-status" aria-live="polite"></span>
+      </div>
+      <p class="small-note">Referências geradas automaticamente. Confira as normas da revista ou da instituição.</p>
     </section>
 
     <section aria-labelledby="codigo">
@@ -63,7 +151,7 @@
 
   <footer class="site-footer">
     <div class="container">
-      <p>O Nomos é um produto tecnológico desenvolvido em pesquisa de mestrado vinculada ao Programa de Pós-Graduação em Geografia (PPGEO) da Universidade Federal de Pernambuco (UFPE), no grupo de pesquisa PAISAGEO.</p>
+      <p>O Nomos é um produto tecnológico desenvolvido em pesquisa de mestrado no Programa de <span class="nowrap">Pós-Graduação</span> em Geografia (PPGEO) da Universidade Federal de Pernambuco (UFPE), vinculada ao grupo de pesquisa PAISAGEO.</p>
     </div>
   </footer>
 </body>
