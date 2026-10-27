@@ -1,0 +1,220 @@
+/* Palette taken from the app theme (mobile-app/app/_layout.tsx, constants/theme.ts). */
+:root {
+  --bg: #ffffff;
+  --text: #11181c;
+  --muted: #4a5560;
+  --surface: #e7f3f1;
+  --border: #9fc4bf;
+  --link: #1f6661;
+  --accent: #2a8f88;
+  --button-bg: #1f6661;
+  --button-text: #ffffff;
+  --logo-bg: #e7f3f1;
+  --focus: #1f6661;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151718;
+    --text: #ecedee;
+    --muted: #9ba1a6;
+    --surface: #173a37;
+    --border: #3e6f6a;
+    --link: #7fd1c8;
+    --accent: #7fd1c8;
+    --button-bg: #7fd1c8;
+    --button-text: #041514;
+    --focus: #7fd1c8;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.container {
+  width: 100%;
+  max-width: 60rem;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 2rem);
+}
+
+/* Links stay distinguishable without relying on color alone. */
+a {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 0.1em;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0.75rem 1rem;
+  background: var(--button-bg);
+  color: var(--button-text);
+  transform: translateY(-100%);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+/* Header */
+.site-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding-block: 1.5rem;
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.logo-box {
+  display: inline-block;
+  padding: 0.5rem;
+  border-radius: 1.25rem;
+  background: var(--logo-bg);
+  line-height: 0;
+}
+
+.logo-box img {
+  display: block;
+  width: 6rem;
+  height: auto;
+}
+
+h1 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(2rem, 8vw, 2.75rem);
+  line-height: 1.15;
+}
+
+.lead {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+/* Content */
+main {
+  padding-block: 1.5rem 2rem;
+}
+
+section + section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+h2 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.375rem, 5vw, 1.75rem);
+  line-height: 1.25;
+}
+
+p {
+  margin: 0 0 1rem;
+}
+
+.features {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.features li {
+  min-width: 0;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border);
+  border-left: 0.3rem solid var(--accent);
+  border-radius: 0.5rem;
+  background: var(--surface);
+}
+
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 3rem;
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.5rem;
+  background: var(--button-bg);
+  color: var(--button-text);
+  font-weight: 600;
+}
+
+/* Footer */
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding-block: 1.5rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.site-footer p {
+  margin: 0;
+}
+
+.not-found {
+  padding-block: 3rem;
+}
+
+@media (min-width: 45em) {
+  .hero {
+    flex-direction: row;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .logo-box img {
+    width: 8rem;
+  }
+
+  .features {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

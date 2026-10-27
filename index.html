@@ -3,12 +3,68 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Nomos</title>
+  <title>Nomos | Aplicativo para inventários ambientais</title>
+  <meta name="description" content="Nomos é um aplicativo móvel para inventários ambientais, construído como plataforma extensível para diferentes protocolos de levantamento de campo.">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#151718" media="(prefers-color-scheme: dark)">
+  <link rel="icon" type="image/svg+xml" href="assets/img/logo.svg">
+  <link rel="icon" type="image/png" href="assets/img/favicon.png">
+  <link rel="apple-touch-icon" href="assets/img/icon.png">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:site_name" content="Nomos">
+  <meta property="og:title" content="Nomos | Aplicativo para inventários ambientais">
+  <meta property="og:description" content="Aplicativo móvel para inventários ambientais, construído como plataforma extensível para diferentes protocolos de levantamento de campo.">
+  <meta property="og:url" content="https://pablonvsx.github.io/nomos/">
+  <meta property="og:image" content="https://pablonvsx.github.io/nomos/assets/img/icon.png">
+  <meta property="og:image:alt" content="Logo do Nomos">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script src="assets/js/version.js" defer></script>
 </head>
 <body>
-  <h1>Nomos</h1>
-  <p>Plataforma móvel para levantamentos de campo, com o protocolo PAISAGEO como implementação de referência.</p>
-  <p>Página em construção: tutoriais, guia de uso e download do aplicativo estarão disponíveis aqui.</p>
-  <p><a href="https://github.com/pablonvsx/nomos">Repositório no GitHub</a></p>
+  <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+
+  <header class="site-header">
+    <div class="container hero">
+      <span class="logo-box">
+        <img src="assets/img/logo.svg" alt="Logo do Nomos" width="120" height="120">
+      </span>
+      <div>
+        <h1>Nomos</h1>
+        <p class="lead">Aplicativo móvel para inventários ambientais, construído como plataforma extensível para diferentes protocolos de levantamento de campo.</p>
+      </div>
+    </div>
+  </header>
+
+  <main id="conteudo" class="container">
+    <section aria-labelledby="sobre">
+      <h2 id="sobre">O que é o Nomos</h2>
+      <p>O Nomos apoia inventários ambientais. Em sua versão inicial, implementa um protocolo de cartografia da paisagem desenvolvido no PPGEO da UFPE, servindo como intermediário técnico-metodológico para substituir registros analógicos por um fluxo digital estruturado, padronizado e reprodutível. O aplicativo também permite usar protocolos mais simples, criados pelo próprio usuário.</p>
+      <ul class="features">
+        <li><strong>Coleta offline.</strong> Os registros ficam salvos no próprio aparelho, sem exigir conexão em campo.</li>
+        <li><strong>Classificação fisionômica automatizada.</strong> Gera a fórmula de vegetação segundo o sistema de Küchler.</li>
+        <li><strong>Nomenclatura padronizada da paisagem.</strong> Compõe o nome da unidade a partir dos atributos observados em campo.</li>
+        <li><strong>Arquitetura modular de protocolos.</strong> O protocolo de referência é um módulo entre outros, e é possível criar protocolos personalizados.</li>
+        <li><strong>Exportação estruturada.</strong> Gera dados em GeoJSON e CSV, com as mídias de campo em um arquivo compactado.</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="versao">
+      <h2 id="versao">Versão</h2>
+      <p id="app-version">Informações de versão indisponíveis no momento.</p>
+    </section>
+
+    <section aria-labelledby="codigo">
+      <h2 id="codigo">Código e licença</h2>
+      <p>O código do Nomos está aberto e é distribuído sob a licença GNU GPL v3.</p>
+      <p><a class="link-button" href="https://github.com/pablonvsx/nomos">Repositório no GitHub</a></p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>O Nomos é um produto tecnológico desenvolvido em pesquisa de mestrado vinculada ao Programa de Pós-Graduação em Geografia (PPGEO) da Universidade Federal de Pernambuco (UFPE), no grupo de pesquisa PAISAGEO.</p>
+    </div>
+  </footer>
 </body>
 </html>
