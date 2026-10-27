@@ -118,8 +118,14 @@ a {
 .hero {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 1rem;
+  text-align: center;
+}
+
+.hero-text {
+  width: 100%;
+  max-width: 40rem;
 }
 
 .logo-box {
@@ -138,6 +144,7 @@ a {
 
 h1 {
   margin: 0 0 0.5rem;
+  text-align: center;
   font-size: clamp(2rem, 8vw, 2.75rem);
   line-height: 1.15;
 }
@@ -332,6 +339,18 @@ button.link-button {
   padding-inline: 1rem;
 }
 
+/* Compact button: icon plus short label. */
+.link-list .link-button--icon {
+  gap: 0.5rem;
+  padding-inline: 0.75rem;
+}
+
+.icon {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
 .logo-strip {
   display: flex;
   flex-wrap: wrap;
@@ -433,6 +452,16 @@ button.link-button {
   margin: 0;
 }
 
+.footer-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.0625rem;
+  color: var(--text);
+}
+
+.site-footer .logo-strip {
+  justify-content: center;
+}
+
 .not-found {
   padding-block: 3rem;
 }
@@ -444,12 +473,6 @@ button.link-button {
 
   .container {
     padding-inline: 2rem;
-  }
-
-  .hero {
-    flex-direction: row;
-    align-items: center;
-    gap: 1.5rem;
   }
 
   .logo-box img {

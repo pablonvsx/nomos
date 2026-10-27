@@ -23,6 +23,12 @@
   <script src="assets/js/main.js" defer></script>
 </head>
 <body>
+  <!-- Icon sprite: inline, no external requests. GitHub uses the Octicons mark; Lattes and ResearchGate use simple monogram badges. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="icon-github" viewBox="0 0 16 16"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></symbol>
+    <symbol id="icon-lattes" viewBox="0 0 24 24"><rect x="1" y="1" width="22" height="22" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 6v10.5h7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-researchgate" viewBox="0 0 24 24"><rect x="1" y="1" width="22" height="22" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><text x="12" y="16.2" text-anchor="middle" font-family="system-ui, Arial, sans-serif" font-size="11" font-weight="700" fill="currentColor">RG</text></symbol>
+  </svg>
   <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
 
   <header class="site-header">
@@ -30,7 +36,7 @@
       <span class="logo-box">
         <img src="assets/img/logo.svg" alt="Logo do Nomos" width="120" height="120">
       </span>
-      <div>
+      <div class="hero-text">
         <h1>Nomos</h1>
         <p class="lead">Aplicativo móvel para inventários ambientais, construído como plataforma extensível para diferentes protocolos de levantamento de campo.</p>
       </div>
@@ -78,17 +84,17 @@
           <h3>Autor</h3>
           <p class="person-name">Pablo Guilherme de Melo Neves</p>
           <ul class="link-list">
-            <li><a class="link-button link-button--outline" href="http://lattes.cnpq.br/0232693906809043" target="_blank" rel="noopener noreferrer">Currículo Lattes<span class="visually-hidden"> (abre em nova aba)</span></a></li>
-            <li><a class="link-button link-button--outline" href="https://www.researchgate.net/profile/Pablo-Neves-2" target="_blank" rel="noopener noreferrer">ResearchGate<span class="visually-hidden"> (abre em nova aba)</span></a></li>
-            <li><a class="link-button link-button--outline" href="https://github.com/pablonvsx" target="_blank" rel="noopener noreferrer">GitHub<span class="visually-hidden"> (abre em nova aba)</span></a></li>
+            <li><a class="link-button link-button--outline link-button--icon" href="http://lattes.cnpq.br/0232693906809043" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-lattes"></use></svg><span>Lattes</span><span class="visually-hidden"> (abre em nova aba)</span></a></li>
+            <li><a class="link-button link-button--outline link-button--icon" href="https://www.researchgate.net/profile/Pablo-Neves-2" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-researchgate"></use></svg><span>ResearchGate</span><span class="visually-hidden"> (abre em nova aba)</span></a></li>
+            <li><a class="link-button link-button--outline link-button--icon" href="https://github.com/pablonvsx" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-github"></use></svg><span>GitHub</span><span class="visually-hidden"> (abre em nova aba)</span></a></li>
           </ul>
         </div>
         <div class="person">
           <h3>Orientador</h3>
           <p class="person-name">Lucas Costa de Souza Cavalcanti</p>
           <ul class="link-list">
-            <li><a class="link-button link-button--outline" href="http://lattes.cnpq.br/0571151043430712" target="_blank" rel="noopener noreferrer">Currículo Lattes<span class="visually-hidden"> (abre em nova aba)</span></a></li>
-            <li><a class="link-button link-button--outline" href="https://www.researchgate.net/profile/Lucas-Cavalcanti-7" target="_blank" rel="noopener noreferrer">ResearchGate<span class="visually-hidden"> (abre em nova aba)</span></a></li>
+            <li><a class="link-button link-button--outline link-button--icon" href="http://lattes.cnpq.br/0571151043430712" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-lattes"></use></svg><span>Lattes</span><span class="visually-hidden"> (abre em nova aba)</span></a></li>
+            <li><a class="link-button link-button--outline link-button--icon" href="https://www.researchgate.net/profile/Lucas-Cavalcanti-7" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-researchgate"></use></svg><span>ResearchGate</span><span class="visually-hidden"> (abre em nova aba)</span></a></li>
           </ul>
         </div>
       </div>
@@ -100,18 +106,7 @@
         <li><a class="link-button link-button--outline" href="https://www.instagram.com/ufpe.oficial" target="_blank" rel="noopener noreferrer">Instagram da UFPE<span class="visually-hidden"> (abre em nova aba)</span></a></li>
         <li><a class="link-button link-button--outline" href="https://sites.ufpe.br/paisageo/" target="_blank" rel="noopener noreferrer">Página do PAISAGEO<span class="visually-hidden"> (abre em nova aba)</span></a></li>
         <li><a class="link-button link-button--outline" href="https://www.instagram.com/paisageo.ufpe" target="_blank" rel="noopener noreferrer">Instagram do PAISAGEO<span class="visually-hidden"> (abre em nova aba)</span></a></li>
-        <li><a class="link-button link-button--outline" href="https://github.com/pablonvsx/nomos" target="_blank" rel="noopener noreferrer">Repositório do Nomos<span class="visually-hidden"> (abre em nova aba)</span></a></li>
       </ul>
-
-      <h3>Apoio institucional</h3>
-      <ul class="logo-strip">
-        <li class="logo-card"><img src="assets/img/logo-ufpe.png" alt="Logo da Universidade Federal de Pernambuco" width="75" height="112" loading="lazy"></li>
-        <li class="logo-card"><img src="assets/img/logo-capes.png" alt="Logo da Coordenação de Aperfeiçoamento de Pessoal de Nível Superior (CAPES)" width="121" height="112" loading="lazy"></li>
-        <li class="logo-card"><img src="assets/img/logo-ppgeo.png" alt="Logo do Programa de Pós-Graduação em Geografia (PPGEO) da UFPE" width="102" height="112" loading="lazy"></li>
-        <li class="logo-card"><img src="assets/img/logo-intertropicos.png" alt="Logo do Laboratório de Pesquisa em Dinâmicas de Paisagens Intertropicais (INTERTRÓPICOS)" width="173" height="112" loading="lazy"></li>
-        <li class="logo-card"><img src="assets/img/logo-paisageo.png" alt="Logo do Grupo de Pesquisa em Geografia e Conservação em Paisagens Tropicais (PAISAGEO)" width="400" height="97" loading="lazy"></li>
-      </ul>
-      <p class="small-note">Universidade Federal de Pernambuco (UFPE), Coordenação de Aperfeiçoamento de Pessoal de Nível Superior (CAPES), Programa de <span class="nowrap">Pós-Graduação</span> em Geografia (PPGEO), Laboratório de Pesquisa em Dinâmicas de Paisagens Intertropicais (INTERTRÓPICOS) e Grupo de Pesquisa em Geografia e Conservação em Paisagens Tropicais (PAISAGEO).</p>
     </section>
 
     <section class="citation" aria-labelledby="citar">
@@ -151,7 +146,15 @@
 
   <footer class="site-footer">
     <div class="container">
-      <p>O Nomos é um produto tecnológico desenvolvido em pesquisa de mestrado no Programa de <span class="nowrap">Pós-Graduação</span> em Geografia (PPGEO) da Universidade Federal de Pernambuco (UFPE), vinculada ao grupo de pesquisa PAISAGEO.</p>
+      <h2 class="footer-title">Apoio institucional</h2>
+      <ul class="logo-strip">
+        <li class="logo-card"><img src="assets/img/logo-ufpe.png" alt="Logo da Universidade Federal de Pernambuco" width="75" height="112" loading="lazy"></li>
+        <li class="logo-card"><img src="assets/img/logo-capes.png" alt="Logo da Coordenação de Aperfeiçoamento de Pessoal de Nível Superior (CAPES)" width="121" height="112" loading="lazy"></li>
+        <li class="logo-card"><img src="assets/img/logo-ppgeo.png" alt="Logo do Programa de Pós-Graduação em Geografia (PPGEO) da UFPE" width="102" height="112" loading="lazy"></li>
+        <li class="logo-card"><img src="assets/img/logo-intertropicos.png" alt="Logo do Laboratório de Pesquisa em Dinâmicas de Paisagens Intertropicais (INTERTRÓPICOS)" width="173" height="112" loading="lazy"></li>
+        <li class="logo-card"><img src="assets/img/logo-paisageo.png" alt="Logo do Grupo de Pesquisa em Geografia e Conservação em Paisagens Tropicais (PAISAGEO)" width="400" height="97" loading="lazy"></li>
+      </ul>
+      <p>Universidade Federal de Pernambuco (UFPE), Coordenação de Aperfeiçoamento de Pessoal de Nível Superior (CAPES), Programa de <span class="nowrap">Pós-Graduação</span> em Geografia (PPGEO), Laboratório de Pesquisa em Dinâmicas de Paisagens Intertropicais (INTERTRÓPICOS) e Grupo de Pesquisa em Geografia e Conservação em Paisagens Tropicais (PAISAGEO).</p>
     </div>
   </footer>
 </body>
