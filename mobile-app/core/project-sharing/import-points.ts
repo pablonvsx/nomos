@@ -38,11 +38,20 @@ export interface ImportPointsResult {
   missingMedia: number;
 }
 
-/** Thrown when a points package doesn't belong to the target project. */
+export type ProjectMismatchReason = "project" | "protocol";
+
+/**
+ * Thrown when a points package doesn't belong to the target project. The
+ * message is for logs only: screens show their own translated text chosen by
+ * `reason`.
+ */
 export class ProjectMismatchError extends Error {
-  constructor(message: string) {
+  readonly reason: ProjectMismatchReason;
+
+  constructor(message: string, reason: ProjectMismatchReason) {
     super(message);
     this.name = "ProjectMismatchError";
+    this.reason = reason;
   }
 }
 
@@ -259,7 +268,7 @@ export async function importPointsPackage(
 
     const targetProjectUuid = await ensureProjectUuid(targetProjectId);
     if (pkg.project_uuid !== targetProjectUuid) {
-      throw new ProjectMismatchError("Este arquivo pertence a outro projeto.");
+      throw new ProjectMismatchError("Este arquivo pertence a outro projeto.", "project");
     }
     if (
       pkg.protocol_id !== targetProject.protocol_id ||
@@ -267,6 +276,7 @@ export async function importPointsPackage(
     ) {
       throw new ProjectMismatchError(
         "Este arquivo foi exportado com um protocolo diferente do deste projeto.",
+        "protocol",
       );
     }
 

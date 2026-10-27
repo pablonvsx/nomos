@@ -561,6 +561,8 @@
     "pointsImported": "{{count}} punto(s) importado(s), en espera de revisión.",
     "errorImportingPointsPackage": "No se pudo importar el paquete de puntos. Verifique si el archivo es válido.",
     "importPointsNotZip": "El archivo seleccionado no es un paquete de puntos (.zip). Elija el archivo .zip enviado por el colaborador.",
+    "importPointsWrongProject": "Este archivo pertenece a otro proyecto.",
+    "importPointsWrongProtocol": "Este archivo se exportó con un protocolo distinto al de este proyecto.",
     "importPointsOutdated": "Este paquete fue creado por una versión anterior de Nomos y ya no se puede importar. Pida al colaborador que actualice la aplicación y exporte los puntos de nuevo.",
     "pointsImportOwnerEmailWarning": "El correo del dueño registrado en este paquete es diferente de la cuenta conectada en este dispositivo. Revise el origen antes de aprobar los datos importados."
   },

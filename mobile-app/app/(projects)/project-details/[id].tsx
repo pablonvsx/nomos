@@ -814,7 +814,10 @@ function UnifiedProjectDetailsScreen() {
       } catch (error) {
         console.error("Error importing points package:", error);
         if (error instanceof ProjectMismatchError) {
-          alert(t("common.error"), error.message);
+          alert(
+            t("common.error"),
+            t(error.reason === "project" ? "projectView.importPointsWrongProject" : "projectView.importPointsWrongProtocol"),
+          );
         } else if (error instanceof NotAZipFileError) {
           alert(t("common.error"), t("projectView.importPointsNotZip"));
         } else if (error instanceof OutdatedPackageVersionError) {

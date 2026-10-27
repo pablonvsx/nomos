@@ -231,6 +231,8 @@ describe("importPointsPackage — identity checks", () => {
     await expect(importPointsPackage(targetProject.id)).rejects.toBeInstanceOf(
       ProjectMismatchError,
     );
+    // The screen picks its translated message from the reason, not from the error text.
+    await expect(importPointsPackage(targetProject.id)).rejects.toMatchObject({ reason: "project" });
     expect(createPointMock).not.toHaveBeenCalled();
   });
 
@@ -246,6 +248,7 @@ describe("importPointsPackage — identity checks", () => {
     pickZip(zipUri);
 
     await expect(importPointsPackage(project.id)).rejects.toBeInstanceOf(ProjectMismatchError);
+    await expect(importPointsPackage(project.id)).rejects.toMatchObject({ reason: "protocol" });
     expect(createPointMock).not.toHaveBeenCalled();
   });
 
