@@ -149,6 +149,20 @@ p {
   margin: 0 0 1rem;
 }
 
+/* Justified text; hyphenation (lang="pt-BR") avoids wide gaps on narrow screens. */
+p {
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+/* Short, narrow blocks stay left-aligned on small screens: justifying them opens wide gaps. */
+.lead,
+.features li {
+  text-align: left;
+}
+
 .features {
   margin: 0;
   padding: 0;
@@ -206,6 +220,13 @@ p {
 
   .features {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .features li {
+    text-align: justify;
+    text-justify: inter-word;
+    hyphens: auto;
+    -webkit-hyphens: auto;
   }
 }
 
