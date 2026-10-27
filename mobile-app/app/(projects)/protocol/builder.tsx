@@ -8,6 +8,7 @@ import { MODAL_SCROLL_AREA_STYLE } from "@/constants/modal-layout";
 import { ModalBody, ModalTitle } from "@/components/ui/ModalBody";
 import { MODAL_TITLE_STYLE } from "@/constants/modal-title";
 import { ModalActions } from "@/components/ui/ModalActions";
+import { ScientificModulePickerDialog } from "@/components/protocol/ScientificModulePickerDialog";
 import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
 import {
   View,
@@ -31,7 +32,6 @@ import {
   SegmentedButtons,
   RadioButton,
   Chip,
-  Divider,
 } from "react-native-paper";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useI18n } from "@/contexts/i18n-context";
@@ -65,7 +65,6 @@ import {
   listBuilderAttachableModules,
   SharedModuleCatalogEntry,
 } from "@/modules/registry";
-import { NATIVE_PROTOCOLS_CATALOG } from "@/constants/native-protocols-catalog";
 import { BUTTON_RADIUS, SEGMENTED_BUTTONS_SHAPE_THEME, MODAL_SHAPE_STYLE } from "@/constants/shape";
 
 export default function ProtocolBuilderScreen() {
@@ -505,13 +504,12 @@ export default function ProtocolBuilderScreen() {
 
       {/* Add Scientific Module Dialog */}
       {addModuleDialog && (
-        <ModuleSelectionDialog
+        <ScientificModulePickerDialog
           visible={addModuleDialog}
           onDismiss={() => setAddModuleDialog(false)}
           modules={availableSharedModules}
           lang={(currentLanguage as string) ?? "pt"}
           onSelect={addSharedModuleSection}
-          theme={theme}
           t={t}
         />
       )}
@@ -771,119 +769,6 @@ const TypeSelectionDialog = memo(function TypeSelectionDialog({
     </Portal>
   );
 });
-
-// Picker for attaching a prefab scientific module (modules/registry.ts)
-// to the protocol - same own-Portal/own-Dialog + Pressable-list pattern as
-// TypeSelectionDialog above.
-function ModuleSelectionDialog({
-  visible,
-  onDismiss,
-  modules,
-  lang,
-  onSelect,
-  theme,
-  t,
-}: {
-  visible: boolean;
-  onDismiss: () => void;
-  modules: SharedModuleCatalogEntry[];
-  lang: string;
-  onSelect: (entry: SharedModuleCatalogEntry) => void;
-  theme: any;
-  t: (key: string) => string;
-}) {
-  // Grouped by protocolId (in first-seen order) so the picker scales cleanly
-  // once modules from more than one native protocol are attachable - today
-  // that's just "paisageo", so there's a single group, but the structure
-  // already supports more.
-  const groups = useMemo(() => {
-    const byProtocol = new Map<string, { protocolName: string; entries: SharedModuleCatalogEntry[] }>();
-    for (const entry of modules) {
-      const existing = byProtocol.get(entry.protocolId);
-      if (existing) {
-        existing.entries.push(entry);
-      } else {
-        byProtocol.set(entry.protocolId, {
-          protocolName: entry.protocolName[lang] ?? entry.protocolName.pt ?? entry.protocolId,
-          entries: [entry],
-        });
-      }
-    }
-    return Array.from(byProtocol.values());
-  }, [modules, lang]);
-
-  return (
-    <Portal>
-      <Dialog visible={visible} onDismiss={onDismiss} style={[MODAL_SHAPE_STYLE, { maxHeight: "80%" }]}>
-        <ModalTitle style={MODAL_TITLE_STYLE} numberOfLines={1}>
-          {t("protocol.selectScientificModule")}
-        </ModalTitle>
-        <Dialog.ScrollArea style={[{ paddingHorizontal: 0 }, MODAL_SCROLL_AREA_STYLE]}>
-          <ScrollView contentContainerStyle={{ paddingVertical: 8 }}>
-            {modules.length === 0 ? (
-              <Text
-                variant="bodyMedium"
-                style={{ paddingHorizontal: 20, color: theme.colors.onSurfaceVariant }}
-              >
-                {t("protocol.noScientificModulesAvailable")}
-              </Text>
-            ) : (
-              groups.map((group, groupIndex) => (
-                <View key={group.protocolName}>
-                  {groupIndex > 0 && <Divider style={{ marginVertical: 8 }} />}
-                  <Text
-                    variant="labelLarge"
-                    style={{
-                      paddingHorizontal: 20,
-                      paddingTop: groupIndex > 0 ? 4 : 0,
-                      paddingBottom: 4,
-                      color: theme.colors.primary,
-                    }}
-                  >
-                    {group.protocolName}
-                  </Text>
-                  {group.entries.map((entry) => {
-                    const description =
-                      NATIVE_PROTOCOLS_CATALOG[entry.protocolId]?.modules.find(
-                        (m) => m.id === entry.descriptor.id,
-                      )?.description;
-                    return (
-                      <Pressable
-                        key={entry.descriptor.id}
-                        onPress={() => onSelect(entry)}
-                        style={{
-                          flexDirection: "row",
-                          paddingVertical: 10,
-                          paddingHorizontal: 20,
-                        }}
-                      >
-                        <Icon source="flask-outline" size={22} color={theme.colors.onSurfaceVariant} />
-                        <View style={{ flex: 1, marginLeft: 16 }}>
-                          <Text variant="bodyMedium">
-                            {entry.descriptor.title[lang] ?? entry.descriptor.title.pt ?? entry.descriptor.id}
-                          </Text>
-                          {description && (
-                            <Text
-                              variant="bodySmall"
-                              style={{ color: theme.colors.onSurfaceVariant, marginTop: 2, textAlign: "justify" }}
-                            >
-                              {description[lang] ?? description.pt}
-                            </Text>
-                          )}
-                        </View>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              ))
-            )}
-          </ScrollView>
-        </Dialog.ScrollArea>
-        <ModalActions confirmLabel={t("common.close")} onConfirm={onDismiss} />
-      </Dialog>
-    </Portal>
-  );
-}
 
 // Unit selection list for the Number field type. Same shape as
 // TypeSelectionDialog above (own Dialog + own Portal, mounted only while

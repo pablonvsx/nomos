@@ -1,4 +1,4 @@
-import { makeEmailBreakable, orderStackedButtons } from "../dialog-layout";
+import { dialogMaxHeight, isScrollable, makeEmailBreakable, orderStackedButtons } from "../dialog-layout";
 
 const btn = (label: string, role?: "primary" | "cancel") => ({ label, role });
 
@@ -45,5 +45,45 @@ describe("makeEmailBreakable", () => {
 
   it("leaves an empty string alone", () => {
     expect(makeEmailBreakable("")).toBe("");
+  });
+});
+
+describe("dialogMaxHeight", () => {
+  it("is 70% of the window by default", () => {
+    expect(dialogMaxHeight(640)).toBe(448);
+  });
+
+  it("never exceeds the window minus the dialog's own vertical margins", () => {
+    // 360dp-high landscape window: 70% (252) already fits inside 360 - 2 * 44 (272).
+    expect(dialogMaxHeight(360)).toBe(252);
+    // A ratio near 1 is capped by the margins.
+    expect(dialogMaxHeight(360, 0.95)).toBe(272);
+  });
+
+  it("accepts another ratio", () => {
+    expect(dialogMaxHeight(1000, 0.5)).toBe(500);
+  });
+
+  it("never returns a negative height for a degenerate window", () => {
+    expect(dialogMaxHeight(50)).toBe(0);
+  });
+});
+
+describe("isScrollable", () => {
+  it("is false when the content fits", () => {
+    expect(isScrollable(200, 300)).toBe(false);
+    expect(isScrollable(300, 300)).toBe(false);
+  });
+
+  it("ignores sub-dp rounding differences", () => {
+    expect(isScrollable(300.6, 300)).toBe(false);
+  });
+
+  it("is true when the content is taller than the viewport", () => {
+    expect(isScrollable(302, 300)).toBe(true);
+  });
+
+  it("is false before the viewport has been measured", () => {
+    expect(isScrollable(500, 0)).toBe(false);
   });
 });
