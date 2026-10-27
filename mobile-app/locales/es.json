@@ -788,6 +788,10 @@
     "disconnectError": "No se pudo desconectar la cuenta de Google.",
     "unavailable": "El inicio de sesión con Google no está disponible en esta versión de la app (por ejemplo, Expo Go). Se requiere una compilación nativa (APK) para usar esta función."
   },
+  "backupCollaboration": {
+    "title": "Copia de seguridad y colaboración",
+    "queueTitle": "Cola de puntos"
+  },
   "driveBackup": {
     "activateAction": "Activar Copia de Seguridad en Drive",
     "backupAction": "Hacer Copia de Seguridad",
@@ -865,6 +869,12 @@
     "scopeProject": "Datos del proyecto",
     "scopePoints": "Puntos",
     "backupButton": "Hacer copia",
+    "summary": {
+      "upToDate": "Datos y puntos al día con Drive",
+      "pending": "Hay elementos sin copia en Drive"
+    },
+    "queueBadgeOne": "{{count}} en la cola",
+    "queueBadgeOther": "{{count}} en la cola",
     "accountMismatch": "La cuenta de Google conectada no es la del dueño de este proyecto. Vuelva a conectar con la cuenta correcta.",
     "status": {
       "checking": "Verificando...",

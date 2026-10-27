@@ -788,6 +788,10 @@
     "disconnectError": "Could not disconnect the Google account.",
     "unavailable": "Google sign-in isn't available in this build of the app (e.g. Expo Go). A native build (APK) is required to use this feature."
   },
+  "backupCollaboration": {
+    "title": "Backup and Collaboration",
+    "queueTitle": "Point queue"
+  },
   "driveBackup": {
     "activateAction": "Activate Drive Backup",
     "backupAction": "Back Up",
@@ -865,6 +869,12 @@
     "scopeProject": "Project data",
     "scopePoints": "Points",
     "backupButton": "Back up",
+    "summary": {
+      "upToDate": "Data and points up to date with Drive",
+      "pending": "Some items are not backed up to Drive"
+    },
+    "queueBadgeOne": "{{count}} in the queue",
+    "queueBadgeOther": "{{count}} in the queue",
     "accountMismatch": "The connected Google account is not this project's owner. Reconnect with the right account.",
     "status": {
       "checking": "Checking...",

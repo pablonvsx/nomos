@@ -788,6 +788,10 @@
     "disconnectError": "Impossible de déconnecter le compte Google.",
     "unavailable": "La connexion Google n'est pas disponible dans cette version de l'application (ex. Expo Go). Une version native (APK) est nécessaire pour utiliser cette fonctionnalité."
   },
+  "backupCollaboration": {
+    "title": "Sauvegarde et collaboration",
+    "queueTitle": "File des points"
+  },
   "driveBackup": {
     "activateAction": "Activer la Sauvegarde sur Drive",
     "backupAction": "Sauvegarder",
@@ -865,6 +869,12 @@
     "scopeProject": "Données du projet",
     "scopePoints": "Points",
     "backupButton": "Sauvegarder",
+    "summary": {
+      "upToDate": "Données et points à jour avec Drive",
+      "pending": "Certains éléments ne sont pas sauvegardés sur Drive"
+    },
+    "queueBadgeOne": "{{count}} dans la file",
+    "queueBadgeOther": "{{count}} dans la file",
     "accountMismatch": "Le compte Google connecté n'est pas celui du propriétaire de ce projet. Reconnectez-vous avec le bon compte.",
     "status": {
       "checking": "Vérification...",

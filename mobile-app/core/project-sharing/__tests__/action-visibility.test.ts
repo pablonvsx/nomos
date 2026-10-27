@@ -47,6 +47,13 @@ describe("getProjectActionVisibility (section 10.0 table)", () => {
     ]);
   });
 
+  it("shows the 'Backup e Colaboração' card (backup flag) only to the owner", () => {
+    expect(getProjectActionVisibility("owner").backup).toBe(true);
+    expect(getProjectActionVisibility("collaborator").backup).toBe(false);
+    expect(getProjectActionVisibility(null).backup).toBe(false);
+    expect(getProjectActionVisibility(undefined).backup).toBe(false);
+  });
+
   it("never offers a collaborator copy any owner or not-yet-shared action", () => {
     const v = getProjectActionVisibility("collaborator");
     expect(v.exportConfigPackage).toBe(false);

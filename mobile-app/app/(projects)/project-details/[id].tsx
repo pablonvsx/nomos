@@ -110,7 +110,7 @@ import { formatPointName } from "@/core/points/point-label";
 import { computeBackupStatus } from "@/core/drive-sync/backup-status-service";
 import { decideExportGate, type ExportGateReason } from "@/core/project-sharing/export-gate";
 import { useBackupStatus } from "@/hooks/use-backup-status";
-import { DriveBackupCard } from "@/components/drive-sync/DriveBackupCard";
+import { BackupCollaborationCard } from "@/components/project-sharing/BackupCollaborationCard";
 import { ExportWarningDialog } from "@/components/drive-sync/ExportWarningDialog";
 import { isOnline } from "@/core/net/connectivity";
 import { parseFeatureCollection } from "@/core/utils/geojson";
@@ -1148,6 +1148,23 @@ function UnifiedProjectDetailsScreen() {
           </Card.Content>
         </Card>
 
+        {/* Backup and collaboration (owner only, section 10.0): Drive backup block + point queue, collapsed by default */}
+        {visibility.backup && (
+          <BackupCollaborationCard
+            projectStatus={projectDataBackup.status}
+            pointsStatus={pointsBackup.status}
+            busy={busy || isBackupBusy()}
+            onBackupProject={handleBackupProjectData}
+            onBackupPoints={handleBackupAllPoints}
+            pendingCount={pendingApprovalsCount}
+            rejectedCount={rejectedPointsCount}
+            showPendingApprovals={visibility.pendingApprovals}
+            showRejectedPoints={visibility.rejectedPoints}
+            onOpenPendingApprovals={() => router.push(`/project-pending-approvals/${id}` as any)}
+            onOpenRejectedPoints={() => router.push(`/project-rejected/${id}` as any)}
+          />
+        )}
+
         {/* Map Visualization */}
         <Card style={[styles.card, { backgroundColor: paperTheme.colors.surface }]}>
           <Card.Content>
@@ -1199,17 +1216,6 @@ function UnifiedProjectDetailsScreen() {
             </View>
           </Card.Content>
         </Card>
-
-        {/* Drive backup: what is pending per scope, owner only */}
-        {visibility.backup && driveLinkedOwner && (
-          <DriveBackupCard
-            projectStatus={projectDataBackup.status}
-            pointsStatus={pointsBackup.status}
-            busy={busy || isBackupBusy()}
-            onBackupProject={handleBackupProjectData}
-            onBackupPoints={handleBackupAllPoints}
-          />
-        )}
 
         {/* Vegetation Classification — shown whenever the project's active modules include "vegetation" */}
         {hasVegetationModule && <Card style={[styles.card, { backgroundColor: paperTheme.colors.surface }]}>
@@ -1349,41 +1355,6 @@ function UnifiedProjectDetailsScreen() {
             <FlatList data={surveyPoints} keyExtractor={item => item.id.toString()} renderItem={renderSurveyPoint} scrollEnabled={false} />
           </Card.Content>
         </Card>
-
-        {/* Local approval queue links (Fase 3) - owner only (section 10.0) */}
-        {visibility.pendingApprovals && (
-        <Card
-          style={[styles.pointCard, { backgroundColor: paperTheme.colors.surface }]}
-          onPress={() => router.push(`/project-pending-approvals/${id}` as any)}
-          mode="elevated"
-        >
-          <Card.Content>
-            <View style={styles.pointHeader}>
-              <Text variant="titleMedium" style={{ fontWeight: "bold" }}>
-                {t("pointApproval.pendingApprovalsTitle")} ({pendingApprovalsCount})
-              </Text>
-              <IconButton icon="chevron-right" size={24} style={{ marginRight: -8 }} />
-            </View>
-          </Card.Content>
-        </Card>
-        )}
-
-        {visibility.rejectedPoints && (
-        <Card
-          style={[styles.pointCard, { backgroundColor: paperTheme.colors.surface }]}
-          onPress={() => router.push(`/project-rejected/${id}` as any)}
-          mode="elevated"
-        >
-          <Card.Content>
-            <View style={styles.pointHeader}>
-              <Text variant="titleMedium" style={{ fontWeight: "bold" }}>
-                {t("pointApproval.rejectedPointsTitle")} ({rejectedPointsCount})
-              </Text>
-              <IconButton icon="chevron-right" size={24} style={{ marginRight: -8 }} />
-            </View>
-          </Card.Content>
-        </Card>
-        )}
       </ScrollView>
 
       <FAB.Group

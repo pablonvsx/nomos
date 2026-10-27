@@ -132,7 +132,7 @@ row of the original design table; it is the owner-side half of the points
 flow, so it follows the owner column.
 
 The consumers are `app/(projects)/project-details/[id].tsx` (FAB actions
-and the approval/rejected cards), `app/(survey)/survey-point-details/[id].tsx`
+and the owner-only Backup and Collaboration card, which holds the Drive backup rows and the approval/rejected links), `app/(survey)/survey-point-details/[id].tsx`
 ("send to owner"), and the two owner-only screens
 (`project-pending-approvals/[id].tsx`, `project-rejected/[id].tsx`), which
 also load the project and navigate back if the role is not `'owner'`, so a
@@ -653,10 +653,21 @@ error reading the project or the snapshot, or an up-to-date project whose
 connected Google account is not the owner's (the backup could not run); it is
 never reported as a false "up to date". It is computed in small async steps
 when the screen gains focus and when a backup ends, so opening the screen does
-not block. The project screen shows an owner-only card
-(`DriveBackupCard`) with one row per scope: the status text ("Up to date with
-Drive (date)" or "N item(s) pending") and a button that is enabled unless the
-scope is verifiably up to date.
+not block. The project screen shows an owner-only, collapsible card
+("Backup and Collaboration", `BackupCollaborationCard`) placed right below the
+project details card. Its "Drive backup" block (`DriveBackupRows`) has one row
+per scope: the status text ("Up to date with Drive (date)" or "N item(s)
+pending") and a button that is enabled unless the scope is verifiably up to
+date. The card starts collapsed on every visit (local state, not persisted).
+Collapsed, it shows a one-line summary and, when there are pending approvals,
+a badge. The summary (`getBackupSummaryState` in
+`core/drive-sync/backup-summary.ts`) is "up to date" only when both rows are
+up to date, using the same `isBackupUpToDate` rule as the rows, "pending" when
+any scope has items to send, and otherwise reuses the row text ("Checking...",
+"Could not verify the backup") so it never claims a pending state it does not
+know. Inside the open card, a second collapsible level, "Point queue", holds the
+"Pending approvals (N)" and "Rejected points (N)" links; collapsed, it shows the
+pending-approval count.
 
 ## The backup session and modal
 

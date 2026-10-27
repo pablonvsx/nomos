@@ -224,10 +224,10 @@ components/
 ├── survey/          InsertLocationModal.tsx, SpeciesInput.tsx, SurveySelect.tsx
 ├── map/            MapLegend.tsx, LayerMenu.tsx, map-overlay-styles.ts — map overlays (see 09_SCREEN_FLOW.md)
 ├── settings/        SpeciesLinkSettingsModal.tsx
-├── drive-sync/      RestoreProjectsModal.tsx, BackupModal.tsx (global backup modal), DriveBackupCard.tsx, ExportWarningDialog.tsx — see 12_BACKUP_COLLABORATION.md
+├── drive-sync/      RestoreProjectsModal.tsx, BackupModal.tsx (global backup modal), DriveBackupRows.tsx, ExportWarningDialog.tsx — see 12_BACKUP_COLLABORATION.md
 ├── google-account/  GoogleConnectionModal.tsx — single shared connection modal
 ├── local-identity/  CollectorCodeModal.tsx — single shared collector-code modal
-├── project-sharing/ PointDuplicatesModal.tsx — Substituir/Descartar on points-package import
+├── project-sharing/ PointDuplicatesModal.tsx — Substituir/Descartar on points-package import, BackupCollaborationCard.tsx (collapsible owner card on the project screen)
 ├── protocol/        ScientificModulePickerDialog.tsx — module cards of the custom-protocol builder's "attach scientific module" dialog
 ├── ErrorBoundary.tsx, HapticTab.tsx
 ```

@@ -86,11 +86,35 @@ flowchart TD
     Backup -->|"ended 'completed' + OK: export resumes"| Details
 ```
 
-The backup is on demand: the project screen has an owner-only "Drive backup"
-card (`DriveBackupCard`) with one row per scope (project data, points), each
-showing its status ("Up to date with Drive (date)" / "N item(s) pending" /
-"could not be verified") and a button that is disabled only when the scope is
-verifiably up to date. The activation of the backup is a session too: after the account confirmation, the same pre-flight and the same `BackupModal` (with its own texts: "Activating the Drive backup", "Backup activated" / "Activation cancelled" / "The backup could not be activated"); leaving the screen is not possible while it runs, and the project only becomes an owner project when it ends complete. `BackupModal` is mounted once at the app root and
+The backup is on demand. The project screen lists its cards in this order:
+project details, **Backup and Collaboration** (owner only), map visualization,
+vegetation classification, species catalog, survey points. The Backup and
+Collaboration card (`BackupCollaborationCard`) is shown only when
+`getProjectActionVisibility(role).backup` is true, that is, to the owner;
+collaborator copies and plain local projects do not get the card and the screen
+is unchanged for them. It is collapsible in two independent levels, both always
+**collapsed when the screen opens**. The state is a local `useState` of the
+card: it is never stored (no AsyncStorage, database or route parameter) and it
+is not reset when coming back from a sub-screen, because the project screen
+stays mounted.
+
+- **Level 1, the card.** The whole header is one touch target. Collapsed, it
+  shows the title, a one-line summary ("Data and points up to date with Drive",
+  "Some items are not backed up to Drive", or the row wording "Checking..." /
+  "Could not verify the backup" while a scope is unknown) and, when there are
+  pending approvals, a badge ("N in the queue"; rejected points do not count,
+  and with zero there is no badge). Open, it shows the "Drive backup" block:
+  one row per scope (project data, points), each with its status ("Up to date
+  with Drive (date)" / "N item(s) pending" / "could not be verified") and a
+  button that is disabled only when the scope is verifiably up to date.
+- **Level 2, "Point queue".** A sub-section inside the open card with its own
+  header. Collapsed, it shows the number of pending approvals when above zero.
+  Open, it shows the "Pending approvals (N)" and "Rejected points (N)" rows,
+  each with a chevron, navigating to `project-pending-approvals/[id]` and
+  `project-rejected/[id]` (route guards unchanged).
+
+The screen, not the card, owns the backup operation (exclusive lock, banner,
+FAB, handlers); the card only presents and keeps the two open flags. The activation of the backup is a session too: after the account confirmation, the same pre-flight and the same `BackupModal` (with its own texts: "Activating the Drive backup", "Backup activated" / "Activation cancelled" / "The backup could not be activated"); leaving the screen is not possible while it runs, and the project only becomes an owner project when it ends complete. `BackupModal` is mounted once at the app root and
 driven by the global backup session, so it keeps the person until the end
 whatever screen started it: Back and a tap outside ask whether to cancel, and
 a finished backup closes only with OK. Its states: `running` → (`confirmingCancel`

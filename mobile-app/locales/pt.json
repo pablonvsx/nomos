@@ -788,6 +788,10 @@
     "disconnectError": "Não foi possível desconectar a conta Google.",
     "unavailable": "O login com Google não está disponível nesta versão do app (ex.: Expo Go). É necessário um build nativo (APK) para usar este recurso."
   },
+  "backupCollaboration": {
+    "title": "Backup e Colaboração",
+    "queueTitle": "Fila de pontos"
+  },
   "driveBackup": {
     "activateAction": "Ativar Backup no Drive",
     "backupAction": "Fazer Backup",
@@ -865,6 +869,12 @@
     "scopeProject": "Dados do projeto",
     "scopePoints": "Pontos",
     "backupButton": "Fazer backup",
+    "summary": {
+      "upToDate": "Dados e pontos em dia com o Drive",
+      "pending": "Há itens sem backup no Drive"
+    },
+    "queueBadgeOne": "{{count}} na fila",
+    "queueBadgeOther": "{{count}} na fila",
     "accountMismatch": "A conta do Google conectada não é a do dono deste projeto. Reconecte com a conta correta.",
     "status": {
       "checking": "Verificando...",

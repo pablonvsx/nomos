@@ -33,7 +33,12 @@ export function backupStatusText(status: BackupStatus | null, formatDate: (iso: 
   }
 }
 
+/** The one definition of "em dia com o Drive": a verified status with nothing left to send. */
+export function isBackupUpToDate(status: BackupStatus | null): boolean {
+  return status?.kind === "upToDate";
+}
+
 /** The backup button is available unless the project is verifiably up to date. */
 export function isBackupActionEnabled(status: BackupStatus | null): boolean {
-  return status !== null && status.kind !== "upToDate";
+  return status !== null && !isBackupUpToDate(status);
 }
