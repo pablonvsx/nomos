@@ -392,6 +392,10 @@
     "openSite": "Abrir página de Nomos",
     "openSiteA11y": "Abrir la página de Nomos en el navegador",
     "installedVersion": "Versión instalada: {{version}}",
+    "updateChecking": "Buscando actualizaciones...",
+    "updateUpToDate": "Esta es la versión más reciente.",
+    "updateAvailable": "Hay una nueva versión disponible ({{version}}). Abra la página de Nomos para descargarla.",
+    "updateCheckFailed": "No se pudo buscar actualizaciones ahora.",
     "openErrorTitle": "Enlace no disponible",
     "openError": "No se pudo abrir la página de Nomos. Verifique que haya un navegador instalado en el dispositivo e inténtelo de nuevo."
   },

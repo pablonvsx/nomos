@@ -7,4 +7,7 @@
 import Constants from "expo-constants";
 import { formatAppVersion } from "@/utils/app-version";
 
+/** Raw installed version ("1.1.0"), for comparisons. Empty when unavailable. */
+export const APP_VERSION = Constants.expoConfig?.version ?? "";
+
 export const APP_VERSION_LABEL = formatAppVersion(Constants.expoConfig?.version);

@@ -393,6 +393,10 @@
     "openSite": "Open Nomos page",
     "openSiteA11y": "Open the Nomos page in the browser",
     "installedVersion": "Installed version: {{version}}",
+    "updateChecking": "Checking for updates...",
+    "updateUpToDate": "This is the latest version.",
+    "updateAvailable": "A new version is available ({{version}}). Open the Nomos page to download it.",
+    "updateCheckFailed": "Could not check for updates right now.",
     "openErrorTitle": "Link unavailable",
     "openError": "The Nomos page could not be opened. Check that a web browser is installed on this device and try again."
   },

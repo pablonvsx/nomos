@@ -393,6 +393,10 @@
     "openSite": "Ouvrir la page de Nomos",
     "openSiteA11y": "Ouvrir la page de Nomos dans le navigateur",
     "installedVersion": "Version installée : {{version}}",
+    "updateChecking": "Recherche de mises à jour...",
+    "updateUpToDate": "Ceci est la dernière version.",
+    "updateAvailable": "Une nouvelle version est disponible ({{version}}). Ouvrez la page de Nomos pour la télécharger.",
+    "updateCheckFailed": "Impossible de vérifier les mises à jour pour le moment.",
     "openErrorTitle": "Lien indisponible",
     "openError": "Impossible d'ouvrir la page de Nomos. Vérifiez qu'un navigateur est installé sur l'appareil et réessayez."
   },

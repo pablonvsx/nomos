@@ -8,11 +8,13 @@ import { BUTTON_RADIUS } from "@/constants/shape";
 import { PROJECT_PAGE_URL } from "@/constants/links";
 import { APP_VERSION_LABEL } from "@/constants/app-version";
 import { openExternalUrl } from "@/utils/open-external-url";
+import { useAppUpdateStatus } from "@/hooks/use-app-update-status";
 
 export default function ResourcesScreen() {
   const paperTheme = usePaperTheme();
   const { t } = useI18n();
   const { alert } = useAlertDialog();
+  const updateState = useAppUpdateStatus();
 
   // Opened only on tap: the app is offline-first, nothing depends on this link.
   const openSite = async () => {
@@ -21,6 +23,16 @@ export default function ResourcesScreen() {
       alert(t("resources.openErrorTitle"), t("resources.openError"));
     }
   };
+
+  // A failed check with nothing cached reads as a neutral note, not as an error.
+  const updateMessage =
+    updateState.status === "checking"
+      ? t("resources.updateChecking")
+      : updateState.status === "upToDate"
+        ? t("resources.updateUpToDate")
+        : updateState.status === "updateAvailable"
+          ? t("resources.updateAvailable", { version: updateState.latestVersion })
+          : t("resources.updateCheckFailed");
 
   return (
     <ScrollView
@@ -67,6 +79,14 @@ export default function ResourcesScreen() {
         >
           {t("resources.installedVersion", { version: APP_VERSION_LABEL })}
         </Text>
+
+        <Text
+          variant="bodyMedium"
+          accessibilityLiveRegion="polite"
+          style={[styles.updateStatus, { color: paperTheme.colors.onSurfaceVariant }]}
+        >
+          {updateMessage}
+        </Text>
       </View>
     </ScrollView>
   );
@@ -100,6 +120,10 @@ const styles = StyleSheet.create({
   },
   version: {
     marginTop: 32,
+    textAlign: "center",
+  },
+  updateStatus: {
+    marginTop: 4,
     textAlign: "center",
   },
 });

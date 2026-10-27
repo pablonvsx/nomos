@@ -18,6 +18,7 @@ Documentation kept faithful to Nomos's actual code (not to old planning specs), 
 12. [11_GUIDE_NEW_MODULE.md](11_GUIDE_NEW_MODULE.md) — smaller-scope guide: adding a module to an already-existing protocol.
 13. [12_BACKUP_COLLABORATION.md](12_BACKUP_COLLABORATION.md) — the single-owner Drive backup model, the collaborator/owner packages, and the shared modals that connect them.
 14. [13_FAQ.md](13_FAQ.md) — short answers to recurring questions, with file/line references.
+15. [14_APP_UPDATE_CHECK.md](14_APP_UPDATE_CHECK.md) — the update status line on the Resources screen: `nomos-version.json` format and validation, states, offline-first cache policy, and how to publish a new version.
 
 ## Suggested reading order
 
