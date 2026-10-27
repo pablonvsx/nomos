@@ -93,6 +93,7 @@ core/
 │   ├── restore-errors.ts           MediaRestoreError (dependency-free, usable with instanceof)
 │   └── restore-error-messages.ts   describeRestoreError (pure, testable error→i18n-key mapping)
 ├── media-layout/                   the one media folder layout (photos/, audio/, section_*, group_*), pure; used by media export, points package and Drive, see 12_BACKUP_COLLABORATION.md
+├── app-update/                     update status line of the Resources screen: semver compare, nomos-version.json validation, cached check, see 14_APP_UPDATE_CHECK.md
 ├── project-sharing/                the two export/import packages, see 12_BACKUP_COLLABORATION.md
 │   ├── project-config-package.ts   build/apply the configuration package
 │   ├── export-points.ts            build/share the points package (.zip)
@@ -196,7 +197,6 @@ db/
 ├── mappers/
 │   ├── point.mapper.ts        mapPointFromDb, buildPointWithModules, buildPointEnvelope
 │   ├── species.mapper.ts
-│   ├── project-species.mapper.ts
 │   ├── protocol.mapper.ts
 │   ├── custom-protocol.mapper.ts
 │   └── json-utils.ts          parseJsonText, ensureJsonText
@@ -228,6 +228,7 @@ components/
 ├── google-account/  GoogleConnectionModal.tsx — single shared connection modal
 ├── local-identity/  CollectorCodeModal.tsx — single shared collector-code modal
 ├── project-sharing/ PointDuplicatesModal.tsx — Substituir/Descartar on points-package import
+├── protocol/        ScientificModulePickerDialog.tsx — module cards of the custom-protocol builder's "attach scientific module" dialog
 ├── ErrorBoundary.tsx, HapticTab.tsx
 ```
 
@@ -255,7 +256,7 @@ hooks/
 ├── use-stable-text-input.ts     avoids re-injecting `value` into a focused TextInput (Android flicker bug)
 ├── use-bottom-content-padding.ts  bottom padding to clear floating UI/safe area
 ├── use-scroll-overflow.ts       tracks whether scrollable content overflows its container
-├── use-color-scheme.ts (+.web.ts)
+├── use-app-update-status.ts     checks for a newer app version when the Resources screen is focused, see 14_APP_UPDATE_CHECK.md
 └── use-google-account.ts        thin useState wrapper around core/google-auth/google-account-controller.ts
                                    (the pure logic lives in the controller so it's testable without
                                    react-test-renderer, which this project's Jest setup doesn't have)

@@ -34,7 +34,7 @@ export type UpdatePointInput = Partial<Omit<CreatePointInput, "project_id" | "pr
  * SQL condition for the project's general point list/map/exports: only
  * points collected directly (NULL) or already approved. Pending points live
  * only in the approval queue and rejected ones only in the rejected area
- * (section 6 of COLLAB_MODEL_REFERENCE.md).
+ * ("Local approval queue and rejected points" in docs/12_BACKUP_COLLABORATION.md).
  */
 export const VISIBLE_POINT_CONDITION = "(approval_status IS NULL OR approval_status = 'approved')";
 

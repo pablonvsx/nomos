@@ -1143,3 +1143,30 @@ merged into one message rather than alerted one after another.
   and a real zip reader, but not the native `react-native-zip-archive`
   library; the Drive suites use an in-memory fake Drive. Neither replaces
   a run on a device against the real Drive.
+
+## Implementation rules for contributors
+
+The rules below were written down while the collaboration and backup model was
+built, and they still apply to any change in this area.
+
+- **Never rebuild a Drive JSON file from scratch.** `manifest.json` (and the
+  other Drive JSON files) are read, changed field by field and written back, so
+  a field this build does not know about, or an identity field, is never lost.
+- **Never persist a path from a temporary or extraction-only location.** Media
+  is copied into persistent app storage first, and only that URI is stored.
+- **`owner_email` is a secondary signal.** The identity checks are the project
+  and point UUIDs and the role; the e-mail only drives a non-blocking warning.
+- **One shared UUID helper, check before generating.** Every `uuid` goes
+  through the same helper and an existing value is reused, never regenerated,
+  so exporting twice yields the same identifiers.
+- **Reject unknown `format_version` explicitly.** Every package and Drive file
+  checks `format_version` before reading anything else and fails with a
+  specific, translated message for a version this build does not understand.
+- **Follow the app's visual conventions.** Justified body text, rectangular
+  buttons with the shared corner radius (`BUTTON_RADIUS`), theme tokens for
+  every color, `ModalActions` for dialog footers; reuse a shared component
+  before writing a new one.
+- **Code, identifiers and comments are in English**, even though the interface
+  texts are localized.
+- **A fix is done when a test proves it.** A bug fix comes with an automated
+  test that fails before the change and passes after it.

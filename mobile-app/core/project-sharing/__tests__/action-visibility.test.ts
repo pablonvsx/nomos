@@ -5,7 +5,7 @@ import {
   type ProjectActionVisibility,
 } from "../action-visibility";
 
-// Section 10.0 of COLLAB_MODEL_REFERENCE.md, written out literally: one row
+// "Role-based actions" in docs/12_BACKUP_COLLABORATION.md, written out literally: one row
 // per action, columns are role = NULL | 'collaborator' | 'owner'.
 const TABLE: Array<[keyof ProjectActionVisibility, boolean, boolean, boolean]> = [
   ["exportConfigPackage", true, false, true],

@@ -258,7 +258,7 @@ describe("returnPointToPending (a point rejected by mistake)", () => {
   });
 });
 
-// Section 6 of COLLAB_MODEL_REFERENCE.md: the general point list/map must only
+// "Local approval queue and rejected points" in docs/12_BACKUP_COLLABORATION.md: the general point list/map must only
 // ever contain NULL (collected directly) or 'approved' points.
 function seedAllStatuses() {
   seedPoint({ id: 1, approval_status: null, generated_name: "A" });

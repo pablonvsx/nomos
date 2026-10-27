@@ -14,7 +14,7 @@ export interface ProjectActionVisibility {
 
 /**
  * Single source of truth for which collaboration action each project role
- * sees (section 10.0 of COLLAB_MODEL_REFERENCE.md). Every screen must derive
+ * sees ("Role-based actions" in docs/12_BACKUP_COLLABORATION.md). Every screen must derive
  * its buttons/cards from this instead of checking the role inline - it is a
  * strict role boundary, not a Google-account boundary.
  *

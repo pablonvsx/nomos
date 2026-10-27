@@ -7,9 +7,6 @@
 // new native protocol, just add an entry here (key = same `id` as the
 // manifest), without touching modules/<id>/.
 //
-// The former per-protocol "workflow" prose (shown by the removed native
-// protocols screen) is preserved in docs/protocolos-nativos-app-legado.md.
-//
 // Lives in constants/ (not app/) because any file inside app/ is treated
 // by Expo Router as a route - a module without a component default export
 // there triggers the "missing the required default export" warning.
