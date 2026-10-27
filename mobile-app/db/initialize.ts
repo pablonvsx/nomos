@@ -78,8 +78,6 @@ async function migrateSchema(): Promise<void> {
 
 export async function initDatabase() {
   try {
-    console.log("🔧 Initializing database...");
-
     // Performance and integrity settings
     await db.execAsync("PRAGMA journal_mode = WAL");
     await db.execAsync("PRAGMA foreign_keys = ON");
@@ -324,10 +322,8 @@ export async function initDatabase() {
         `,
         [protocolId],
       );
-      console.log("✓ Default protocol created");
     }
 
-    console.log("✅ Database initialized successfully!");
   } catch (error) {
     console.error("❌ Database initialization error:", error);
     throw error;

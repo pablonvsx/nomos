@@ -290,7 +290,7 @@ export default function ProtocolBuilderScreen() {
         sections,
         metadata: {
           version: "1.0",
-          created_by: "user", // TODO: Add user system
+          created_by: "user", // placeholder author: there is no user system yet
         },
       };
 
