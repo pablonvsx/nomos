@@ -50,6 +50,7 @@ import { Species, VegetationClass } from "@/types/database";
 // PAISAGEO modules (types only + the impacts conversion for the naming capability)
 import type { VegetationModuleData } from "@/modules/paisageo/modules/vegetation/serde";
 import { vegetationSchema } from "@/modules/paisageo/modules/vegetation/schema";
+import { applyVegetationRendererUpdate } from "@/modules/paisageo/modules/vegetation/form-owned-fields";
 import type { GeoecologicalConstraintsModuleData } from "@/modules/paisageo/modules/geoecological-constraints/serde";
 import type { ImpactsModuleData } from "@/modules/paisageo/modules/impacts/serde";
 import { toRecordJson } from "@/modules/paisageo/modules/impacts/serde";
@@ -85,7 +86,10 @@ const SUBSTITUTED_STATUS = "substituida";
 // don't have their own specialized widget - unlike the Kuchler matrix
 // (VegetationModuleRenderer), they're generic fields rendered directly by
 // this screen, which allows freely controlling the card order (e.g.
-// "Parcel Size" between homogeneity and vegetation structure).
+// "Parcel Size" between homogeneity and vegetation structure). Because the
+// renderer never re-renders for them, the screen is their only owner:
+// handleModuleChange keeps them out of whatever the renderer reports
+// (modules/paisageo/modules/vegetation/form-owned-fields.ts).
 // context_flags used to be here too, but it's rendered by
 // VegetationModuleRenderer now, as a collapsible section under the matrix
 // it complements (see that file).
@@ -404,7 +408,16 @@ export default function SurveyFormScreen() {
   }, []);
 
   const handleModuleChange = useCallback((moduleId: string, next: unknown) => {
-    setModuleValues((prev) => ({ ...prev, [moduleId]: next as Record<string, unknown> }));
+    setModuleValues((prev) => ({
+      ...prev,
+      // The vegetation renderer is memoized on the fields it reads, so its copy of the blob can be
+      // older than ours for the fields this screen edits itself (homogeneity, conservation, land
+      // use): those are always kept from the latest state, never from what the renderer reports.
+      [moduleId]:
+        moduleId === "vegetation"
+          ? applyVegetationRendererUpdate(prev["vegetation"], next)
+          : (next as Record<string, unknown>),
+    }));
   }, []);
 
   const handlePointFieldChange = useCallback((key: string, value: unknown) => {

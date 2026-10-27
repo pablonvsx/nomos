@@ -82,8 +82,11 @@ interface VegetationModuleRendererProps extends ModuleRendererProps {
 // force KuchlerMatrix (the heaviest widget in the form) to fully re-render
 // for a change it doesn't even use. Comparing only the fields actually read
 // below keeps this renderer (and KuchlerMatrix under it) stable across those
-// edits. Safe against staleness: handleVegFieldChange's shallow spread in
-// form.tsx preserves the matrix/leaf_matrix object references untouched.
+// edits. The matrix/leaf_matrix references are preserved by handleVegFieldChange's
+// shallow spread in form.tsx. The price: this renderer does NOT re-render when
+// those loose fields change, so the blob in `dataRef` below can be older than the
+// screen's state for them. Its updates therefore must not be trusted for those
+// keys: form.tsx's handleModuleChange restores them (form-owned-fields.ts).
 function sameVegetationValue(prevValue: unknown, nextValue: unknown): boolean {
   const a = (prevValue != null && typeof prevValue === "object" ? prevValue : {}) as VegetationModuleData;
   const b = (nextValue != null && typeof nextValue === "object" ? nextValue : {}) as VegetationModuleData;
