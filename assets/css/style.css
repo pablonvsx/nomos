@@ -243,8 +243,7 @@ p,
 
 .features li,
 .person,
-.resource,
-.inst-links {
+.resource {
   min-width: 0;
   padding: 0.875rem 1rem;
   border: 1px solid var(--border);
@@ -476,6 +475,7 @@ button.link-button {
 .logo-strip {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 0.5rem;
   margin: 0 0 1rem;
   padding: 0;
@@ -485,7 +485,7 @@ button.link-button {
 /* Fixed light background in both themes, so the logos stay legible in dark mode. */
 .logo-card {
   display: flex;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   align-items: center;
   justify-content: center;
   padding: 0.5rem 0.75rem;
@@ -503,28 +503,51 @@ button.link-button {
 }
 
 .inst-links {
+  display: flex;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 1.25rem;
   margin: 0;
-  padding-block: 0.25rem;
+  padding: 0;
   list-style: none;
+  font-size: 0.75rem;
+  color: var(--muted);
 }
 
 .inst-links > li {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.5rem;
   min-width: 0;
-  min-height: 2.75rem;
-}
-
-.inst-links > li + li {
-  border-top: 1px solid var(--border);
 }
 
 .inst-name {
-  font-size: 0.875rem;
   font-weight: 600;
-  color: var(--text);
+}
+
+.inst-links .link-list {
+  gap: 0.625rem;
+  font-size: inherit;
+}
+
+.inst-links .icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+@container (max-width: 29rem) {
+  .inst-links .link-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
 }
 
 /* Citation */
@@ -562,11 +585,6 @@ button.link-button {
   -webkit-hyphens: none;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-}
-
-/* Reserved height so switching formats does not shift the content below. */
-.js .reference {
-  min-height: 14rem;
 }
 
 .reference--code {
@@ -630,22 +648,6 @@ button.link-button {
   .link-button--block {
     width: fit-content;
     min-width: 18rem;
-  }
-
-  .logo-card {
-    flex: 0 1 auto;
-  }
-
-  .inst-links {
-    container-type: normal;
-    width: fit-content;
-    min-width: 22rem;
-  }
-
-  .inst-links > li {
-    display: grid;
-    grid-template-columns: 8rem auto;
-    justify-content: start;
   }
 }
 
