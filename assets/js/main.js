@@ -165,4 +165,5 @@
   initLanguage();
   initDownload();
   initCitation();
+  i18n.apply(i18n.get());
 })();

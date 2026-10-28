@@ -79,6 +79,7 @@
       'cite.copied': 'Referência copiada',
       'cite.copyFailed': 'Não foi possível copiar',
       'cite.note': 'Referências geradas automaticamente. Confira as normas da revista ou da instituição.',
+      'cite.versionNote': 'Para citar uma versão específica, use o DOI dela no <a href="{url}" target="_blank" rel="noopener noreferrer">registro do Zenodo<span class="visually-hidden"> (abre em nova aba)</span></a>.',
       'code.title': 'Código e licença',
       'code.text': 'O código do Nomos está aberto e é distribuído sob a licença GNU GPL v3.',
       'code.button': 'Repositório no GitHub'
@@ -140,6 +141,7 @@
       'cite.copied': 'Reference copied',
       'cite.copyFailed': 'Could not copy',
       'cite.note': 'References are generated automatically. Check the guidelines of the journal or institution.',
+      'cite.versionNote': 'To cite a specific version, use its DOI on the <a href="{url}" target="_blank" rel="noopener noreferrer">Zenodo record<span class="visually-hidden"> (opens in a new tab)</span></a>.',
       'code.title': 'Code and license',
       'code.text': 'The Nomos source code is open and distributed under the GNU GPL v3 license.',
       'code.button': 'GitHub repository'
@@ -201,6 +203,7 @@
       'cite.copied': 'Referencia copiada',
       'cite.copyFailed': 'No se pudo copiar',
       'cite.note': 'Las referencias se generan automáticamente. Consulte las normas de la revista o de la institución.',
+      'cite.versionNote': 'Para citar una versión específica, utilice su DOI en el <a href="{url}" target="_blank" rel="noopener noreferrer">registro de Zenodo<span class="visually-hidden"> (se abre en una pestaña nueva)</span></a>.',
       'code.title': 'Código y licencia',
       'code.text': 'El código de Nomos es abierto y se distribuye bajo la licencia GNU GPL v3.',
       'code.button': 'Repositorio en GitHub'
@@ -262,6 +265,7 @@
       'cite.copied': 'Référence copiée',
       'cite.copyFailed': 'Impossible de copier',
       'cite.note': 'Les références sont générées automatiquement. Vérifiez les normes de la revue ou de l\'institution.',
+      'cite.versionNote': 'Pour citer une version précise, utilisez son DOI sur la <a href="{url}" target="_blank" rel="noopener noreferrer">notice Zenodo<span class="visually-hidden"> (s\'ouvre dans un nouvel onglet)</span></a>.',
       'code.title': 'Code et licence',
       'code.text': 'Le code de Nomos est ouvert et distribué sous la licence GNU GPL v3.',
       'code.button': 'Dépôt GitHub'
@@ -317,6 +321,11 @@
     return readUrlLocale() || readStoredLocale() || DEFAULT_LOCALE;
   }
 
+  function templateVars() {
+    var lib = root.NomosCitation;
+    return lib ? { url: lib.DOI_URL } : {};
+  }
+
   function applyGuide(locale) {
     var link = document.getElementById('guide-link');
     var note = document.querySelector('.resource-note');
@@ -345,7 +354,10 @@
         var htmlKey = el.getAttribute('data-i18n-html');
         var attrs = el.getAttribute('data-i18n-attr');
         if (key) el.textContent = t(key, loc);
-        if (htmlKey) el.innerHTML = t(htmlKey, loc);
+        if (htmlKey) {
+          var html = t(htmlKey, loc, templateVars());
+          if (!/\{\w+\}/.test(html)) el.innerHTML = html;
+        }
         if (attrs) {
           attrs.split(';').forEach(function (pair) {
             var at = pair.indexOf(':');

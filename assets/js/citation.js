@@ -6,6 +6,10 @@
 })(this, function () {
   'use strict';
 
+  // Concept DOI of Nomos on Zenodo (all versions), without the resolver prefix.
+  var NOMOS_DOI = '10.5281/zenodo.22069700';
+  var DOI_URL = 'https://doi.org/' + NOMOS_DOI;
+
   // Single place with the citation data. `version`, `year` and `access` are
   // filled in at runtime (nomos-version.json and the visitor's current day).
   var CONFIG = {
@@ -17,6 +21,8 @@
     country: 'Brazil',
     institution: 'Universidade Federal de Pernambuco',
     url: 'https://pablonvsx.github.io/nomos/',
+    doi: NOMOS_DOI,
+    doiUrl: DOI_URL,
     access: null // { year, month (1-12), day }
   };
 
@@ -52,6 +58,7 @@
     var out = a.family.toUpperCase() + ', ' + a.given + '. ' + d.title + '. ' +
       versionPart(d, 'Versão ', '. ') +
       d.place + ': ' + d.institution + ', ' + d.year + '. Software. ' +
+      'DOI: ' + d.doi + '. ' +
       'Disponível em: ' + d.url + '.';
     if (d.access) {
       out += ' Acesso em: ' + d.access.day + ' ' + MONTHS_PT_ABNT[d.access.month - 1] + ' ' + d.access.year + '.';
@@ -62,7 +69,7 @@
   function apa7(d) {
     return d.author.family + ', ' + dotted(d.author.given) + ' (' + d.year + '). ' + d.title +
       versionPart(d, ' (Version ', ')') + ' [Computer software]. ' +
-      d.institution + '. ' + d.url;
+      d.institution + '. ' + d.doiUrl;
   }
 
   function vancouver(d) {
@@ -72,19 +79,19 @@
     if (d.access) {
       out += ' [cited ' + d.access.year + ' ' + MONTHS_EN_SHORT[d.access.month - 1] + ' ' + pad2(d.access.day) + ']';
     }
-    return out + '. Available from: ' + d.url;
+    return out + '. Available from: ' + d.url + ' doi:' + d.doi;
   }
 
   function ieee(d) {
     return dotted(d.author.given) + ' ' + d.author.family + ', "' + d.title + ',"' +
       versionPart(d, ' version ', ',') + ' software, ' +
-      d.institution + ', ' + d.place + ', ' + d.country + ', ' + d.year + '. [Online]. Available: ' + d.url;
+      d.institution + ', ' + d.place + ', ' + d.country + ', ' + d.year + '. [Online]. Available: ' + d.url + ', doi: ' + d.doi + '.';
   }
 
   function mla9(d) {
     var out = d.author.family + ', ' + d.author.given + '. ' + d.title + '. ' +
       versionPart(d, 'Version ', ', ') +
-      d.institution + ', ' + d.year + ', ' + d.url + '.';
+      d.institution + ', ' + d.year + ', ' + d.doiUrl + '.';
     if (d.access) {
       out += ' Accessed ' + d.access.day + ' ' + MONTHS_EN_MLA[d.access.month - 1] + ' ' + d.access.year + '.';
     }
@@ -94,7 +101,7 @@
   function chicago(d) {
     return d.author.family + ', ' + d.author.given + '. ' + d.year + '. ' + d.title + '. ' +
       versionPart(d, 'Version ', '. ') +
-      d.place + ': ' + d.institution + '. ' + d.url + '.';
+      d.place + ': ' + d.institution + '. ' + d.doiUrl + '.';
   }
 
   function bibtex(d) {
@@ -110,6 +117,7 @@
       '  note         = {Software},',
       '  organization = {' + d.institution + '},',
       '  address      = {' + d.place + '},',
+      '  doi          = {' + d.doi + '},',
       '  howpublished = {\\url{' + d.url + '}}' + (d.access ? ',' : '')
     );
     if (d.access) lines.push('  urldate      = {' + d.access.year + '-' + pad2(d.access.month) + '-' + pad2(d.access.day) + '}');
@@ -131,7 +139,7 @@
       'UR  - ' + d.url
     );
     if (d.access) lines.push('Y2  - ' + d.access.year + '/' + pad2(d.access.month) + '/' + pad2(d.access.day));
-    lines.push('ER  -');
+    lines.push('DO  - ' + d.doi, 'ER  -');
     return lines.join('\n');
   }
 
@@ -147,5 +155,5 @@
     { id: 'ris', label: 'RIS', format: ris, code: true }
   ];
 
-  return { CONFIG: CONFIG, FORMATS: FORMATS };
+  return { CONFIG: CONFIG, FORMATS: FORMATS, DOI: NOMOS_DOI, DOI_URL: DOI_URL };
 });
