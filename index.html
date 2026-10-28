@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Nomos | Aplicativo para inventários ambientais: download, autoria e citação</title>
-  <meta name="description" content="Nomos é um aplicativo móvel para inventários ambientais, desenvolvido no PPGEO da UFPE. Baixe o APK para Android, conheça a autoria e a vinculação acadêmica e veja como citar o software.">
+  <title data-i18n="meta.title">Nomos | Aplicativo para inventários ambientais: download, autoria e citação</title>
+  <meta name="description" data-i18n-attr="content:meta.description" content="Nomos é um aplicativo móvel para inventários ambientais, desenvolvido no PPGEO da UFPE. Baixe o APK para Android, conheça a autoria e a vinculação acadêmica e veja como citar o software.">
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#151718" media="(prefers-color-scheme: dark)">
   <link rel="icon" type="image/svg+xml" href="assets/img/logo.svg">
@@ -13,12 +13,13 @@
   <meta property="og:type" content="website">
   <meta property="og:locale" content="pt_BR">
   <meta property="og:site_name" content="Nomos">
-  <meta property="og:title" content="Nomos | Aplicativo para inventários ambientais">
-  <meta property="og:description" content="Baixe o aplicativo Nomos para Android, conheça a autoria e a vinculação acadêmica e veja como citar o software em ABNT, APA, Vancouver, IEEE, MLA, Chicago, BibTeX e RIS.">
+  <meta property="og:title" data-i18n-attr="content:meta.ogTitle" content="Nomos | Aplicativo para inventários ambientais">
+  <meta property="og:description" data-i18n-attr="content:meta.ogDescription" content="Baixe o aplicativo Nomos para Android, conheça a autoria e a vinculação acadêmica e veja como citar o software em ABNT, APA, Vancouver, IEEE, MLA, Chicago, BibTeX e RIS.">
   <meta property="og:url" content="https://pablonvsx.github.io/nomos/">
   <meta property="og:image" content="https://pablonvsx.github.io/nomos/assets/img/icon.png">
-  <meta property="og:image:alt" content="Logo do Nomos">
+  <meta property="og:image:alt" data-i18n-attr="content:logo.alt" content="Logo do Nomos">
   <link rel="stylesheet" href="assets/css/style.css">
+  <script src="assets/js/i18n.js" defer></script>
   <script src="assets/js/citation.js" defer></script>
   <script src="assets/js/main.js" defer></script>
 </head>
@@ -31,16 +32,24 @@
     <symbol id="icon-document" viewBox="0 0 24 24"><path d="M6 2.5h8.5L19 7v13.5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 2.5v5h5M8.5 12.5h7M8.5 16.5h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="icon-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   </svg>
-  <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+  <a class="skip-link" href="#conteudo" data-i18n="skip.link">Ir para o conteúdo</a>
 
   <header class="site-header">
+    <div class="container lang-bar">
+      <nav id="lang-nav" aria-label="Idioma" data-i18n-attr="aria-label:lang.label" hidden>
+        <button type="button" lang="pt-BR" aria-label="Português (Brasil)">PT</button>
+        <button type="button" lang="en" aria-label="English">EN</button>
+        <button type="button" lang="es" aria-label="Español">ES</button>
+        <button type="button" lang="fr" aria-label="Français">FR</button>
+      </nav>
+    </div>
     <div class="container hero">
       <span class="logo-box">
-        <img src="assets/img/logo.svg" alt="Logo do Nomos" width="120" height="120">
+        <img src="assets/img/logo.svg" alt="Logo do Nomos" data-i18n-attr="alt:logo.alt" width="120" height="120">
       </span>
       <div class="hero-text">
         <h1>Nomos</h1>
-        <p class="lead">Aplicativo móvel para inventários ambientais, construído como plataforma extensível para diferentes protocolos de levantamento de campo.</p>
+        <p class="lead" data-i18n="hero.lead">Aplicativo móvel para inventários ambientais</p>
       </div>
     </div>
   </header>
@@ -48,69 +57,70 @@
   <main id="conteudo" class="container">
     <!-- Download addresses: change them here only (button and "Ver todas as versões"). -->
     <section class="download" aria-labelledby="baixar">
-      <h2 id="baixar">Baixar o Nomos</h2>
-      <a class="link-button link-button--block" href="https://github.com/pablonvsx/nomos/releases/latest/download/nomos.apk">Baixar para Android</a>
-      <p id="app-version" class="download-note">Última versão publicada · Android</p>
-      <p class="download-note"><a href="https://github.com/pablonvsx/nomos/releases">Ver todas as versões</a></p>
+      <h2 id="baixar" data-i18n="download.title">Baixar o Nomos</h2>
+      <a class="link-button link-button--block" href="https://github.com/pablonvsx/nomos/releases/latest/download/nomos.apk" data-i18n="download.button">Baixar para Android</a>
+      <p id="app-version" class="download-note" data-i18n="version.fallback">Última versão publicada · Android</p>
+      <p class="download-note"><a href="https://github.com/pablonvsx/nomos/releases" data-i18n="download.allVersions">Ver todas as versões</a></p>
 
       <details class="install">
-        <summary>Como instalar</summary>
+        <summary data-i18n="install.summary">Como instalar</summary>
         <ol>
-          <li>Toque em <strong>Baixar para Android</strong> e aguarde o arquivo ser baixado.</li>
-          <li>O navegador pode avisar que o arquivo pode ser prejudicial. Isso é comum em aplicativos instalados fora da loja. Escolha manter o download.</li>
-          <li>Abra o arquivo baixado.</li>
-          <li>O Android pode pedir permissão para o navegador instalar aplicativos de fontes desconhecidas. Autorize somente para esta instalação.</li>
-          <li>Conclua a instalação.</li>
+          <li data-i18n-html="install.step1">Toque em <strong>Baixar para Android</strong> e aguarde o arquivo ser baixado.</li>
+          <li data-i18n="install.step2">O navegador pode avisar que o arquivo pode ser prejudicial. Isso é comum em aplicativos instalados fora da loja. Escolha manter o download.</li>
+          <li data-i18n="install.step3">Abra o arquivo baixado.</li>
+          <li data-i18n="install.step4">O Android pode pedir permissão para o navegador instalar aplicativos de fontes desconhecidas. Autorize somente para esta instalação.</li>
+          <li data-i18n="install.step5">Conclua a instalação.</li>
         </ol>
       </details>
     </section>
 
     <section aria-labelledby="sobre">
-      <h2 id="sobre">O que é o Nomos</h2>
-      <p>O Nomos apoia inventários ambientais. Em sua versão inicial, implementa um protocolo de cartografia da paisagem desenvolvido no PPGEO da UFPE, servindo como intermediário <span class="nowrap">técnico-metodológico</span> para substituir registros analógicos por um fluxo digital estruturado, padronizado e reprodutível. O aplicativo também permite usar protocolos mais simples, criados pelo próprio usuário.</p>
+      <h2 id="sobre" data-i18n="about.title">O que é o Nomos</h2>
+      <p data-i18n-html="about.text">O Nomos apoia inventários ambientais. Em sua versão inicial, implementa um protocolo de cartografia da paisagem desenvolvido no PPGEO da UFPE, servindo como intermediário <span class="nowrap">técnico-metodológico</span> para substituir registros analógicos por um fluxo digital estruturado, padronizado e reprodutível. O aplicativo também permite usar protocolos mais simples, criados pelo próprio usuário.</p>
       <ul class="features">
-        <li><strong>Coleta offline.</strong> Os registros ficam salvos no próprio aparelho, sem exigir conexão em campo.</li>
-        <li><strong>Classificação fisionômica automatizada.</strong> Gera a fórmula de vegetação segundo o sistema de Küchler.</li>
-        <li><strong>Nomenclatura padronizada da paisagem.</strong> Compõe o nome da unidade a partir dos atributos observados em campo.</li>
-        <li><strong>Arquitetura modular de protocolos.</strong> O protocolo de referência é um módulo entre outros, e é possível criar protocolos personalizados.</li>
-        <li><strong>Exportação estruturada.</strong> Gera dados em GeoJSON e CSV, com as mídias de campo em um arquivo compactado.</li>
+        <li data-i18n-html="about.f1"><strong>Coleta offline.</strong> Os registros ficam salvos no próprio aparelho, sem exigir conexão em campo.</li>
+        <li data-i18n-html="about.f2"><strong>Classificação fisionômica automatizada.</strong> Gera a fórmula de vegetação segundo o sistema de Küchler.</li>
+        <li data-i18n-html="about.f3"><strong>Nomenclatura padronizada da paisagem.</strong> Compõe o nome da unidade a partir dos atributos observados em campo.</li>
+        <li data-i18n-html="about.f4"><strong>Arquitetura modular de protocolos.</strong> O protocolo de referência é um módulo entre outros, e é possível criar protocolos personalizados.</li>
+        <li data-i18n-html="about.f5"><strong>Exportação estruturada.</strong> Gera dados em GeoJSON e CSV, com as mídias de campo em um arquivo compactado.</li>
       </ul>
     </section>
 
     <section aria-labelledby="guia">
-      <h2 id="guia">Guia e tutoriais</h2>
+      <h2 id="guia" data-i18n="guide.title">Guia e tutoriais</h2>
       <ul class="resources">
         <li class="resource">
           <span class="resource-icon"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-document"></use></svg></span>
           <div>
-            <h3>Guia prático de uso</h3>
-            <p class="resource-meta">Versão 1.0 · agosto de 2026</p>
+            <h3 data-i18n="guide.itemTitle">Guia prático de uso</h3>
+            <p class="resource-meta" data-i18n="guide.meta">Versão 1.0 · agosto de 2026</p>
           </div>
-          <p class="resource-text">Orientações práticas para usar o aplicativo nos inventários ambientais em campo.</p>
-          <a class="link-button link-button--outline" href="https://docs.google.com/document/d/14M19dZIUNGjFN2J7mU_xN3LT13nbuIot/edit" target="_blank" rel="noopener noreferrer">Abrir guia<svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-external"></use></svg><span class="visually-hidden"> (abre em nova aba)</span></a>
+          <p class="resource-text" data-i18n="guide.text">Orientações práticas para usar o aplicativo nos inventários ambientais em campo.</p>
+          <a id="guide-link" class="link-button link-button--outline" href="https://docs.google.com/document/d/14M19dZIUNGjFN2J7mU_xN3LT13nbuIot/edit" target="_blank" rel="noopener noreferrer"><span data-i18n="guide.open">Abrir guia</span><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-external"></use></svg><span class="visually-hidden" data-i18n="a11y.newTab"> (abre em nova aba)</span></a>
+          <p class="resource-note" data-i18n="guide.onlyPt" hidden>O guia está disponível, por enquanto, apenas em português.</p>
         </li>
       </ul>
     </section>
 
     <section aria-labelledby="autoria">
-      <h2 id="autoria">Autoria</h2>
+      <h2 id="autoria" data-i18n="authors.title">Autoria</h2>
 
       <div class="people">
         <div class="person">
-          <h3>Autor</h3>
+          <h3 data-i18n="authors.author">Autor</h3>
           <p class="person-name">Pablo Guilherme de Melo Neves</p>
           <ul class="link-list">
-            <li><a title="Lattes" href="http://lattes.cnpq.br/0232693906809043" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-lattes"></use></svg><span class="link-label">Lattes</span><span class="visually-hidden"> (abre em nova aba)</span></a></li>
-            <li><a title="ResearchGate" href="https://www.researchgate.net/profile/Pablo-Neves-2" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-researchgate"></use></svg><span class="link-label">ResearchGate</span><span class="visually-hidden"> (abre em nova aba)</span></a></li>
-            <li><a title="GitHub" href="https://github.com/pablonvsx" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-github"></use></svg><span class="link-label">GitHub</span><span class="visually-hidden"> (abre em nova aba)</span></a></li>
+            <li><a title="Lattes" href="http://lattes.cnpq.br/0232693906809043" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-lattes"></use></svg><span class="link-label">Lattes</span><span class="visually-hidden" data-i18n="a11y.newTab"> (abre em nova aba)</span></a></li>
+            <li><a title="ResearchGate" href="https://www.researchgate.net/profile/Pablo-Neves-2" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-researchgate"></use></svg><span class="link-label">ResearchGate</span><span class="visually-hidden" data-i18n="a11y.newTab"> (abre em nova aba)</span></a></li>
+            <li><a title="GitHub" href="https://github.com/pablonvsx" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-github"></use></svg><span class="link-label">GitHub</span><span class="visually-hidden" data-i18n="a11y.newTab"> (abre em nova aba)</span></a></li>
           </ul>
         </div>
         <div class="person">
-          <h3>Orientador</h3>
+          <h3 data-i18n="authors.advisor">Orientador</h3>
           <p class="person-name">Lucas Costa de Souza Cavalcanti</p>
           <ul class="link-list">
-            <li><a title="Lattes" href="http://lattes.cnpq.br/0571151043430712" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-lattes"></use></svg><span class="link-label">Lattes</span><span class="visually-hidden"> (abre em nova aba)</span></a></li>
-            <li><a title="ResearchGate" href="https://www.researchgate.net/profile/Lucas-Cavalcanti-7" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-researchgate"></use></svg><span class="link-label">ResearchGate</span><span class="visually-hidden"> (abre em nova aba)</span></a></li>
+            <li><a title="Lattes" href="http://lattes.cnpq.br/0571151043430712" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-lattes"></use></svg><span class="link-label">Lattes</span><span class="visually-hidden" data-i18n="a11y.newTab"> (abre em nova aba)</span></a></li>
+            <li><a title="ResearchGate" href="https://www.researchgate.net/profile/Lucas-Cavalcanti-7" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-researchgate"></use></svg><span class="link-label">ResearchGate</span><span class="visually-hidden" data-i18n="a11y.newTab"> (abre em nova aba)</span></a></li>
           </ul>
         </div>
       </div>
@@ -118,53 +128,53 @@
     </section>
 
     <section aria-labelledby="vinculacao">
-      <h2 id="vinculacao">Vinculação e apoio institucional</h2>
-      <p>O Nomos é um produto tecnológico desenvolvido em pesquisa de mestrado vinculada ao Programa de <span class="nowrap">Pós-Graduação</span> em Geografia (PPGEO) da Universidade Federal de Pernambuco (UFPE). A pesquisa tem afiliação científica ao Laboratório de Pesquisa em Dinâmicas de Paisagens Intertropicais (INTERTRÓPICOS) e ao Grupo de Pesquisa em Geografia e Conservação em Paisagens Tropicais (PAISAGEO). A pesquisa conta com o apoio da Coordenação de Aperfeiçoamento de Pessoal de Nível Superior (CAPES).</p>
+      <h2 id="vinculacao" data-i18n="affil.title">Vinculação e apoio institucional</h2>
+      <p><span data-i18n-html="affil.text">O Nomos é um produto tecnológico desenvolvido em pesquisa de mestrado vinculada ao Programa de <span class="nowrap">Pós-Graduação</span> em Geografia (PPGEO) da Universidade Federal de Pernambuco (UFPE). A pesquisa tem afiliação científica ao Laboratório de Pesquisa em Dinâmicas de Paisagens Intertropicais (INTERTRÓPICOS) e ao Grupo de Pesquisa em Geografia e Conservação em Paisagens Tropicais (PAISAGEO).</span> <span data-i18n="affil.capes">A pesquisa conta com o apoio da Coordenação de Aperfeiçoamento de Pessoal de Nível Superior (CAPES).</span></p>
       <ul class="logo-strip">
-        <li class="logo-card"><a href="https://www.ufpe.br/" target="_blank" rel="noopener noreferrer" aria-label="Site da UFPE (abre em nova aba)"><img src="assets/img/logo-ufpe.png" alt="Logo da Universidade Federal de Pernambuco" width="75" height="112" loading="lazy"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-external"></use></svg></a></li>
-        <li class="logo-card"><img src="assets/img/logo-capes.png" alt="Logo da Coordenação de Aperfeiçoamento de Pessoal de Nível Superior (CAPES)" width="121" height="112" loading="lazy"></li>
-        <li class="logo-card"><img src="assets/img/logo-ppgeo.png" alt="Logo do Programa de Pós-Graduação em Geografia (PPGEO) da UFPE" width="102" height="112" loading="lazy"></li>
-        <li class="logo-card"><img src="assets/img/logo-intertropicos.png" alt="Logo do Laboratório de Pesquisa em Dinâmicas de Paisagens Intertropicais (INTERTRÓPICOS)" width="173" height="112" loading="lazy"></li>
-        <li class="logo-card"><a href="https://sites.ufpe.br/paisageo/" target="_blank" rel="noopener noreferrer" aria-label="Página do PAISAGEO (abre em nova aba)"><img src="assets/img/logo-paisageo.png" alt="Logo do Grupo de Pesquisa em Geografia e Conservação em Paisagens Tropicais (PAISAGEO)" width="400" height="97" loading="lazy"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-external"></use></svg></a></li>
+        <li class="logo-card"><a href="https://www.ufpe.br/" target="_blank" rel="noopener noreferrer" data-i18n-attr="aria-label:logoLink.ufpe" aria-label="Site da UFPE (abre em nova aba)"><img src="assets/img/logo-ufpe.png" data-i18n-attr="alt:logo.ufpe" alt="Logo da Universidade Federal de Pernambuco" width="75" height="112" loading="lazy"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-external"></use></svg></a></li>
+        <li class="logo-card"><img src="assets/img/logo-capes.png" data-i18n-attr="alt:logo.capes" alt="Logo da Coordenação de Aperfeiçoamento de Pessoal de Nível Superior (CAPES)" width="121" height="112" loading="lazy"></li>
+        <li class="logo-card"><img src="assets/img/logo-ppgeo.png" data-i18n-attr="alt:logo.ppgeo" alt="Logo do Programa de Pós-Graduação em Geografia (PPGEO) da UFPE" width="102" height="112" loading="lazy"></li>
+        <li class="logo-card"><img src="assets/img/logo-intertropicos.png" data-i18n-attr="alt:logo.intertropicos" alt="Logo do Laboratório de Pesquisa em Dinâmicas de Paisagens Intertropicais (INTERTRÓPICOS)" width="173" height="112" loading="lazy"></li>
+        <li class="logo-card"><a href="https://sites.ufpe.br/paisageo/" target="_blank" rel="noopener noreferrer" data-i18n-attr="aria-label:logoLink.paisageo" aria-label="Site do PAISAGEO (abre em nova aba)"><img src="assets/img/logo-paisageo.png" data-i18n-attr="alt:logo.paisageo" alt="Logo do Grupo de Pesquisa em Geografia e Conservação em Paisagens Tropicais (PAISAGEO)" width="400" height="97" loading="lazy"><svg class="icon" aria-hidden="true" focusable="false"><use href="#icon-external"></use></svg></a></li>
       </ul>
       <ul class="org-links">
-        <li><strong>UFPE:</strong> <a href="https://www.ufpe.br/" target="_blank" rel="noopener noreferrer">Site<span class="visually-hidden"> (abre em nova aba)</span></a>, <a href="https://www.instagram.com/ufpe.oficial" target="_blank" rel="noopener noreferrer">Instagram<span class="visually-hidden"> (abre em nova aba)</span></a></li>
-        <li><strong>PAISAGEO:</strong> <a href="https://sites.ufpe.br/paisageo/" target="_blank" rel="noopener noreferrer">Página<span class="visually-hidden"> (abre em nova aba)</span></a>, <a href="https://www.instagram.com/paisageo.ufpe" target="_blank" rel="noopener noreferrer">Instagram<span class="visually-hidden"> (abre em nova aba)</span></a></li>
+        <li><strong>UFPE:</strong> <a href="https://www.ufpe.br/" target="_blank" rel="noopener noreferrer"><span data-i18n="affil.site">Site</span><span class="visually-hidden" data-i18n="a11y.newTab"> (abre em nova aba)</span></a>, <a href="https://www.instagram.com/ufpe.oficial" target="_blank" rel="noopener noreferrer">Instagram<span class="visually-hidden" data-i18n="a11y.newTab"> (abre em nova aba)</span></a></li>
+        <li><strong>PAISAGEO:</strong> <a href="https://sites.ufpe.br/paisageo/" target="_blank" rel="noopener noreferrer"><span data-i18n="affil.site">Site</span><span class="visually-hidden" data-i18n="a11y.newTab"> (abre em nova aba)</span></a>, <a href="https://www.instagram.com/paisageo.ufpe" target="_blank" rel="noopener noreferrer">Instagram<span class="visually-hidden" data-i18n="a11y.newTab"> (abre em nova aba)</span></a></li>
       </ul>
     </section>
 
     <section class="citation" aria-labelledby="citar">
-      <h2 id="citar">Como citar</h2>
-      <p>Para citar o Nomos como software, use a referência abaixo.</p>
+      <h2 id="citar" data-i18n="cite.title">Como citar</h2>
+      <p data-i18n="cite.intro">Para citar o Nomos como software, use a referência abaixo.</p>
 
       <!-- Hidden until main.js runs; without JavaScript only the static ABNT reference shows. -->
       <div id="cite-controls" class="cite-controls" hidden>
-        <label for="cite-format">Formato da citação</label>
+        <label for="cite-format" data-i18n="cite.label">Formato da citação</label>
         <select id="cite-format">
           <option value="abnt" selected>ABNT</option>
           <option value="apa7">APA 7</option>
           <option value="vancouver">Vancouver</option>
           <option value="ieee">IEEE</option>
           <option value="mla9">MLA 9</option>
-          <option value="chicago">Chicago (autor-data)</option>
+          <option value="chicago" data-i18n="cite.chicago">Chicago (autor-data)</option>
           <option value="bibtex">BibTeX</option>
           <option value="ris">RIS</option>
         </select>
       </div>
 
-      <div id="cite-text" class="reference" aria-live="polite">NEVES, Pablo Guilherme de Melo. Nomos: aplicativo móvel para inventários ambientais. Recife: Universidade Federal de Pernambuco, 2026. Software. Disponível em: https://pablonvsx.github.io/nomos/.</div>
+      <div id="cite-text" class="reference" lang="pt-BR" aria-live="polite">NEVES, Pablo Guilherme de Melo. Nomos: aplicativo móvel para inventários ambientais. Recife: Universidade Federal de Pernambuco, 2026. Software. Disponível em: https://pablonvsx.github.io/nomos/.</div>
 
       <div class="cite-actions">
-        <button type="button" id="cite-copy" class="link-button" hidden>Copiar referência</button>
+        <button type="button" id="cite-copy" class="link-button" data-i18n="cite.copy" hidden>Copiar referência</button>
         <span id="cite-status" class="cite-status" aria-live="polite"></span>
       </div>
-      <p class="small-note">Referências geradas automaticamente. Confira as normas da revista ou da instituição.</p>
+      <p class="small-note" data-i18n="cite.note">Referências geradas automaticamente. Confira as normas da revista ou da instituição.</p>
     </section>
 
     <section aria-labelledby="codigo">
-      <h2 id="codigo">Código e licença</h2>
-      <p>O código do Nomos está aberto e é distribuído sob a licença GNU GPL v3.</p>
-      <p><a class="link-button link-button--outline" href="https://github.com/pablonvsx/nomos">Repositório no GitHub</a></p>
+      <h2 id="codigo" data-i18n="code.title">Código e licença</h2>
+      <p data-i18n="code.text">O código do Nomos está aberto e é distribuído sob a licença GNU GPL v3.</p>
+      <p><a class="link-button link-button--outline" href="https://github.com/pablonvsx/nomos" data-i18n="code.button">Repositório no GitHub</a></p>
     </section>
   </main>
 </body>

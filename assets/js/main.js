@@ -4,29 +4,13 @@
 (function () {
   'use strict';
 
-  // Every user-facing string created here lives in STRINGS; read it through t().
-  var DEFAULT_LOCALE = 'pt-BR';
-  var STRINGS = {
-    'pt-BR': {
-      versionLabel: 'Versão',
-      publishedOn: 'publicada em',
-      fileType: 'Android',
-      versionSeparator: ' · ',
-      versionFallback: 'Última versão publicada · Android',
-      citationCopied: 'Referência copiada',
-      citationCopyFailed: 'Não foi possível copiar'
-    }
-  };
-
-  function t(key, locale) {
-    var table = STRINGS[locale] || STRINGS[DEFAULT_LOCALE];
-    return key in table ? table[key] : STRINGS[DEFAULT_LOCALE][key];
-  }
-
   var SEMVER = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
   var ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
   document.documentElement.classList.add('js');
+
+  var i18n = window.NomosI18n;
+  if (!i18n) return;
 
   // The only request for nomos-version.json. Resolves to { version, year, date } or null.
   var versionInfo = (function () {
@@ -57,40 +41,41 @@
     else callback(null);
   }
 
-  // Release date as numeric day/month/year in the given locale, or null if it cannot be formatted.
-  function formatDate(timestamp, locale) {
+  // Release date in the medium style of the given Intl locale, or null if it cannot be formatted.
+  function formatDate(timestamp, intlLocale) {
     if (timestamp === null || !window.Intl || !Intl.DateTimeFormat) return null;
     try {
-      return new Intl.DateTimeFormat(locale, {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        timeZone: 'UTC'
-      }).format(timestamp);
+      return new Intl.DateTimeFormat(intlLocale, { dateStyle: 'medium', timeZone: 'UTC' }).format(timestamp);
     } catch (e) {
       return null;
     }
   }
 
-  // Download: "Versão X · publicada em DD/MM/AAAA · Android"
-  function initDownload(locale) {
+  // Download: the version line is rebuilt from the stored JSON on every language change.
+  // On failure the translated fallback applied by NomosI18n stays in place.
+  function initDownload() {
     var el = document.getElementById('app-version');
     if (!el) return;
+    var published = null;
+
+    function render() {
+      if (!published) return;
+      var locale = i18n.get();
+      var date = formatDate(published.released, i18n.INTL_LOCALES[locale]);
+      el.textContent = date
+        ? i18n.t('version.line', locale, { version: published.version, date: date })
+        : i18n.t('version.lineNoDate', locale, { version: published.version });
+    }
+
+    document.addEventListener('nomos:localechange', render);
     whenVersion(function (info) {
-      if (!info) {
-        el.textContent = t('versionFallback', locale);
-        return;
-      }
-      var date = formatDate(info.released, locale);
-      var parts = [t('versionLabel', locale) + ' ' + info.version];
-      if (date) parts.push(t('publishedOn', locale) + ' ' + date);
-      parts.push(t('fileType', locale));
-      el.textContent = parts.join(t('versionSeparator', locale));
+      published = info;
+      render();
     });
   }
 
   // Citation: format selector, live reference and clipboard copy.
-  function initCitation(locale) {
+  function initCitation() {
     var lib = window.NomosCitation;
     var controls = document.getElementById('cite-controls');
     var select = document.getElementById('cite-format');
@@ -105,6 +90,7 @@
     data.access = { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() };
 
     var current = '';
+    var statusKey = '';
     var statusTimer = null;
 
     function render() {
@@ -112,24 +98,31 @@
       current = chosen.format(data);
       output.textContent = current;
       output.classList.toggle('reference--code', chosen.code);
-      if (status) status.textContent = '';
+      statusKey = '';
+      showStatus();
     }
 
-    function setStatus(text) {
+    function showStatus() {
+      if (status) status.textContent = statusKey ? i18n.t(statusKey, i18n.get()) : '';
+    }
+
+    function setStatus(key) {
       if (!status) return;
-      status.textContent = text;
+      statusKey = key;
+      showStatus();
       clearTimeout(statusTimer);
-      statusTimer = setTimeout(function () { status.textContent = ''; }, 3000);
+      statusTimer = setTimeout(function () { statusKey = ''; showStatus(); }, 3000);
     }
 
     select.addEventListener('change', render);
+    document.addEventListener('nomos:localechange', showStatus);
 
     if (copyButton && navigator.clipboard && navigator.clipboard.writeText) {
       copyButton.hidden = false;
       copyButton.addEventListener('click', function () {
         navigator.clipboard.writeText(current).then(
-          function () { setStatus(t('citationCopied', locale)); },
-          function () { setStatus(t('citationCopyFailed', locale)); }
+          function () { setStatus('cite.copied'); },
+          function () { setStatus('cite.copyFailed'); }
         );
       });
     }
@@ -147,7 +140,29 @@
     });
   }
 
-  var locale = DEFAULT_LOCALE;
-  initDownload(locale);
-  initCitation(locale);
+  // Language selector: hidden until this script runs, so without JavaScript nothing shows.
+  function initLanguage() {
+    var nav = document.getElementById('lang-nav');
+    if (!nav) return;
+    var buttons = Array.prototype.slice.call(nav.querySelectorAll('button'));
+
+    function sync() {
+      var locale = i18n.get();
+      buttons.forEach(function (button) {
+        if (button.getAttribute('lang') === locale) button.setAttribute('aria-current', 'true');
+        else button.removeAttribute('aria-current');
+      });
+    }
+
+    buttons.forEach(function (button) {
+      button.addEventListener('click', function () { i18n.set(button.getAttribute('lang')); });
+    });
+    document.addEventListener('nomos:localechange', sync);
+    nav.hidden = false;
+    sync();
+  }
+
+  initLanguage();
+  initDownload();
+  initCitation();
 })();
