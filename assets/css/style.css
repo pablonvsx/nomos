@@ -10,7 +10,6 @@
   --button-bg: #1f6661;
   --button-text: #ffffff;
   --logo-bg: #e7f3f1;
-  --logo-link: #1f6661;
   --focus: #1f6661;
   color-scheme: light dark;
 }
@@ -211,21 +210,17 @@ p {
   margin: 0 0 1rem;
 }
 
-/* Academic style: running text and card text are left-aligned on narrow screens and justified
-   from 45em up, never hyphenated. Headings, buttons, labels, links, the selector and the
-   references stay left-aligned. */
+/* Academic style: running text and card text are justified at every width, never hyphenated.
+   Headings, buttons, labels, links, the selector and the references stay left-aligned. */
 p,
 .features li {
-  text-align: left;
+  text-align: justify;
+  text-justify: inter-word;
   hyphens: none;
   -webkit-hyphens: none;
   overflow-wrap: normal;
   word-break: normal;
   text-wrap: pretty;
-}
-
-main p {
-  max-width: 70ch;
 }
 
 .nowrap {
@@ -292,12 +287,13 @@ button.link-button {
 .link-button--block {
   display: flex;
   width: 100%;
+  margin-inline: auto;
 }
 
 /* Download */
 .download-note {
   margin: 0.5rem 0 0;
-  text-align: left;
+  text-align: center;
 }
 
 .download-note a {
@@ -454,7 +450,6 @@ button.link-button {
 .resource-text {
   grid-column: 1 / -1;
   margin: 0;
-  text-align: left;
 }
 
 .resource .link-button {
@@ -488,7 +483,6 @@ button.link-button {
 
 /* Fixed light background in both themes, so the logos stay legible in dark mode. */
 .logo-card {
-  position: relative;
   display: flex;
   flex: 1 1 auto;
   align-items: center;
@@ -505,15 +499,6 @@ button.link-button {
   width: auto;
   height: 3rem;
   max-width: 100%;
-}
-
-.logo-card a .icon {
-  position: absolute;
-  top: 0.25rem;
-  right: 0.25rem;
-  width: 0.75rem;
-  height: 0.75rem;
-  color: var(--logo-link);
 }
 
 .org-links {
@@ -611,12 +596,6 @@ button.link-button {
     font-size: 1.125rem;
   }
 
-  p,
-  .features li {
-    text-align: justify;
-    text-justify: inter-word;
-  }
-
   .features,
   .people {
     grid-template-columns: 1fr 1fr;
@@ -637,8 +616,7 @@ button.link-button {
   }
 
   .link-button--block {
-    display: inline-flex;
-    width: auto;
+    width: fit-content;
     min-width: 18rem;
   }
 
