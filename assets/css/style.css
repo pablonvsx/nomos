@@ -123,7 +123,7 @@ a {
 
 .lang-bar nav {
   display: flex;
-  margin-top: -0.75rem;
+  margin-block: -0.75rem 0.75rem;
 }
 
 .lang-bar button {
@@ -271,12 +271,12 @@ main p {
   font: inherit;
   font-weight: 600;
   text-align: left;
+  text-decoration: none;
   overflow-wrap: anywhere;
 }
 
 button.link-button {
   cursor: pointer;
-  text-decoration: none;
 }
 
 .link-button--outline {
@@ -298,6 +298,10 @@ button.link-button {
 .download-note {
   margin: 0.5rem 0 0;
   text-align: left;
+}
+
+.download-note a {
+  text-decoration: none;
 }
 
 #app-version {
