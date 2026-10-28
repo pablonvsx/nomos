@@ -377,12 +377,6 @@ button.link-button {
   text-decoration: none;
 }
 
-.link-label {
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-}
-
 .icon {
   flex: none;
   width: 1rem;
@@ -585,6 +579,11 @@ button.link-button {
   -webkit-hyphens: none;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.reference:not(.reference--code) {
+  text-align: justify;
+  text-justify: inter-word;
 }
 
 .reference--code {

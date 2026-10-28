@@ -82,7 +82,7 @@
 
   function abnt(d) {
     var a = d.author;
-    var out = a.family.toUpperCase() + ', ' + a.given + '. ' + d.title + '. ' +
+    var out = a.family.toUpperCase() + ', ' + dotted(a.given) + ' ' + d.title + '. ' +
       versionPart(d, 'Versão ', '. ') +
       d.place + ': ' + d.institution + ', ' + d.year + '. Software. ' +
       'DOI: ' + d.doi + '. ' +
