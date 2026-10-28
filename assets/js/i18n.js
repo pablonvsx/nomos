@@ -77,7 +77,8 @@
       'cite.copied': 'Referência copiada',
       'cite.copyFailed': 'Não foi possível copiar',
       'cite.note': 'Referências geradas automaticamente. Confira as normas da revista ou da instituição.',
-      'cite.versionNote': 'Para citar uma versão específica, use o DOI dela no <a href="{url}" target="_blank" rel="noopener noreferrer">registro do Zenodo<span class="visually-hidden"> (abre em nova aba)</span></a>.',
+      'cite.noteGeneric': 'Esta referência cita o Nomos sem indicar versão e usa o DOI de todas as versões, que aponta sempre para a mais recente. Para citar uma versão específica, use o DOI dela no <a href="{url}" target="_blank" rel="noopener noreferrer">registro do Zenodo<span class="visually-hidden"> (abre em nova aba)</span></a>.',
+      'cite.noteVersion': 'Esta referência cita a versão <span data-cite-version></span> do Nomos e usa o DOI dessa versão. Para citar o software em geral, sem indicar versão, use o DOI de todas as versões: <a href="{url}" target="_blank" rel="noopener noreferrer">{doi}<span class="visually-hidden"> (abre em nova aba)</span></a>.',
       'code.title': 'Código e licença',
       'code.text': 'O código do Nomos está aberto e é distribuído sob a licença GNU GPL v3.',
       'code.button': 'Repositório no GitHub'
@@ -137,7 +138,8 @@
       'cite.copied': 'Reference copied',
       'cite.copyFailed': 'Could not copy',
       'cite.note': 'References are generated automatically. Check the guidelines of the journal or institution.',
-      'cite.versionNote': 'To cite a specific version, use its DOI on the <a href="{url}" target="_blank" rel="noopener noreferrer">Zenodo record<span class="visually-hidden"> (opens in a new tab)</span></a>.',
+      'cite.noteGeneric': 'This reference cites Nomos without a version and uses the DOI for all versions, which always points to the latest one. To cite a specific version, use its DOI on the <a href="{url}" target="_blank" rel="noopener noreferrer">Zenodo record<span class="visually-hidden"> (opens in a new tab)</span></a>.',
+      'cite.noteVersion': 'This reference cites version <span data-cite-version></span> of Nomos and uses the DOI of that version. To cite the software in general, without a version, use the DOI for all versions: <a href="{url}" target="_blank" rel="noopener noreferrer">{doi}<span class="visually-hidden"> (opens in a new tab)</span></a>.',
       'code.title': 'Code and license',
       'code.text': 'The Nomos source code is open and distributed under the GNU GPL v3 license.',
       'code.button': 'GitHub repository'
@@ -197,7 +199,8 @@
       'cite.copied': 'Referencia copiada',
       'cite.copyFailed': 'No se pudo copiar',
       'cite.note': 'Las referencias se generan automáticamente. Consulte las normas de la revista o de la institución.',
-      'cite.versionNote': 'Para citar una versión específica, utilice su DOI en el <a href="{url}" target="_blank" rel="noopener noreferrer">registro de Zenodo<span class="visually-hidden"> (se abre en una pestaña nueva)</span></a>.',
+      'cite.noteGeneric': 'Esta referencia cita Nomos sin indicar versión y usa el DOI de todas las versiones, que apunta siempre a la más reciente. Para citar una versión específica, utilice su DOI en el <a href="{url}" target="_blank" rel="noopener noreferrer">registro de Zenodo<span class="visually-hidden"> (se abre en una pestaña nueva)</span></a>.',
+      'cite.noteVersion': 'Esta referencia cita la versión <span data-cite-version></span> de Nomos y usa el DOI de esa versión. Para citar el software en general, sin indicar versión, utilice el DOI de todas las versiones: <a href="{url}" target="_blank" rel="noopener noreferrer">{doi}<span class="visually-hidden"> (se abre en una pestaña nueva)</span></a>.',
       'code.title': 'Código y licencia',
       'code.text': 'El código de Nomos es abierto y se distribuye bajo la licencia GNU GPL v3.',
       'code.button': 'Repositorio en GitHub'
@@ -257,7 +260,8 @@
       'cite.copied': 'Référence copiée',
       'cite.copyFailed': 'Impossible de copier',
       'cite.note': 'Les références sont générées automatiquement. Vérifiez les normes de la revue ou de l\'institution.',
-      'cite.versionNote': 'Pour citer une version précise, utilisez son DOI sur la <a href="{url}" target="_blank" rel="noopener noreferrer">notice Zenodo<span class="visually-hidden"> (s\'ouvre dans un nouvel onglet)</span></a>.',
+      'cite.noteGeneric': 'Cette référence cite Nomos sans indiquer de version et utilise le DOI de toutes les versions, qui pointe toujours vers la plus récente. Pour citer une version précise, utilisez son DOI sur la <a href="{url}" target="_blank" rel="noopener noreferrer">notice Zenodo<span class="visually-hidden"> (s\'ouvre dans un nouvel onglet)</span></a>.',
+      'cite.noteVersion': 'Cette référence cite la version <span data-cite-version></span> de Nomos et utilise le DOI de cette version. Pour citer le logiciel de façon générale, sans indiquer de version, utilisez le DOI de toutes les versions : <a href="{url}" target="_blank" rel="noopener noreferrer">{doi}<span class="visually-hidden"> (s\'ouvre dans un nouvel onglet)</span></a>.',
       'code.title': 'Code et licence',
       'code.text': 'Le code de Nomos est ouvert et distribué sous la licence GNU GPL v3.',
       'code.button': 'Dépôt GitHub'
@@ -315,7 +319,7 @@
 
   function templateVars() {
     var lib = root.NomosCitation;
-    return lib ? { url: lib.DOI_URL } : {};
+    return lib ? { url: lib.CONCEPT_DOI_URL, doi: lib.CONCEPT_DOI } : {};
   }
 
   function applyGuide(locale) {

@@ -12,7 +12,7 @@
   var i18n = window.NomosI18n;
   if (!i18n) return;
 
-  // The only request for nomos-version.json. Resolves to { version, year, date } or null.
+  // The only request for nomos-version.json. Resolves to { version, released, release } or null.
   var versionInfo = (function () {
     if (!window.fetch || !window.Promise) return null;
     return fetch('nomos-version.json', { cache: 'no-store' })
@@ -27,8 +27,8 @@
         var released = date ? Date.UTC(Number(date[1]), Number(date[2]) - 1, Number(date[3])) : NaN;
         return {
           version: version,
-          year: date ? Number(date[1]) : null,
-          released: isNaN(released) ? null : released
+          released: isNaN(released) ? null : released,
+          release: { version: version, doi: data.doi, date: data.released_at }
         };
       })
       .catch(function () {
@@ -85,19 +85,32 @@
     if (!lib || !controls || !select || !output) return;
 
     var now = new Date();
-    var data = {};
-    Object.keys(lib.CONFIG).forEach(function (key) { data[key] = lib.CONFIG[key]; });
-    data.access = { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() };
+    var access = { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() };
+    var data = lib.citationData(null);
+    data.access = access;
+    var noteGeneric = document.getElementById('cite-note-generic');
+    var noteVersion = document.getElementById('cite-note-version');
 
     var current = '';
     var statusKey = '';
     var statusTimer = null;
+
+    function renderNote() {
+      var versioned = !!data.version;
+      if (noteGeneric) noteGeneric.hidden = versioned;
+      if (noteVersion) {
+        noteVersion.hidden = !versioned;
+        var slot = noteVersion.querySelector('[data-cite-version]');
+        if (slot) slot.textContent = data.version;
+      }
+    }
 
     function render() {
       var chosen = lib.FORMATS.filter(function (f) { return f.id === select.value; })[0] || lib.FORMATS[0];
       current = chosen.format(data);
       output.textContent = current;
       output.classList.toggle('reference--code', chosen.code);
+      renderNote();
       statusKey = '';
       showStatus();
     }
@@ -116,6 +129,7 @@
 
     select.addEventListener('change', render);
     document.addEventListener('nomos:localechange', showStatus);
+    document.addEventListener('nomos:localechange', renderNote);
 
     if (copyButton && navigator.clipboard && navigator.clipboard.writeText) {
       copyButton.hidden = false;
@@ -130,12 +144,11 @@
     controls.hidden = false;
     select.value = lib.FORMATS[0].id; // always ABNT on load, no persisted choice
 
-    // Render right away with the fallback year; refine with the published version when it arrives.
+    // Render right away without a version; refine with the published release when it arrives.
     render();
     whenVersion(function (info) {
-      if (!info) return;
-      data.version = info.version;
-      if (info.year) data.year = info.year;
+      data = lib.citationData(info && info.release);
+      data.access = access;
       render();
     });
   }

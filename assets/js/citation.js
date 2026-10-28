@@ -7,23 +7,24 @@
   'use strict';
 
   // Concept DOI of Nomos on Zenodo (all versions), without the resolver prefix.
-  var NOMOS_DOI = '10.5281/zenodo.22069700';
-  var DOI_URL = 'https://doi.org/' + NOMOS_DOI;
+  var NOMOS_CONCEPT_DOI = '10.5281/zenodo.22069700';
+  var DOI_RESOLVER = 'https://doi.org/';
+  var CONCEPT_DOI_URL = DOI_RESOLVER + NOMOS_CONCEPT_DOI;
 
-  // Single place with the citation data. `version`, `year` and `access` are
-  // filled in at runtime (nomos-version.json and the visitor's current day).
+  var VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
+  var DOI_PATTERN = /^10\.5281\/zenodo\.\d+$/;
+  var ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+  // Fixed citation data. citationData() adds the version, the DOI, the year of a published
+  // release and the visitor's access date.
   var CONFIG = {
     author: { family: 'Neves', given: 'Pablo Guilherme de Melo' },
     title: 'Nomos: aplicativo móvel para inventários ambientais',
-    version: '',
     year: 2026,
     place: 'Recife',
     country: 'Brazil',
     institution: 'Universidade Federal de Pernambuco',
-    url: 'https://pablonvsx.github.io/nomos/',
-    doi: NOMOS_DOI,
-    doiUrl: DOI_URL,
-    access: null // { year, month (1-12), day }
+    url: 'https://pablonvsx.github.io/nomos/'
   };
 
   // Fixed tables: no toLocaleDateString, so the output never depends on the browser locale.
@@ -47,6 +48,32 @@
 
   function dotted(given) {
     return initials(given).join('. ') + '.';
+  }
+
+  function releaseYear(date) {
+    var parts = ISO_DATE.exec(date);
+    if (!parts) return null;
+    var year = Number(parts[1]);
+    var month = Number(parts[2]) - 1;
+    var day = Number(parts[3]);
+    var check = new Date(Date.UTC(year, month, day));
+    var real = check.getUTCFullYear() === year && check.getUTCMonth() === month && check.getUTCDate() === day;
+    return real ? year : null;
+  }
+
+  // release: { version, doi, date } as read from nomos-version.json, or null.
+  // With a valid version and its own DOI the data cites that version; otherwise it cites the
+  // software without a version, using the concept DOI. `access` is { year, month (1-12), day }.
+  function citationData(release) {
+    var data = {};
+    Object.keys(CONFIG).forEach(function (key) { data[key] = CONFIG[key]; });
+    var versioned = release && VERSION_PATTERN.test(release.version) && DOI_PATTERN.test(release.doi);
+    data.version = versioned ? release.version : '';
+    data.doi = versioned ? release.doi : NOMOS_CONCEPT_DOI;
+    data.doiUrl = DOI_RESOLVER + data.doi;
+    if (versioned) data.year = releaseYear(release.date) || CONFIG.year;
+    data.access = null;
+    return data;
   }
 
   function versionPart(data, prefix, suffix) {
@@ -155,5 +182,10 @@
     { id: 'ris', label: 'RIS', format: ris, code: true }
   ];
 
-  return { CONFIG: CONFIG, FORMATS: FORMATS, DOI: NOMOS_DOI, DOI_URL: DOI_URL };
+  return {
+    citationData: citationData,
+    FORMATS: FORMATS,
+    CONCEPT_DOI: NOMOS_CONCEPT_DOI,
+    CONCEPT_DOI_URL: CONCEPT_DOI_URL
+  };
 });
