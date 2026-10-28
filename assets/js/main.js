@@ -4,6 +4,25 @@
 (function () {
   'use strict';
 
+  // Every user-facing string created here lives in STRINGS; read it through t().
+  var DEFAULT_LOCALE = 'pt-BR';
+  var STRINGS = {
+    'pt-BR': {
+      versionLabel: 'Versão',
+      publishedOn: 'publicada em',
+      fileType: 'arquivo .apk',
+      versionSeparator: ' · ',
+      versionFallback: 'Última versão publicada',
+      citationCopied: 'Referência copiada',
+      citationCopyFailed: 'Não foi possível copiar'
+    }
+  };
+
+  function t(key, locale) {
+    var table = STRINGS[locale] || STRINGS[DEFAULT_LOCALE];
+    return key in table ? table[key] : STRINGS[DEFAULT_LOCALE][key];
+  }
+
   var SEMVER = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
   var ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -21,10 +40,11 @@
         var version = data && data.latest_version;
         if (typeof version !== 'string' || !SEMVER.test(version)) return null;
         var date = ISO_DATE.exec(data.released_at);
+        var released = date ? Date.UTC(Number(date[1]), Number(date[2]) - 1, Number(date[3])) : NaN;
         return {
           version: version,
           year: date ? Number(date[1]) : null,
-          date: date ? date[3] + '/' + date[2] + '/' + date[1] : null
+          released: isNaN(released) ? null : released
         };
       })
       .catch(function () {
@@ -37,21 +57,40 @@
     else callback(null);
   }
 
+  // Release date as numeric day/month/year in the given locale, or null if it cannot be formatted.
+  function formatDate(timestamp, locale) {
+    if (timestamp === null || !window.Intl || !Intl.DateTimeFormat) return null;
+    try {
+      return new Intl.DateTimeFormat(locale, {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        timeZone: 'UTC'
+      }).format(timestamp);
+    } catch (e) {
+      return null;
+    }
+  }
+
   // Download: "Versão X · publicada em DD/MM/AAAA · arquivo .apk"
-  function initDownload() {
+  function initDownload(locale) {
     var el = document.getElementById('app-version');
     if (!el) return;
     whenVersion(function (info) {
-      if (!info) return;
-      var parts = ['Versão ' + info.version];
-      if (info.date) parts.push('publicada em ' + info.date);
-      parts.push('arquivo .apk');
-      el.textContent = parts.join(' · ');
+      if (!info) {
+        el.textContent = t('versionFallback', locale);
+        return;
+      }
+      var date = formatDate(info.released, locale);
+      var parts = [t('versionLabel', locale) + ' ' + info.version];
+      if (date) parts.push(t('publishedOn', locale) + ' ' + date);
+      parts.push(t('fileType', locale));
+      el.textContent = parts.join(t('versionSeparator', locale));
     });
   }
 
   // Citation: format selector, live reference and clipboard copy.
-  function initCitation() {
+  function initCitation(locale) {
     var lib = window.NomosCitation;
     var controls = document.getElementById('cite-controls');
     var select = document.getElementById('cite-format');
@@ -89,8 +128,8 @@
       copyButton.hidden = false;
       copyButton.addEventListener('click', function () {
         navigator.clipboard.writeText(current).then(
-          function () { setStatus('Referência copiada'); },
-          function () { setStatus('Não foi possível copiar'); }
+          function () { setStatus(t('citationCopied', locale)); },
+          function () { setStatus(t('citationCopyFailed', locale)); }
         );
       });
     }
@@ -108,6 +147,7 @@
     });
   }
 
-  initDownload();
-  initCitation();
+  var locale = DEFAULT_LOCALE;
+  initDownload(locale);
+  initCitation(locale);
 })();
