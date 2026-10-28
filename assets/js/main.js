@@ -10,9 +10,9 @@
     'pt-BR': {
       versionLabel: 'Versão',
       publishedOn: 'publicada em',
-      fileType: 'arquivo .apk',
+      fileType: 'Android',
       versionSeparator: ' · ',
-      versionFallback: 'Última versão publicada',
+      versionFallback: 'Última versão publicada · Android',
       citationCopied: 'Referência copiada',
       citationCopyFailed: 'Não foi possível copiar'
     }
@@ -72,7 +72,7 @@
     }
   }
 
-  // Download: "Versão X · publicada em DD/MM/AAAA · arquivo .apk"
+  // Download: "Versão X · publicada em DD/MM/AAAA · Android"
   function initDownload(locale) {
     var el = document.getElementById('app-version');
     if (!el) return;
