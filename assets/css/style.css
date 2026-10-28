@@ -118,7 +118,7 @@ a {
 
 .lang-bar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
 }
 
 .lang-bar nav {
